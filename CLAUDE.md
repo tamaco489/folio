@@ -4,17 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## リポジトリの現状
 
-`folio` はまだアプリケーションコードを持たない**ブートストラップ段階**のリポジトリ。
-存在するのは Claude Code 設定 (`.claude/`)、GitHub テンプレート (`.github/`)、MCP 設定 (`.mcp.json`)、ドキュメントのみ。
+Phase 1 (経路 A / B の比較) を実装中。
+backend は Go モジュールと共有層のスタブまでが main に入っている。`infra/` はディレクトリだけで Terraform ファイルはまだない。
 
-ビルド・lint・テストのコマンドはまだ存在しない。
+Issue は #2 〜 #35 に分割済み。実装順と並列可能な組み合わせは `tmp/issue-dependencies.md` を参照する (`tmp/` は git 管理外)。
+
+### ツールチェーン
+
+asdf で管理し、ルートの `.tool-versions` で固定している。
+
+```text
+golang    1.26.5
+terraform 1.15.8
+```
+
+### コマンド
+
 タスクランナーは Make ではなく [just](https://github.com/casey/just) を使う。
-justfile はルートに置かず、`backend/` と `infra/` のそれぞれの直下に置く方針のため、実行は各ディレクトリに移動してから行う (例: `cd backend && just test`)。
-最初にツールチェーンを追加する際はこの前提に合わせること。
+justfile はルートに置かず `backend/` と `infra/` の直下に置くため、実行は各ディレクトリに移動してから行う。
+
+```sh
+cd backend && just fmt   # go fmt ./...
+cd backend && just vet   # go vet ./...
+cd backend && just test  # go test ./...
+```
+
+`infra/justfile` と Lambda のクロスコンパイルレシピはまだない。追加する際もこの前提に合わせること。
 
 ## ディレクトリ構成
 
-未作成。実装時は以下に従う。
+backend はディレクトリ骨格と `go.mod` まで作成済み、infra はディレクトリのみ。到達点は以下。
 
 ```text
 folio/
@@ -46,8 +65,18 @@ folio/
 - `pkg/` は設けない。外部から import される想定がないため
 - `layers/` は中身で命名し、サブシステム軸では分けない。対応する Go パッケージは作らない
 - ビルドは `provided.al2023` / `arm64`、出力は `bin/{関数名}/bootstrap`
+- `testdata/` の配置規約は `backend/justfile` の冒頭コメントに書いてある。`testdata/pdf/` は arXiv 由来で再配布不可のため git 管理外
 
 命名規則やアーキテクチャの詳細は Notion の Develop データベース (親ページ: AWS AIP-C01) を参照する。
+
+### 依存の扱い
+
+`internal/awsx/` の 4 パッケージを並列に実装すると `go.sum` が競合するため、必要な AWS SDK 6 モジュールは先行して `go.mod` に載せてある。
+以降の実装で新しい依存を追加しないこと。追加が必要なら理由を PR に書く。
+
+`backend/tools/tools.go` は `//go:build tools` を付けた依存保持専用のファイル。
+`aws-lambda-go` は最初の `main.go` が入るまでコードから参照されず、これがないと `go mod tidy` で削除される。
+参照先ができた時点でこのファイルは削除する。
 
 ## Git / GitHub ワークフロー
 
