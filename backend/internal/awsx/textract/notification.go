@@ -25,6 +25,7 @@ type NotifiedS3 struct {
 }
 
 // Succeeded は結果を取得してよい状態かを返す
+//
 // PARTIAL_SUCCESS でも Block は取得できるため成功として扱う
 func (n CompletionNotification) Succeeded() bool {
 	return n.Status == types.JobStatusSucceeded || n.Status == types.JobStatusPartialSuccess
@@ -36,6 +37,7 @@ func (n CompletionNotification) Time() time.Time {
 }
 
 // ParseCompletionNotification は SNS メッセージ本文を解析する
+//
 // 得られたジョブ ID をそのまま GetDocumentAnalysis に渡せる
 func ParseCompletionNotification(message []byte) (*CompletionNotification, error) {
 	var n CompletionNotification

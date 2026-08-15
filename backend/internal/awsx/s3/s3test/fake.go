@@ -57,7 +57,6 @@ func (f *Fake) Object(bucket, key string) (Object, bool) {
 	return obj, ok
 }
 
-// GetObject は API を満たす
 func (f *Fake) GetObject(_ context.Context, params *awss3.GetObjectInput, _ ...func(*awss3.Options)) (*awss3.GetObjectOutput, error) {
 	if f.GetErr != nil {
 		return nil, f.GetErr
@@ -76,7 +75,6 @@ func (f *Fake) GetObject(_ context.Context, params *awss3.GetObjectInput, _ ...f
 	}, nil
 }
 
-// PutObject は API を満たす
 func (f *Fake) PutObject(_ context.Context, params *awss3.PutObjectInput, _ ...func(*awss3.Options)) (*awss3.PutObjectOutput, error) {
 	if f.PutErr != nil {
 		return nil, f.PutErr
@@ -100,7 +98,6 @@ func (f *Fake) PutObject(_ context.Context, params *awss3.PutObjectInput, _ ...f
 	return &awss3.PutObjectOutput{}, nil
 }
 
-// HeadObject は API を満たす
 func (f *Fake) HeadObject(_ context.Context, params *awss3.HeadObjectInput, _ ...func(*awss3.Options)) (*awss3.HeadObjectOutput, error) {
 	if f.HeadErr != nil {
 		return nil, f.HeadErr

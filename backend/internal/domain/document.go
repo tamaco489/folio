@@ -26,8 +26,7 @@ const (
 
 // Document は 1 本の PDF に対する抽出結果全体
 //
-// Sections Figures Tables References は経路間で同じ形の差分を取るため、
-// 要素が無い場合も空配列として出力する
+// Sections Figures Tables References は経路間で同じ形の差分を取るため、要素が無い場合も空配列として出力する
 type Document struct {
 	JobID         string      `json:"jobId"`
 	SchemaVersion string      `json:"schemaVersion"`

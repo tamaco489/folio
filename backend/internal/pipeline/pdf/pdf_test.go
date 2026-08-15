@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-// requirePoppler は poppler が使えない環境でテストをスキップする
-//
-// CI に poppler が入っていない可能性があるため、存在確認で分岐する
+// requirePoppler は poppler が使えない環境でテストをスキップする (CI に poppler が入っていない可能性があるため)
 func requirePoppler(t *testing.T) *Runner {
 	t.Helper()
 
@@ -32,8 +30,7 @@ func TestResolveBinDir(t *testing.T) {
 		t.Errorf("resolveBinDir(%q) = %q, want %q", dir, got, dir)
 	}
 
-	// Layer の既定パスが存在するかは実行環境に依存するため、
-	// 既定パスか PATH 委譲 (空文字) のどちらかであることだけを確かめる
+	// Layer の既定パスが存在するかは実行環境に依存するため、既定パスか PATH 委譲 (空文字) のどちらかであることだけを確かめる
 	got := resolveBinDir("")
 	if got != "" && got != DefaultBinDir {
 		t.Errorf("resolveBinDir(\"\") = %q, want %q or empty", got, DefaultBinDir)

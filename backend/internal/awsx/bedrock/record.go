@@ -11,13 +11,15 @@ import (
 	"time"
 )
 
-// ErrRecordingNotFound は再生対象の記録が見つからない場合に返る
-var ErrRecordingNotFound = errors.New("bedrock: recording not found")
+var (
+	// ErrRecordingNotFound は再生対象の記録が見つからない場合に返る
+	ErrRecordingNotFound = errors.New("bedrock: recording not found")
 
-// ErrRecordKeyRequired は記録・再生時にキーが指定されていない場合に返る
-var ErrRecordKeyRequired = errors.New("bedrock: record key is required")
+	// ErrRecordKeyRequired は記録・再生時にキーが指定されていない場合に返る
+	ErrRecordKeyRequired = errors.New("bedrock: record key is required")
+)
 
-// Route は抽出経路。記録ファイル名の一部となる
+// Route は抽出経路 (記録ファイル名の一部となる)
 type Route string
 
 const (
@@ -34,15 +36,13 @@ func RecordKey(paperID string, route Route) string {
 
 // Recording は 1 回の Converse 呼び出しの記録
 //
-// SDK の ConverseOutput は union 型を含み JSON へ往復できないため、
-// 呼び出し側が必要とする形へ落とした Response を記録する
+// SDK の ConverseOutput は union 型を含み JSON へ往復できないため、呼び出し側が必要とする形へ落とした Response を記録する
 type Recording struct {
 	ModelID    string    `json:"modelId"`
 	Route      Route     `json:"route,omitempty"`
 	RecordedAt time.Time `json:"recordedAt"`
 	Response   Response  `json:"response"`
-	// Note は記録の由来を書き残すための補助欄
-	Note string `json:"note,omitempty"`
+	Note       string    `json:"note,omitempty"` // Note は記録の由来を書き残すための補助欄
 }
 
 // Store は記録ファイルの読み書きを担う
@@ -99,7 +99,7 @@ func (s *Store) Load(key string) (*Recording, error) {
 
 // Recorder は Converser をラップし、応答をファイルへ記録するモード
 //
-// 実 API を呼ぶため課金が発生する。記録の取得はユーザーの承認を得てから行う
+// 実 API を呼ぶため課金が発生する (記録の取得はユーザーの承認を得てから行う)
 type Recorder struct {
 	next  Converser
 	store *Store

@@ -20,30 +20,23 @@ var pageFilePattern = regexp.MustCompile(`^` + pagePrefix + `-(\d+)\.png$`)
 
 // RasterizeResult はラスタライズの結果
 type RasterizeResult struct {
-	// Dir はページ画像を書き出したディレクトリ
-	Dir string
-
-	// Pages はページ画像の絶対パス (ページ昇順)
-	Pages []string
-
-	// DPI は描画に使用した解像度
-	DPI int
+	Dir   string   // Dir はページ画像を書き出したディレクトリ
+	Pages []string // Pages はページ画像の絶対パス (ページ昇順)
+	DPI   int      // DPI は描画に使用した解像度
 }
 
 // PageFileName はページ番号から画像ファイル名を導出する
 //
 // Textract の非同期 API は 3,000 ページまで扱えるため 4 桁ゼロ埋めとする
-// 3 桁だと 999 ページを超えた時点で桁が増え、辞書順とページ順がずれる
-// (page-1000 が page-999 より前に並ぶ)
+// 3 桁だと 999 ページを超えた時点で桁が増え、辞書順とページ順がずれる (page-1000 が page-999 より前に並ぶ)
 func PageFileName(page int) string {
 	return fmt.Sprintf("%s-%04d.png", pagePrefix, page)
 }
 
 // Rasterize は指定範囲のページを PNG に変換する
 //
-// first, last に 0 を渡すとそれぞれ先頭ページ、末尾ページとして扱う
-// Lambda の /tmp は容量に上限があるため、ページ数が多い PDF は
-// 呼び出し側で範囲を分割して複数回に分けられるようにしてある
+// first, last に 0 を渡すとそれぞれ先頭ページ、末尾ページとして扱うため、全ページの変換は 0, 0 で表す
+// Lambda の /tmp は容量に上限があるため、ページ数が多い PDF は呼び出し側で範囲を分割して複数回に分けられるようにしてある
 func (r *Runner) Rasterize(ctx context.Context, pdfPath, outDir string, first, last int) (RasterizeResult, error) {
 	if first < 0 || last < 0 || (last != 0 && first != 0 && last < first) {
 		return RasterizeResult{}, fmt.Errorf("pdf: invalid page range: first=%d last=%d", first, last)
@@ -79,8 +72,7 @@ func (r *Runner) Rasterize(ctx context.Context, pdfPath, outDir string, first, l
 
 // normalizePageFiles は pdftoppm の出力を 4 桁ゼロ埋めの名前に揃える
 //
-// pdftoppm はゼロ埋め桁数を総ページ数から決めるため、10 ページの PDF では
-// page-01.png になる
+// pdftoppm はゼロ埋め桁数を総ページ数から決めるため、10 ページの PDF では page-01.png になる
 // 後続の Lambda が桁数を意識せずに済むよう、ここで命名規約に揃える
 func normalizePageFiles(outDir string) ([]string, error) {
 	entries, err := os.ReadDir(outDir)

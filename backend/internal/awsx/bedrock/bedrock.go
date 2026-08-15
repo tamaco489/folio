@@ -1,8 +1,8 @@
 // Package bedrock は Bedrock Runtime の操作を awsx 層に閉じ込める
 //
-// 経路 A (Textract の出力テキストの構造化) と経路 B (ページ画像の直接読み取り) は
-// 入力の種類が異なるだけで呼び出し方は同じであるため、Converse API を用いて
-// テキストと画像を同一の Request にまとめて扱う
+// 2 つの経路は入力の種類が異なるだけで呼び出し方は同じであるため、Converse API でテキストと画像を同一の Request にまとめて扱う
+//   - 経路 A: Textract の出力テキストを構造化する
+//   - 経路 B: ページ画像を直接読み取る
 package bedrock
 
 import (
@@ -20,14 +20,19 @@ import (
 var (
 	// ErrModelIDRequired はモデル ID が Request にも既定値にも指定されていない場合に返る
 	ErrModelIDRequired = errors.New("bedrock: model id is required")
+
 	// ErrEmptyRequest はメッセージが 1 件もない場合に返る
 	ErrEmptyRequest = errors.New("bedrock: request has no messages")
+
 	// ErrEmptyContent は中身のない content block が含まれる場合に返る
 	ErrEmptyContent = errors.New("bedrock: content block is empty")
+
 	// ErrUnsupportedContent は未知の content block 種別が渡された場合に返る
 	ErrUnsupportedContent = errors.New("bedrock: unsupported content block")
+
 	// ErrNoTextContent はモデルの応答にテキストが含まれない場合に返る
 	ErrNoTextContent = errors.New("bedrock: response has no text content")
+
 	// ErrInvalidJSON はモデルの応答を JSON として解釈できない場合に返る
 	ErrInvalidJSON = errors.New("bedrock: response is not valid json")
 )
@@ -46,8 +51,7 @@ const ImageFormatPNG ImageFormat = "png"
 
 // ContentPart はメッセージを構成する content block
 //
-// テキストと画像を同じ配列に並べられるため、経路 A と経路 B で
-// 呼び出し側のコードが変わらない
+// テキストと画像を同じ配列に並べられるため、経路 A と経路 B で呼び出し側のコードが変わらない
 type ContentPart interface {
 	isContentPart()
 }
@@ -88,18 +92,12 @@ func UserImage(format ImageFormat, b []byte, prompt string) Message {
 
 // Request は Converse API への入力
 type Request struct {
-	// ModelID は使用するモデル。空の場合はクライアントの既定値を用いる
-	ModelID string
-	// System はシステムプロンプト
-	System string
-	// Messages は会話履歴
-	Messages []Message
-	// MaxTokens はモデルの出力トークン上限
-	MaxTokens *int32
-	// Temperature は出力のばらつき
-	Temperature *float32
-	// RecordKey は記録・再生時のファイル名部分。RecordKey 関数で組み立てる
-	RecordKey string
+	ModelID     string    // ModelID は使用するモデル (空ならクライアントの既定値を用いる)
+	System      string    // System はシステムプロンプト
+	Messages    []Message // Messages は会話履歴
+	MaxTokens   *int32    // MaxTokens はモデルの出力トークン上限
+	Temperature *float32  // Temperature は出力のばらつき
+	RecordKey   string    // RecordKey は記録・再生時のファイル名部分 (RecordKey 関数で組み立てる)
 }
 
 // Usage は課金の記録に用いるトークン数
@@ -111,16 +109,11 @@ type Usage struct {
 
 // Response は Converse API の応答を呼び出し側に必要な形へ落としたもの
 type Response struct {
-	// Text は応答に含まれるテキスト content block の連結
-	Text string `json:"text"`
-	// StopReason は生成が止まった理由
-	StopReason string `json:"stopReason"`
-	// Usage は provenance.cost に記録するトークン数
-	Usage Usage `json:"usage"`
-	// LatencyMs は Bedrock が報告した所要時間
-	LatencyMs int64 `json:"latencyMs"`
-	// Attempts は成功までに要した試行回数 (初回を 1 とする)
-	Attempts int `json:"attempts,omitempty"`
+	Text       string `json:"text"`               // Text は応答に含まれるテキスト content block の連結
+	StopReason string `json:"stopReason"`         // StopReason は生成が止まった理由
+	Usage      Usage  `json:"usage"`              // Usage は provenance.cost に記録するトークン数
+	LatencyMs  int64  `json:"latencyMs"`          // LatencyMs は Bedrock が報告した所要時間
+	Attempts   int    `json:"attempts,omitempty"` // Attempts は成功までに要した試行回数 (初回を 1 とする)
 }
 
 // ConverseAPI は bedrockruntime.Client のうち本パッケージが利用する範囲
@@ -163,7 +156,7 @@ func WithRetry(rc RetryConfig) Option {
 	return func(c *Client) { c.retry = rc }
 }
 
-// WithSleeper は待機処理を差し替える。テストで実時間を待たないために用いる
+// WithSleeper は待機処理を差し替える (テストで実時間を待たないために用いる)
 func WithSleeper(s Sleeper) Option {
 	return func(c *Client) {
 		if s != nil {
@@ -172,7 +165,7 @@ func WithSleeper(s Sleeper) Option {
 	}
 }
 
-// WithRandN はジッタの乱数源を差し替える。テストで待機時間を決定的にするために用いる
+// WithRandN はジッタの乱数源を差し替える (テストで待機時間を決定的にするために用いる)
 func WithRandN(f func(int64) int64) Option {
 	return func(c *Client) {
 		if f != nil {
@@ -345,9 +338,8 @@ func newResponse(out *bedrockruntime.ConverseOutput) (*Response, error) {
 
 // DecodeJSON は応答テキストを構造化 JSON として v に読み込む
 //
-// モデルは前置きやコードフェンスを伴う応答を返すことがあるため、
-// JSON 部分を切り出してから解釈する。切り出しても解釈できない場合は
-// ErrInvalidJSON を返し、生テキストは Response.Text に残したままとする
+// モデルは前置きやコードフェンスを伴う応答を返すことがあるため、JSON 部分を切り出してから解釈する
+// 切り出しても解釈できない場合は ErrInvalidJSON を返し、生テキストは Response.Text に残したままとする
 func (r *Response) DecodeJSON(v any) error {
 	payload, ok := extractJSON(r.Text)
 	if !ok {

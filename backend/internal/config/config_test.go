@@ -9,9 +9,7 @@ import (
 	"testing"
 )
 
-// setEnv は Load が参照する環境変数をすべて上書きする
-//
-// 空文字は未設定と同義に扱われるため、ホスト側の値を確実に打ち消せる
+// setEnv は Load が参照する環境変数をすべて上書きする (空文字は未設定と同義に扱われるため、ホスト側の値を確実に打ち消せる)
 func setEnv(t *testing.T, values map[string]string) {
 	t.Helper()
 	for _, key := range []string{

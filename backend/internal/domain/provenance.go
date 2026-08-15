@@ -6,10 +6,10 @@ import "time"
 type Route string
 
 const (
-	// RouteTextract は経路 A。Textract の出力を Bedrock で構造化する
+	// RouteTextract は経路 A (Textract の出力を Bedrock で構造化する)
 	RouteTextract Route = "textract"
 
-	// RouteBedrock は経路 B。ページ画像を Bedrock へ直接投入する
+	// RouteBedrock は経路 B (ページ画像を Bedrock へ直接投入する)
 	RouteBedrock Route = "bedrock"
 )
 

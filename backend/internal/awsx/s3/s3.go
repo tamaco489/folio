@@ -64,8 +64,7 @@ type ObjectInfo struct {
 
 // Get はオブジェクトをストリームとして取得する
 //
-// 500MB クラスの PDF をメモリに載せずに /tmp へ流すため、バイト列ではなく ReadCloser を返す
-// 呼び出し側が Close する
+// 500MB クラスの PDF をメモリに載せずに /tmp へ流すため、バイト列ではなく ReadCloser を返す (呼び出し側が Close する)
 func (c *Client) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	out, err := c.api.GetObject(ctx, &awss3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
@@ -79,7 +78,7 @@ func (c *Client) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 
 // GetBytes はオブジェクト全体をメモリに読み込む
 //
-// JSON など小さいオブジェクト向け。PDF には Get または Download を使う
+// JSON など小さいオブジェクト向け (PDF には Get または Download を使う)
 func (c *Client) GetBytes(ctx context.Context, key string) ([]byte, error) {
 	body, err := c.Get(ctx, key)
 	if err != nil {
@@ -133,8 +132,7 @@ func WithContentType(contentType string) PutOption {
 
 // WithContentLength は Content-Length を指定する
 //
-// SDK は seek できない io.Reader を渡されるとサイズを判定できないため、
-// Put でストリームを渡す場合は明示する
+// SDK は seek できない io.Reader を渡されるとサイズを判定できないため、Put でストリームを渡す場合は明示する
 func WithContentLength(size int64) PutOption {
 	return func(in *awss3.PutObjectInput) {
 		in.ContentLength = aws.Int64(size)
@@ -221,8 +219,10 @@ func wrapErr(op, key string, err error) error {
 
 // isNotFound は SDK が返す複数の「存在しない」表現を吸収する
 //
-// GetObject は NoSuchKey、HeadObject はボディを持たないため NotFound を返し、
-// SDK が型に落とせなかった場合は 404 のまま伝わってくる
+// 同じ意味が 3 系統で来る
+//   - GetObject は NoSuchKey を返す
+//   - HeadObject はボディを持たないため NotFound を返す
+//   - SDK が型に落とせなかった場合は 404 のまま伝わってくる
 func isNotFound(err error) bool {
 	var noSuchKey *types.NoSuchKey
 	if errors.As(err, &noSuchKey) {

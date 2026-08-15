@@ -42,7 +42,7 @@ func TestRegisterJobNew(t *testing.T) {
 		got = append(got, name)
 	}
 	sort.Strings(got)
-	// errorReason は値がないときに書かない。それ以外の属性は Notion 定義の 6 つに限定する
+	// errorReason は値がないときに書かない (それ以外の属性は Notion 定義の 6 つに限定する)
 	want := []string{"createdAt", "filename", "jobId", "status", "updatedAt"}
 	if len(got) != len(want) {
 		t.Fatalf("attributes = %v, want %v", got, want)

@@ -21,6 +21,7 @@ func readFixture(t *testing.T, name string) []byte {
 }
 
 // asAny は JSON をキーと値の集合へ落とす
+//
 // バイト列の比較ではインデントやキー順の差で落ちるため、意味的な同値で比較する
 func asAny(t *testing.T, b []byte) any {
 	t.Helper()

@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
-// fakeAPI は ConverseAPI のフェイク。実 API は一切呼ばない
+// fakeAPI は ConverseAPI のフェイク (実 API は一切呼ばない)
 type fakeAPI struct {
 	inputs  []*bedrockruntime.ConverseInput
 	outputs []*bedrockruntime.ConverseOutput

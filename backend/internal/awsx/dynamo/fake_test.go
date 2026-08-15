@@ -12,6 +12,7 @@ import (
 )
 
 // fakeDynamo は API のインメモリ実装
+//
 // 条件式・更新式は文字列をそのまま解釈するため、Client が組み立てた式の意味を検証できる
 type fakeDynamo struct {
 	items      map[string]map[string]types.AttributeValue

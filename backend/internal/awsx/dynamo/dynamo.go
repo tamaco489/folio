@@ -15,7 +15,7 @@ import (
 // IndexStatusUpdatedAt は status ごとのジョブを更新時刻順に引く GSI
 const IndexStatusUpdatedAt = "gsi-status-updatedAt"
 
-// API は Client が利用する DynamoDB の操作。テストではフェイクに差し替える
+// API は Client が利用する DynamoDB の操作 (テストではフェイクに差し替える)
 type API interface {
 	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
@@ -35,7 +35,7 @@ type Client struct {
 // Option は Client の任意設定
 type Option func(*Client)
 
-// WithClock は時刻の取得方法を差し替える。テストで固定時刻を与えるために使う
+// WithClock は時刻の取得方法を差し替える (テストで固定時刻を与えるために使う)
 func WithClock(now func() time.Time) Option {
 	return func(c *Client) { c.now = now }
 }
@@ -58,11 +58,9 @@ func (c *Client) TableName() string { return c.tableName }
 
 // RegisterJob は条件付き書き込みでジョブを登録する
 //
-// jobId はファイルの SHA-256 なので、同じ PDF の再投入は同じ jobId になる。
-// 未登録か FAILED のときだけ書き込みを通すことで、専用テーブルを持たずに
-// 「成功したものだけ弾く」冪等性を 1 回の書き込みで成立させる。
-// 弾かれた場合は JobExistsError に旧レコードを載せて返すので、
-// 呼び出し側は追加の読み取りなしに PROCESSING か COMPLETED かを判定できる。
+// jobId はファイルの SHA-256 なので、同じ PDF の再投入は同じ jobId になる
+//   - 未登録か FAILED のときだけ書き込みを通すことで、専用テーブルを持たずに「成功したものだけ弾く」冪等性を 1 回の書き込みで成立させる
+//   - 弾かれた場合は JobExistsError に旧レコードを載せて返すので、呼び出し側は追加の読み取りなしに PROCESSING か COMPLETED かを判定できる
 func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, error) {
 	now := c.now().UTC()
 	job := Job{
@@ -101,7 +99,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 	return job, nil
 }
 
-// GetJob は jobId でジョブを取得する。存在しない場合は ErrJobNotFound を返す
+// GetJob は jobId でジョブを取得する (存在しない場合は ErrJobNotFound を返す)
 func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
 	out, err := c.api.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(c.tableName),
@@ -120,7 +118,7 @@ func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
 
 // UpdateStatus は既存ジョブの status を更新し、残っている errorReason を消す
 //
-// FAILED は理由の記録が必須のため受け付けない。MarkFailed を使う
+// FAILED は理由の記録が必須のため受け付けない (MarkFailed を使う)
 func (c *Client) UpdateStatus(ctx context.Context, jobID string, status Status) (Job, error) {
 	if !status.Valid() {
 		return Job{}, fmt.Errorf("dynamo: unknown status %q", status)
@@ -185,6 +183,7 @@ func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[s
 }
 
 // ListByStatus は GSI で同じ status のジョブを updatedAt の新しい順に取得する
+//
 // limit が 0 以下の場合は DynamoDB の 1 ページ分をそのまま返す
 func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) ([]Job, error) {
 	if !status.Valid() {

@@ -15,18 +15,16 @@ import (
 )
 
 // Recording は 1 本の論文に対する Textract の記録済みレスポンス
+//
 // 配置は testdata/textract/{論文 ID}.json
 type Recording struct {
-	PaperID      string              `json:"paperId"`
-	JobID        string              `json:"jobId,omitempty"`
-	FeatureTypes []types.FeatureType `json:"featureTypes,omitempty"`
-	RecordedAt   time.Time           `json:"recordedAt,omitempty"`
-	// Note は記録の出自を残すための備考で、手書きのサンプルであることの明示にも使う
-	Note string `json:"note,omitempty"`
-	// AnalysisPages は GetDocumentAnalysis のレスポンスをページングの順に並べたもの
-	AnalysisPages []AnalysisPage `json:"analysisPages,omitempty"`
-	// Detect は DetectDocumentText のレスポンス
-	Detect *DetectPage `json:"detect,omitempty"`
+	PaperID       string              `json:"paperId"`
+	JobID         string              `json:"jobId,omitempty"`
+	FeatureTypes  []types.FeatureType `json:"featureTypes,omitempty"`
+	RecordedAt    time.Time           `json:"recordedAt,omitempty"`
+	Note          string              `json:"note,omitempty"`          // Note は記録の出自を残すための備考で、手書きのサンプルであることの明示にも使う
+	AnalysisPages []AnalysisPage      `json:"analysisPages,omitempty"` // AnalysisPages は GetDocumentAnalysis のレスポンスをページングの順に並べたもの
+	Detect        *DetectPage         `json:"detect,omitempty"`        // Detect は DetectDocumentText のレスポンス
 }
 
 // AnalysisPage は GetDocumentAnalysis のレスポンス 1 ページ分
@@ -87,6 +85,7 @@ func (r *Recording) WriteFile(path string) error {
 }
 
 // Validate は再生に必要な整合性を検査する
+//
 // 手書きの記録が壊れている場合に再生時ではなく読み込み時に落とすためにある
 func (r *Recording) Validate() error {
 	if len(r.AnalysisPages) == 0 && r.Detect == nil {
@@ -113,6 +112,7 @@ func (r *Recording) Validate() error {
 }
 
 // Replayer は記録済みレスポンスを返す API 実装
+//
 // 実 API を呼ばずに Client のページング処理まで含めて検証できる
 type Replayer struct {
 	rec    *Recording
@@ -210,6 +210,7 @@ func (r *Replayer) DetectDocumentText(_ context.Context, _ *awstextract.DetectDo
 }
 
 // Recorder は実 API の呼び出しを通しつつレスポンスを記録する
+//
 // 記録の取得には課金が発生するため、実行はユーザーの承認を得た場合に限る
 type Recorder struct {
 	inner API

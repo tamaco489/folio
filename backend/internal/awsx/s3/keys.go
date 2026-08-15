@@ -8,8 +8,7 @@ import (
 // S3 キーの第 1 階層
 //
 // S3 イベント通知は PrefixUploads だけをフィルタ対象にする
-// 派生物を PrefixWork / PrefixOutputs に分けているのは、書き込みで通知が再発火して
-// パイプラインが無限ループするのを防ぐため
+// 派生物を PrefixWork / PrefixOutputs に分けているのは、書き込みで通知が再発火してパイプラインが無限ループするのを防ぐため
 const (
 	PrefixUploads = "uploads"
 	PrefixWork    = "work"
@@ -19,8 +18,7 @@ const (
 // MaxPageNumber は PageImageKey が扱えるページ番号の上限
 //
 // 非同期処理の上限が 3,000 ページであるため 3 桁では足りず、ゼロ埋めを 4 桁にしている
-// これを超えると桁が増えてキーの辞書順とページ順が一致しなくなるため、
-// バリデーション層でこの値を上限として弾く
+// これを超えると桁が増えてキーの辞書順とページ順が一致しなくなるため、バリデーション層でこの値を上限として弾く
 const MaxPageNumber = 9999
 
 const (

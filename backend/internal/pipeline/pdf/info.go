@@ -11,24 +11,17 @@ import (
 
 // Info は pdfinfo から取得した文書の属性
 type Info struct {
-	// Pages はページ数
-	Pages int
-
-	// Encrypted は暗号化・保護されているか
-	Encrypted bool
-
-	// Encryption は pdfinfo が報告した暗号化の詳細 (未暗号化なら空)
-	Encryption string
+	Pages      int    // Pages はページ数
+	Encrypted  bool   // Encrypted は暗号化・保護されているか
+	Encryption string // Encryption は pdfinfo が報告した暗号化の詳細 (未暗号化なら空)
 }
 
 // Info は PDF のページ数と保護状態を取得する
 //
 // ページ数と保護状態を 1 回の呼び出しで得られるため pdfinfo を使う
-// PDF ヘッダの自前解析は圧縮オブジェクトや線形化に弱く、判定を誤ると
-// バリデーション層 (#16) が誤った理由で処理を打ち切るため採らない
+// PDF ヘッダの自前解析は圧縮オブジェクトや線形化に弱く、判定を誤るとバリデーション層 (#16) が誤った理由で処理を打ち切るため採らない
 func (r *Runner) Info(ctx context.Context, pdfPath string) (Info, error) {
-	// 空パスワードで開けない PDF は pdfinfo が非ゼロ終了するため、
-	// classify が ErrEncrypted に変換する
+	// 空パスワードで開けない PDF は pdfinfo が非ゼロ終了するため、classify が ErrEncrypted に変換する
 	out, err := r.run(ctx, binPDFInfo, "-enc", "UTF-8", pdfPath)
 	if err != nil {
 		return Info{}, err
