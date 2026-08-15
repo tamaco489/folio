@@ -1,0 +1,130 @@
+{
+  "jobId": "01JB8X7K2M9QRT4V6WZ3N5PDA0",
+  "schemaVersion": "1.0",
+  "source": {
+    "bucket": "paper-idp-dev",
+    "key": "uploads/01JB8X7K2M9QRT4V6WZ3N5PDA0/original.pdf",
+    "filename": "2601.04872v1.pdf",
+    "sha256": "9f2c1ab7e04d5c83b6119ae7d2f0c48a5e73b91d0c6af2e85b34dd7719c0ea62",
+    "language": "en",
+    "pageCount": 11,
+    "hasTextLayer": true,
+    "uploadedAt": "2026-08-15T02:14:33Z"
+  },
+  "metadata": {
+    "title": "Sparse Attention Routing for Long-Context Language Models",
+    "authors": [
+      {
+        "name": "Aiko Tanaka",
+        "affiliation": "Graduate School of Information Science, Tohoku University",
+        "email": "tanaka@example.ac.jp"
+      },
+      {
+        "name": "Marcus Feldman",
+        "affiliation": "Department of Computer Science, ETH Zurich",
+        "email": "feldman@example.ch"
+      }
+    ],
+    "abstract": "Long-context language models suffer from quadratic attention cost. We propose a routing mechanism that selects a sparse subset of key-value pairs per query head, reducing computation by 6.2x while retaining 98% of dense-attention accuracy on retrieval-heavy benchmarks.",
+    "keywords": ["sparse attention", "long context", "efficient inference"],
+    "venue": "arXiv preprint",
+    "year": 2026,
+    "primaryCategory": "cs.CL"
+  },
+  "sections": [
+    {
+      "level": 1,
+      "heading": "1 Introduction",
+      "text": "Transformer-based language models have scaled context windows from 2K to over 1M tokens, but the attention mechanism remains quadratic in sequence length...",
+      "pages": [1, 2]
+    },
+    {
+      "level": 1,
+      "heading": "2 Related Work",
+      "text": "Prior approaches to attention sparsification fall into three families: fixed patterns, learned patterns, and retrieval-based selection...",
+      "pages": [2, 3]
+    },
+    {
+      "level": 2,
+      "heading": "3.1 Routing Function",
+      "text": "Given a query vector q and a set of key vectors K, the router computes a relevance score...",
+      "pages": [4]
+    }
+  ],
+  "figures": [
+    {
+      "id": "Figure 1",
+      "caption": "Overview of the sparse routing architecture. Each query head independently selects k key-value pairs.",
+      "page": 3,
+      "bbox": [0.118, 0.094, 0.882, 0.371]
+    },
+    {
+      "id": "Figure 3",
+      "caption": "Latency versus context length on a single A100 GPU.",
+      "page": 8,
+      "bbox": [0.523, 0.412, 0.951, 0.648]
+    }
+  ],
+  "tables": [
+    {
+      "id": "Table 2",
+      "caption": "Results on long-context retrieval benchmarks. Best scores in bold. † denotes models with extended pre-training.",
+      "page": 7,
+      "bbox": [0.104, 0.152, 0.896, 0.437],
+      "header": [
+        ["Model", "NIAH", "NIAH", "LongBench", "Speedup"],
+        ["", "1K", "128K", "Avg", ""]
+      ],
+      "rows": [
+        ["Dense baseline", "100.0", "94.2", "48.7", "1.0x"],
+        ["StreamingLLM", "100.0", "61.4", "39.2", "5.8x"],
+        ["H2O", "99.8", "77.9", "43.1", "4.1x"],
+        ["Ours", "100.0", "92.6", "47.8", "6.2x"],
+        ["Ours †", "100.0", "93.9", "48.4", "6.2x"]
+      ]
+    }
+  ],
+  "references": [
+    {
+      "raw": "Vaswani, A., Shazeer, N., Parmar, N., et al. Attention Is All You Need. NeurIPS, 2017.",
+      "title": "Attention Is All You Need",
+      "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar"],
+      "year": 2017,
+      "venue": "NeurIPS",
+      "doi": null
+    },
+    {
+      "raw": "Xiao, G., Tian, Y., Chen, B., et al. Efficient Streaming Language Models with Attention Sinks. ICLR, 2024.",
+      "title": "Efficient Streaming Language Models with Attention Sinks",
+      "authors": ["Guangxuan Xiao", "Yuandong Tian", "Beidi Chen"],
+      "year": 2024,
+      "venue": "ICLR",
+      "doi": null
+    }
+  ],
+  "provenance": {
+    "route": "textract",
+    "extractedAt": "2026-08-15T02:15:47Z",
+    "confidence": {
+      "title": 0.998,
+      "authors": 0.981,
+      "abstract": 0.995,
+      "sections": 0.943,
+      "figures": 0.912,
+      "tables": 0.724,
+      "references": 0.868
+    },
+    "cost": {
+      "textractPages": 11,
+      "textractFeatures": ["LAYOUT", "TABLES"],
+      "bedrockModel": "claude-sonnet-4-6",
+      "bedrockInputTokens": 42180,
+      "bedrockOutputTokens": 6340
+    },
+    "durationMs": 74210,
+    "warnings": [
+      "Table 2 のヘッダーが 2 段構成であり、1 段目のセル結合を推定で復元した",
+      "参照文献 3 件で DOI を特定できなかった"
+    ]
+  }
+}
