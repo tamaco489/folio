@@ -1,0 +1,849 @@
+{
+  "paperId": "9000.00002",
+  "jobId": "tables-only-fixture",
+  "featureTypes": [
+    "TABLES"
+  ],
+  "note": "手書きの合成データであり実 API のレスポンスではない。LAYOUT ブロックを含めずに記録された出力でも落ちないことと、多段ヘッダー・ColumnSpan の復元・ヘッダー結合の推定復元を検証するために作成した",
+  "analysisPages": [
+    {
+      "jobStatus": "SUCCEEDED",
+      "modelVersion": "1.0",
+      "documentMetadata": {
+        "Pages": 1
+      },
+      "blocks": [
+        {
+          "BlockType": "PAGE",
+          "Id": "p1",
+          "Page": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 1,
+              "Height": 1,
+              "Left": 0,
+              "Top": 0
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "ln1",
+                "tbl"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "ln1",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "Results are summarised below.",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.02,
+              "Left": 0.1,
+              "Top": 0.3
+            }
+          }
+        },
+        {
+          "BlockType": "TABLE",
+          "Id": "tbl",
+          "Page": 1,
+          "Confidence": 91.7,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.72,
+              "Height": 0.12,
+              "Left": 0.14,
+              "Top": 0.42
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c11",
+                "c21",
+                "c12",
+                "c14",
+                "c15",
+                "c22",
+                "c23",
+                "c24",
+                "c25",
+                "c31",
+                "c32",
+                "c33",
+                "c34",
+                "c35",
+                "m1",
+                "m2"
+              ]
+            },
+            {
+              "Type": "TABLE_TITLE",
+              "Ids": [
+                "tt1"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "TABLE_TITLE",
+          "Id": "tt1",
+          "Page": 1,
+          "Confidence": 95.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.5,
+              "Height": 0.02,
+              "Left": 0.14,
+              "Top": 0.39
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "tt1-w0",
+                "tt1-w1",
+                "tt1-w2",
+                "tt1-w3",
+                "tt1-w4"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c11",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 1,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.14,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c11-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c21",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 2,
+          "ColumnIndex": 1,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.14,
+              "Top": 0.44999999999999996
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c12",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 2,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.28,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c12-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c14",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 4,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.56,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c14-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c15",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 5,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.7000000000000001,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c22",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 2,
+          "ColumnIndex": 2,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.28,
+              "Top": 0.44999999999999996
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c22-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c23",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 2,
+          "ColumnIndex": 3,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.42000000000000004,
+              "Top": 0.44999999999999996
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c23-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c24",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 2,
+          "ColumnIndex": 4,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.56,
+              "Top": 0.44999999999999996
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c24-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c25",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 2,
+          "ColumnIndex": 5,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.7000000000000001,
+              "Top": 0.44999999999999996
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c25-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c31",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 3,
+          "ColumnIndex": 1,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.14,
+              "Top": 0.48
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c31-w0",
+                "c31-w1"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c32",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 3,
+          "ColumnIndex": 2,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.28,
+              "Top": 0.48
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c32-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c33",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 3,
+          "ColumnIndex": 3,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.42000000000000004,
+              "Top": 0.48
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c33-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c34",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 3,
+          "ColumnIndex": 4,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.56,
+              "Top": 0.48
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c34-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "CELL",
+          "Id": "c35",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 3,
+          "ColumnIndex": 5,
+          "RowSpan": 1,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.7000000000000001,
+              "Top": 0.48
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c35-w0"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "MERGED_CELL",
+          "Id": "m1",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 1,
+          "RowSpan": 2,
+          "ColumnSpan": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.14,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c11",
+                "c21"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "MERGED_CELL",
+          "Id": "m2",
+          "Page": 1,
+          "Confidence": 90.0,
+          "RowIndex": 1,
+          "ColumnIndex": 4,
+          "RowSpan": 1,
+          "ColumnSpan": 2,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.14,
+              "Height": 0.03,
+              "Left": 0.56,
+              "Top": 0.42
+            }
+          },
+          "EntityTypes": [
+            "COLUMN_HEADER"
+          ],
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "c14",
+                "c15"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c11-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Model",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c12-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "BLEU",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c14-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Cost",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c22-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "EN-DE",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c23-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "EN-FR",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c24-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "FLOPs",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c25-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Params",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c31-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Transformer",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c31-w1",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "(base)",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c32-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "27.3",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c33-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "38.1",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c34-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "3.3e18",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "c35-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "65M",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "tt1-w0",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Table",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "tt1-w1",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "2:",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "tt1-w2",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Machine",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "tt1-w3",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "translation",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "tt1-w4",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "quality.",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,493 @@
+{
+  "paperId": "9000.00001",
+  "jobId": "two-column-fixture",
+  "featureTypes": [
+    "LAYOUT"
+  ],
+  "note": "手書きの合成データであり実 API のレスポンスではない。二段組の読み順復元と図キャプションの対応づけを検証するために作成した。ページ 1 は LAYOUT ブロックをわざと右段が先に並んだ順で置いてある",
+  "analysisPages": [
+    {
+      "jobStatus": "SUCCEEDED",
+      "modelVersion": "1.0",
+      "documentMetadata": {
+        "Pages": 2
+      },
+      "blocks": [
+        {
+          "BlockType": "PAGE",
+          "Id": "p1",
+          "Page": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 1,
+              "Height": 1,
+              "Left": 0,
+              "Top": 0
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "t1",
+                "r1",
+                "l1",
+                "l2",
+                "r2"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TITLE",
+          "Id": "t1",
+          "Page": 1,
+          "Confidence": 96.5,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.7,
+              "Height": 0.04,
+              "Left": 0.15,
+              "Top": 0.06
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "t1-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "r1",
+          "Page": 1,
+          "Confidence": 94.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.1,
+              "Left": 0.52,
+              "Top": 0.3
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "r1-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "l1",
+          "Page": 1,
+          "Confidence": 95.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.1,
+              "Left": 0.08,
+              "Top": 0.3
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "l1-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "l2",
+          "Page": 1,
+          "Confidence": 93.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.1,
+              "Left": 0.08,
+              "Top": 0.55
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "l2-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "r2",
+          "Page": 1,
+          "Confidence": 92.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.1,
+              "Left": 0.52,
+              "Top": 0.6
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "r2-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "PAGE",
+          "Id": "p2",
+          "Page": 2,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 1,
+              "Height": 1,
+              "Left": 0,
+              "Top": 0
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "f1",
+                "f1c"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_FIGURE",
+          "Id": "f1",
+          "Page": 2,
+          "Confidence": 88.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.76,
+              "Height": 0.3,
+              "Left": 0.12,
+              "Top": 0.15
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "f1-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "f1c",
+          "Page": 2,
+          "Confidence": 97.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.76,
+              "Height": 0.03,
+              "Left": 0.12,
+              "Top": 0.47
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "f1c-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "t1-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "Attention Is All You Need",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.7,
+              "Height": 0.03,
+              "Left": 0.15,
+              "Top": 0.065
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "t1-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "r1-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "right one",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.02,
+              "Left": 0.52,
+              "Top": 0.305
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "r1-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "l1-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "left one",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.02,
+              "Left": 0.08,
+              "Top": 0.305
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "l1-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "l2-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "left two",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.02,
+              "Left": 0.08,
+              "Top": 0.555
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "l2-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "r2-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "right two",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.38,
+              "Height": 0.02,
+              "Left": 0.52,
+              "Top": 0.605
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "r2-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "f1-l",
+          "Page": 2,
+          "Confidence": 98.0,
+          "Text": "attention weights",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.2,
+              "Height": 0.02,
+              "Left": 0.3,
+              "Top": 0.25
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "f1-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "f1c-l",
+          "Page": 2,
+          "Confidence": 98.0,
+          "Text": "Figure 1: The Transformer architecture.",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.76,
+              "Height": 0.02,
+              "Left": 0.12,
+              "Top": 0.475
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "f1c-l-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "t1-l-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "Attention Is All You Need",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "r1-l-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "right one",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "l1-l-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "left one",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "l2-l-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "left two",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "r2-l-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "right two",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "f1-l-w",
+          "Page": 2,
+          "Confidence": 99.0,
+          "Text": "attention weights",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "f1c-l-w",
+          "Page": 2,
+          "Confidence": 99.0,
+          "Text": "Figure 1: The Transformer architecture.",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
