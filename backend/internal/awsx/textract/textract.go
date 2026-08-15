@@ -40,20 +40,15 @@ func New(api API) *Client {
 
 // S3Location は Textract に渡す S3 上のオブジェクト
 type S3Location struct {
-	Bucket  string
-	Key     string
-	Version string
+	Bucket string
+	Key    string
 }
 
 func (l S3Location) toS3Object() *types.S3Object {
-	o := &types.S3Object{
+	return &types.S3Object{
 		Bucket: aws.String(l.Bucket),
 		Name:   aws.String(l.Key),
 	}
-	if l.Version != "" {
-		o.Version = aws.String(l.Version)
-	}
-	return o
 }
 
 func (l S3Location) validate() error {
@@ -73,8 +68,6 @@ type StartAnalysisInput struct {
 	JobTag             string
 	ClientRequestToken string
 	QueriesConfig      *types.QueriesConfig
-	OutputConfig       *types.OutputConfig
-	KMSKeyID           string
 }
 
 // StartDocumentAnalysis は非同期解析を開始し、ジョブ ID を返す
@@ -93,16 +86,12 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 		DocumentLocation: &types.DocumentLocation{S3Object: in.Document.toS3Object()},
 		FeatureTypes:     in.FeatureTypes,
 		QueriesConfig:    in.QueriesConfig,
-		OutputConfig:     in.OutputConfig,
 	}
 	if in.JobTag != "" {
 		params.JobTag = aws.String(in.JobTag)
 	}
 	if in.ClientRequestToken != "" {
 		params.ClientRequestToken = aws.String(in.ClientRequestToken)
-	}
-	if in.KMSKeyID != "" {
-		params.KMSKeyId = aws.String(in.KMSKeyID)
 	}
 	if in.SNSTopicARN != "" || in.RoleARN != "" {
 		if in.SNSTopicARN == "" || in.RoleARN == "" {

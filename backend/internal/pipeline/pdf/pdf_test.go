@@ -162,14 +162,6 @@ func TestInfo(t *testing.T) {
 	if info.Encrypted {
 		t.Errorf("Encrypted = true, want false")
 	}
-
-	pages, err := r.PageCount(context.Background(), path)
-	if err != nil {
-		t.Fatalf("PageCount() error = %v", err)
-	}
-	if pages != 3 {
-		t.Errorf("PageCount() = %d, want 3", pages)
-	}
 }
 
 func TestInfoDamaged(t *testing.T) {

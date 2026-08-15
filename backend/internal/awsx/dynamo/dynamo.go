@@ -220,11 +220,6 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 	return jobs, nil
 }
 
-// ListReviewPending はレビュー待ちのジョブを新しい順に取得する
-func (c *Client) ListReviewPending(ctx context.Context, limit int32) ([]Job, error) {
-	return c.ListByStatus(ctx, StatusReviewPending, limit)
-}
-
 func jobKey(jobID string) map[string]types.AttributeValue {
 	return map[string]types.AttributeValue{
 		attrJobID: &types.AttributeValueMemberS{Value: jobID},

@@ -47,8 +47,6 @@ func (e Env) Valid() bool {
 	}
 }
 
-func (e Env) String() string { return string(e) }
-
 // Requirement は Lambda ごとに必須とする環境変数を表す
 //
 // 5 つの Lambda は必要とする設定値が異なるため、構造体は 1 つに保ち、

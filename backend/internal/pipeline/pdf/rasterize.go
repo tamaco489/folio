@@ -39,17 +39,12 @@ func PageFileName(page int) string {
 	return fmt.Sprintf("%s-%04d.png", pagePrefix, page)
 }
 
-// Rasterize は PDF の全ページを PNG に変換する
-func (r *Runner) Rasterize(ctx context.Context, pdfPath, outDir string) (RasterizeResult, error) {
-	return r.RasterizePages(ctx, pdfPath, outDir, 0, 0)
-}
-
-// RasterizePages は指定範囲のページを PNG に変換する
+// Rasterize は指定範囲のページを PNG に変換する
 //
 // first, last に 0 を渡すとそれぞれ先頭ページ、末尾ページとして扱う
 // Lambda の /tmp は容量に上限があるため、ページ数が多い PDF は
 // 呼び出し側で範囲を分割して複数回に分けられるようにしてある
-func (r *Runner) RasterizePages(ctx context.Context, pdfPath, outDir string, first, last int) (RasterizeResult, error) {
+func (r *Runner) Rasterize(ctx context.Context, pdfPath, outDir string, first, last int) (RasterizeResult, error) {
 	if first < 0 || last < 0 || (last != 0 && first != 0 && last < first) {
 		return RasterizeResult{}, fmt.Errorf("pdf: invalid page range: first=%d last=%d", first, last)
 	}

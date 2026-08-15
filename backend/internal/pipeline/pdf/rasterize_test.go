@@ -72,7 +72,7 @@ func TestRasterize(t *testing.T) {
 	})
 	outDir := filepath.Join(tmp, "pages")
 
-	got, err := r.Rasterize(context.Background(), path, outDir)
+	got, err := r.Rasterize(context.Background(), path, outDir, 0, 0)
 	if err != nil {
 		t.Fatalf("Rasterize() error = %v", err)
 	}
@@ -98,7 +98,7 @@ func TestRasterize(t *testing.T) {
 	}
 }
 
-func TestRasterizePagesRange(t *testing.T) {
+func TestRasterizeRange(t *testing.T) {
 	r := requirePoppler(t)
 
 	tmp := t.TempDir()
@@ -109,9 +109,9 @@ func TestRasterizePagesRange(t *testing.T) {
 	})
 	outDir := filepath.Join(tmp, "pages")
 
-	got, err := r.RasterizePages(context.Background(), path, outDir, 2, 3)
+	got, err := r.Rasterize(context.Background(), path, outDir, 2, 3)
 	if err != nil {
-		t.Fatalf("RasterizePages() error = %v", err)
+		t.Fatalf("Rasterize() error = %v", err)
 	}
 
 	want := []string{
@@ -128,11 +128,11 @@ func TestRasterizePagesRange(t *testing.T) {
 	}
 }
 
-func TestRasterizePagesInvalidRange(t *testing.T) {
+func TestRasterizeInvalidRange(t *testing.T) {
 	t.Parallel()
 
 	r := NewRunner()
-	if _, err := r.RasterizePages(context.Background(), "sample.pdf", t.TempDir(), 3, 2); err == nil {
-		t.Fatal("RasterizePages() error = nil, want error")
+	if _, err := r.Rasterize(context.Background(), "sample.pdf", t.TempDir(), 3, 2); err == nil {
+		t.Fatal("Rasterize() error = nil, want error")
 	}
 }

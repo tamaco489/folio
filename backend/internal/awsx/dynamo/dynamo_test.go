@@ -271,16 +271,16 @@ func TestMarkFailedRequiresReason(t *testing.T) {
 	}
 }
 
-func TestListReviewPending(t *testing.T) {
+func TestListByStatusNewestFirst(t *testing.T) {
 	f := newFakeDynamo()
 	f.seed(Job{JobID: "old", Status: StatusReviewPending, Filename: "a.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
 	f.seed(Job{JobID: "new", Status: StatusReviewPending, Filename: "b.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(time.Hour)})
 	f.seed(Job{JobID: "other", Status: StatusCompleted, Filename: "c.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(2 * time.Hour)})
 	c := newTestClient(f, baseTime)
 
-	jobs, err := c.ListReviewPending(context.Background(), 0)
+	jobs, err := c.ListByStatus(context.Background(), StatusReviewPending, 0)
 	if err != nil {
-		t.Fatalf("ListReviewPending() error = %v", err)
+		t.Fatalf("ListByStatus() error = %v", err)
 	}
 	if len(jobs) != 2 {
 		t.Fatalf("len(jobs) = %d, want 2", len(jobs))

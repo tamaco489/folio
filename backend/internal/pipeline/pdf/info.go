@@ -41,15 +41,6 @@ func (r *Runner) Info(ctx context.Context, pdfPath string) (Info, error) {
 	return info, nil
 }
 
-// PageCount は PDF のページ数を返す
-func (r *Runner) PageCount(ctx context.Context, pdfPath string) (int, error) {
-	info, err := r.Info(ctx, pdfPath)
-	if err != nil {
-		return 0, err
-	}
-	return info.Pages, nil
-}
-
 // parseInfo は pdfinfo の "キー: 値" 形式の出力を解釈する
 func parseInfo(out []byte) (Info, error) {
 	var info Info

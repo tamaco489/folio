@@ -35,20 +35,14 @@ var (
 // Role は Converse API の会話ロール
 type Role string
 
-const (
-	RoleUser      Role = "user"
-	RoleAssistant Role = "assistant"
-)
+const RoleUser Role = "user"
 
 // ImageFormat は画像 content block の形式
+//
+// ラスタライズは pdftoppm の -png 固定であるため PNG のみを定義する
 type ImageFormat string
 
-const (
-	ImageFormatPNG  ImageFormat = "png"
-	ImageFormatJPEG ImageFormat = "jpeg"
-	ImageFormatGIF  ImageFormat = "gif"
-	ImageFormatWEBP ImageFormat = "webp"
-)
+const ImageFormatPNG ImageFormat = "png"
 
 // ContentPart はメッセージを構成する content block
 //
@@ -73,33 +67,23 @@ type ImagePart struct {
 
 func (ImagePart) isContentPart() {}
 
-// Text はテキストの content block を組み立てる
-func Text(s string) ContentPart { return TextPart{Text: s} }
-
-// Image は画像の content block を組み立てる
-func Image(format ImageFormat, b []byte) ContentPart {
-	return ImagePart{Format: format, Bytes: b}
-}
-
 // Message は 1 ターン分の入力
 type Message struct {
 	Role    Role
 	Content []ContentPart
 }
 
-// UserMessage は user ロールのメッセージを組み立てる
-func UserMessage(parts ...ContentPart) Message {
-	return Message{Role: RoleUser, Content: parts}
-}
-
 // UserText はテキストのみの user メッセージを組み立てる (経路 A 向け)
 func UserText(s string) Message {
-	return UserMessage(Text(s))
+	return Message{Role: RoleUser, Content: []ContentPart{TextPart{Text: s}}}
 }
 
 // UserImage は画像と指示テキストを組にした user メッセージを組み立てる (経路 B 向け)
 func UserImage(format ImageFormat, b []byte, prompt string) Message {
-	return UserMessage(Image(format, b), Text(prompt))
+	return Message{Role: RoleUser, Content: []ContentPart{
+		ImagePart{Format: format, Bytes: b},
+		TextPart{Text: prompt},
+	}}
 }
 
 // Request は Converse API への入力
@@ -114,10 +98,6 @@ type Request struct {
 	MaxTokens *int32
 	// Temperature は出力のばらつき
 	Temperature *float32
-	// TopP は候補の絞り込み
-	TopP *float32
-	// StopSequences は生成を打ち切る文字列
-	StopSequences []string
 	// RecordKey は記録・再生時のファイル名部分。RecordKey 関数で組み立てる
 	RecordKey string
 }
@@ -224,10 +204,7 @@ func (c *Client) Converse(ctx context.Context, req Request) (*Response, error) {
 		return nil, err
 	}
 
-	attempts := c.retry.MaxAttempts
-	if attempts < 1 {
-		attempts = 1
-	}
+	attempts := max(c.retry.MaxAttempts, 1)
 
 	var lastErr error
 	for attempt := 1; ; attempt++ {
@@ -291,12 +268,10 @@ func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) 
 			&types.SystemContentBlockMemberText{Value: req.System},
 		}
 	}
-	if req.MaxTokens != nil || req.Temperature != nil || req.TopP != nil || len(req.StopSequences) > 0 {
+	if req.MaxTokens != nil || req.Temperature != nil {
 		in.InferenceConfig = &types.InferenceConfiguration{
-			MaxTokens:     req.MaxTokens,
-			Temperature:   req.Temperature,
-			TopP:          req.TopP,
-			StopSequences: req.StopSequences,
+			MaxTokens:   req.MaxTokens,
+			Temperature: req.Temperature,
 		}
 	}
 	return in, nil
