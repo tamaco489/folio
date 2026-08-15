@@ -1,0 +1,69 @@
+{
+  "jobId": "01JB9Q4T7C2E8HXM5KRV0YWN3B",
+  "schemaVersion": "1.0",
+  "source": {
+    "bucket": "paper-idp-dev",
+    "key": "uploads/01JB9Q4T7C2E8HXM5KRV0YWN3B/original.pdf",
+    "filename": "jsai2026-0412.pdf",
+    "sha256": "3d81f5c60ba24e97cc1f0b7de54a9138f2b6e0cd4471a9835ee2c0d6b7a41f59",
+    "language": "ja",
+    "pageCount": 8,
+    "hasTextLayer": false,
+    "uploadedAt": "2026-08-15T03:41:02Z"
+  },
+  "metadata": {
+    "title": "疎な注意経路選択による長文脈言語モデルの高速化",
+    "authors": [
+      {
+        "name": "田中 藍子"
+      }
+    ],
+    "abstract": "長文脈を扱う言語モデルでは注意機構の計算量が系列長の二乗に比例する。本稿ではクエリヘッドごとに疎な鍵値対を選択する経路選択機構を提案する。"
+  },
+  "sections": [
+    {
+      "level": 1,
+      "heading": "1 はじめに",
+      "text": "近年の言語モデルは文脈長を 2K トークンから 100 万トークン超へと拡大してきたが、注意機構の計算量は依然として系列長の二乗に比例する...",
+      "pages": [1, 2]
+    },
+    {
+      "level": 2,
+      "heading": "2.1 経路選択関数",
+      "text": "クエリベクトル q と鍵ベクトル集合 K が与えられたとき、経路選択器は関連度スコアを計算する...",
+      "pages": [3]
+    }
+  ],
+  "figures": [
+    {
+      "id": "図 1",
+      "caption": "提案する疎な経路選択機構の全体像",
+      "page": 2
+    }
+  ],
+  "tables": [],
+  "references": [
+    {
+      "raw": "Vaswani, A. ほか. Attention Is All You Need. NeurIPS, 2017.",
+      "doi": null
+    }
+  ],
+  "provenance": {
+    "route": "bedrock",
+    "extractedAt": "2026-08-15T03:43:19Z",
+    "confidence": {
+      "title": 0.972,
+      "authors": 0.934,
+      "abstract": 0.988,
+      "sections": 0.901,
+      "figures": 0,
+      "references": 0.612
+    },
+    "cost": {
+      "bedrockModel": "claude-sonnet-4-6",
+      "bedrockInputTokens": 118460,
+      "bedrockOutputTokens": 9120
+    },
+    "durationMs": 132870
+  }
+}
