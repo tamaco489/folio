@@ -1,0 +1,39 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  # 追加を明示的な判断にしたいためデフォルトセットに依存しない
+  default: none
+  enable:
+    # 未処理のエラーは Go で最も事故につながりやすいため入れる
+    - errcheck
+    # golangci-lint 単体でも just vet と同じ検査が効くようにする
+    - govet
+    # 代入したまま使われない値を検出する (誤検出がほぼない)
+    - ineffassign
+    # SA (バグ) と S (簡略化) を検出する
+    # 命名や doc コメントを問う ST1000 系は既定で無効なため過剰にならない
+    - staticcheck
+    # 到達不能な未使用コードを検出する
+    - unused
+
+  settings:
+    errcheck:
+      # Close の戻り値を握りつぶす標準的な用法まで落とすと実装が滞る
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+    rules:
+      # テストは表明の簡潔さを優先しエラーチェックを必須にしない
+      - path: _test\.go
+        linters:
+          - errcheck
