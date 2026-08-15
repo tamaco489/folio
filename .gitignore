@@ -3,3 +3,19 @@
 
 # Temporary files
 tmp/
+
+# Lambda build artifacts
+backend/bin/
+
+# Lambda Layer archives
+backend/**/*.zip
+
+# Sample PDFs fetched from arXiv (default license forbids redistribution)
+backend/testdata/pdf/
+
+# Terraform working directory and state
+infra/**/.terraform/
+infra/**/*.tfstate*
+
+# Environment variables
+.env
