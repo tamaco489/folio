@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
@@ -17,13 +17,13 @@ const IndexStatusUpdatedAt = "gsi-status-updatedAt"
 
 // API は Client が利用する DynamoDB の操作。テストではフェイクに差し替える
 type API interface {
-	PutItem(ctx context.Context, params *awsdynamodb.PutItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.PutItemOutput, error)
-	GetItem(ctx context.Context, params *awsdynamodb.GetItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.GetItemOutput, error)
-	UpdateItem(ctx context.Context, params *awsdynamodb.UpdateItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.UpdateItemOutput, error)
-	Query(ctx context.Context, params *awsdynamodb.QueryInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.QueryOutput, error)
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
 }
 
-var _ API = (*awsdynamodb.Client)(nil)
+var _ API = (*dynamodb.Client)(nil)
 
 // Client は awsx 層が公開する DynamoDB クライアント
 type Client struct {
@@ -77,7 +77,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 		return Job{}, err
 	}
 
-	_, err = c.api.PutItem(ctx, &awsdynamodb.PutItemInput{
+	_, err = c.api.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName:           aws.String(c.tableName),
 		Item:                item,
 		ConditionExpression: aws.String("attribute_not_exists(#jobId) OR #status = :failed"),
@@ -103,7 +103,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 
 // GetJob は jobId でジョブを取得する。存在しない場合は ErrJobNotFound を返す
 func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
-	out, err := c.api.GetItem(ctx, &awsdynamodb.GetItemInput{
+	out, err := c.api.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(c.tableName),
 		Key:       jobKey(jobID),
 		// 冪等性の判定に使うため結果整合性の読み取りでは不十分
@@ -165,7 +165,7 @@ func (c *Client) MarkFailed(ctx context.Context, jobID, reason string) (Job, err
 }
 
 func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[string]string, values map[string]types.AttributeValue) (Job, error) {
-	out, err := c.api.UpdateItem(ctx, &awsdynamodb.UpdateItemInput{
+	out, err := c.api.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(c.tableName),
 		Key:                       jobKey(jobID),
 		UpdateExpression:          aws.String(expr),
@@ -190,7 +190,7 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 	if !status.Valid() {
 		return nil, fmt.Errorf("dynamo: unknown status %q", status)
 	}
-	in := &awsdynamodb.QueryInput{
+	in := &dynamodb.QueryInput{
 		TableName:              aws.String(c.tableName),
 		IndexName:              aws.String(IndexStatusUpdatedAt),
 		KeyConditionExpression: aws.String("#status = :status"),

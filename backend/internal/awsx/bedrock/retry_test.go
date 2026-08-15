@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
@@ -39,7 +39,7 @@ func testRetryConfig() RetryConfig {
 func TestConverseRetriesOnThrottling(t *testing.T) {
 	api := &fakeAPI{
 		errs: []error{throttling(), throttling(), nil},
-		outputs: []*awsbedrockruntime.ConverseOutput{
+		outputs: []*bedrockruntime.ConverseOutput{
 			nil, nil, textOutput(`{"ok":true}`),
 		},
 	}

@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
@@ -147,7 +147,7 @@ type Response struct {
 //
 // テストでフェイクに差し替えるためにインタフェースとして切り出す
 type ConverseAPI interface {
-	Converse(ctx context.Context, params *awsbedrockruntime.ConverseInput, optFns ...func(*awsbedrockruntime.Options)) (*awsbedrockruntime.ConverseOutput, error)
+	Converse(ctx context.Context, params *bedrockruntime.ConverseInput, optFns ...func(*bedrockruntime.Options)) (*bedrockruntime.ConverseOutput, error)
 }
 
 // Converser は経路 A と経路 B の双方が依存する呼び出し口
@@ -254,7 +254,7 @@ func (c *Client) Converse(ctx context.Context, req Request) (*Response, error) {
 	}
 }
 
-func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, error) {
+func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) {
 	modelID := req.ModelID
 	if modelID == "" {
 		modelID = c.defaultModelID
@@ -282,7 +282,7 @@ func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, erro
 		})
 	}
 
-	in := &awsbedrockruntime.ConverseInput{
+	in := &bedrockruntime.ConverseInput{
 		ModelId:  aws.String(modelID),
 		Messages: messages,
 	}
@@ -334,7 +334,7 @@ func toContentBlocks(parts []ContentPart) ([]types.ContentBlock, error) {
 	return blocks, nil
 }
 
-func newResponse(out *awsbedrockruntime.ConverseOutput) (*Response, error) {
+func newResponse(out *bedrockruntime.ConverseOutput) (*Response, error) {
 	if out == nil {
 		return nil, ErrNoTextContent
 	}

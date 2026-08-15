@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
@@ -15,10 +15,10 @@ import (
 // 条件式・更新式は文字列をそのまま解釈するため、Client が組み立てた式の意味を検証できる
 type fakeDynamo struct {
 	items      map[string]map[string]types.AttributeValue
-	lastQuery  *awsdynamodb.QueryInput
-	lastGet    *awsdynamodb.GetItemInput
-	lastPut    *awsdynamodb.PutItemInput
-	lastUpdate *awsdynamodb.UpdateItemInput
+	lastQuery  *dynamodb.QueryInput
+	lastGet    *dynamodb.GetItemInput
+	lastPut    *dynamodb.PutItemInput
+	lastUpdate *dynamodb.UpdateItemInput
 	err        error
 }
 
@@ -38,7 +38,7 @@ func (f *fakeDynamo) get(jobID string) map[string]types.AttributeValue {
 	return f.items[jobID]
 }
 
-func (f *fakeDynamo) PutItem(_ context.Context, params *awsdynamodb.PutItemInput, _ ...func(*awsdynamodb.Options)) (*awsdynamodb.PutItemOutput, error) {
+func (f *fakeDynamo) PutItem(_ context.Context, params *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
 	f.lastPut = params
 	if f.err != nil {
 		return nil, f.err
@@ -60,10 +60,10 @@ func (f *fakeDynamo) PutItem(_ context.Context, params *awsdynamodb.PutItemInput
 		return nil, condErr
 	}
 	f.items[key] = copyItem(params.Item)
-	return &awsdynamodb.PutItemOutput{}, nil
+	return &dynamodb.PutItemOutput{}, nil
 }
 
-func (f *fakeDynamo) GetItem(_ context.Context, params *awsdynamodb.GetItemInput, _ ...func(*awsdynamodb.Options)) (*awsdynamodb.GetItemOutput, error) {
+func (f *fakeDynamo) GetItem(_ context.Context, params *dynamodb.GetItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
 	f.lastGet = params
 	if f.err != nil {
 		return nil, f.err
@@ -72,10 +72,10 @@ func (f *fakeDynamo) GetItem(_ context.Context, params *awsdynamodb.GetItemInput
 	if err != nil {
 		return nil, err
 	}
-	return &awsdynamodb.GetItemOutput{Item: copyItem(f.items[key])}, nil
+	return &dynamodb.GetItemOutput{Item: copyItem(f.items[key])}, nil
 }
 
-func (f *fakeDynamo) UpdateItem(_ context.Context, params *awsdynamodb.UpdateItemInput, _ ...func(*awsdynamodb.Options)) (*awsdynamodb.UpdateItemOutput, error) {
+func (f *fakeDynamo) UpdateItem(_ context.Context, params *dynamodb.UpdateItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
 	f.lastUpdate = params
 	if f.err != nil {
 		return nil, f.err
@@ -97,14 +97,14 @@ func (f *fakeDynamo) UpdateItem(_ context.Context, params *awsdynamodb.UpdateIte
 		return nil, err
 	}
 	f.items[key] = updated
-	out := &awsdynamodb.UpdateItemOutput{}
+	out := &dynamodb.UpdateItemOutput{}
 	if params.ReturnValues == types.ReturnValueAllNew {
 		out.Attributes = copyItem(updated)
 	}
 	return out, nil
 }
 
-func (f *fakeDynamo) Query(_ context.Context, params *awsdynamodb.QueryInput, _ ...func(*awsdynamodb.Options)) (*awsdynamodb.QueryOutput, error) {
+func (f *fakeDynamo) Query(_ context.Context, params *dynamodb.QueryInput, _ ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
 	f.lastQuery = params
 	if f.err != nil {
 		return nil, f.err
@@ -133,7 +133,7 @@ func (f *fakeDynamo) Query(_ context.Context, params *awsdynamodb.QueryInput, _ 
 	if params.Limit != nil && int(*params.Limit) < len(matched) {
 		matched = matched[:*params.Limit]
 	}
-	return &awsdynamodb.QueryOutput{Items: matched, Count: int32(len(matched))}, nil
+	return &dynamodb.QueryOutput{Items: matched, Count: int32(len(matched))}, nil
 }
 
 func keyOf(item map[string]types.AttributeValue) (string, error) {

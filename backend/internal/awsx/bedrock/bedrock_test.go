@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
 // fakeAPI は ConverseAPI のフェイク。実 API は一切呼ばない
 type fakeAPI struct {
-	inputs  []*awsbedrockruntime.ConverseInput
-	outputs []*awsbedrockruntime.ConverseOutput
+	inputs  []*bedrockruntime.ConverseInput
+	outputs []*bedrockruntime.ConverseOutput
 	errs    []error
 }
 
-func (f *fakeAPI) Converse(_ context.Context, params *awsbedrockruntime.ConverseInput, _ ...func(*awsbedrockruntime.Options)) (*awsbedrockruntime.ConverseOutput, error) {
+func (f *fakeAPI) Converse(_ context.Context, params *bedrockruntime.ConverseInput, _ ...func(*bedrockruntime.Options)) (*bedrockruntime.ConverseOutput, error) {
 	i := len(f.inputs)
 	f.inputs = append(f.inputs, params)
 	if i < len(f.errs) && f.errs[i] != nil {
@@ -31,8 +31,8 @@ func (f *fakeAPI) Converse(_ context.Context, params *awsbedrockruntime.Converse
 
 func (f *fakeAPI) calls() int { return len(f.inputs) }
 
-func textOutput(text string) *awsbedrockruntime.ConverseOutput {
-	return &awsbedrockruntime.ConverseOutput{
+func textOutput(text string) *bedrockruntime.ConverseOutput {
+	return &bedrockruntime.ConverseOutput{
 		Output: &types.ConverseOutputMemberMessage{
 			Value: types.Message{
 				Role:    types.ConversationRoleAssistant,
@@ -50,7 +50,7 @@ func textOutput(text string) *awsbedrockruntime.ConverseOutput {
 }
 
 func TestConverseTextInput(t *testing.T) {
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
+	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
 	c := New(api, WithDefaultModelID("model-from-config"))
 
 	resp, err := c.Converse(context.Background(), Request{
@@ -187,7 +187,7 @@ func TestConverseValidation(t *testing.T) {
 }
 
 func TestConverseNoTextContent(t *testing.T) {
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{{
+	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{{
 		Output:     &types.ConverseOutputMemberMessage{Value: types.Message{}},
 		StopReason: types.StopReasonEndTurn,
 	}}}
