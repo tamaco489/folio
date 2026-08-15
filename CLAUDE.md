@@ -2,14 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## リポジトリの現状
-
-Phase 1 (経路 A / B の比較) を実装中。
-backend は Go モジュールと共有層のスタブまでが main に入っている。`infra/` はディレクトリだけで Terraform ファイルはまだない。
-
-Issue は #2 〜 #35 に分割済み。実装順と並列可能な組み合わせは `tmp/issue-dependencies.md` を参照する (`tmp/` は git 管理外)。
-
-### ツールチェーン
+## ツールチェーン
 
 asdf で管理し、ルートの `.tool-versions` で固定している。
 
@@ -18,38 +11,42 @@ golang    1.26.5
 terraform 1.15.8
 ```
 
-### コマンド
+## コマンド
 
 タスクランナーは Make ではなく [just](https://github.com/casey/just) を使う。
 justfile はルートに置かず `backend/` と `infra/` の直下に置くため、実行は各ディレクトリに移動してから行う。
 
 ```sh
-cd backend && just fmt   # go fmt ./...
-cd backend && just vet   # go vet ./...
-cd backend && just test  # go test ./...
+cd backend
+just fmt              # go fmt ./...
+just vet              # go vet ./...
+just test             # go test ./...
+just cmds             # ビルド対象を列挙する
+just build            # 全 Lambda をクロスコンパイルする
+just build-one <cmd>  # 単一の Lambda をビルドする (例: pipeline/validator)
+just package          # bin/{関数名}.zip に固める
+just clean            # bin/ 配下の成果物を削除する
 ```
 
-`infra/justfile` と Lambda のクロスコンパイルレシピはまだない。追加する際もこの前提に合わせること。
-
 ## ディレクトリ構成
-
-backend はディレクトリ骨格と `go.mod` まで作成済み、infra はディレクトリのみ。到達点は以下。
 
 ```text
 folio/
 ├── backend/                Go 単一モジュール (github.com/tamaco489/folio/backend)
 │   ├── cmd/
 │   │   ├── pipeline/       validator, preprocessor, textract-parser, bedrock-parser, finalizer
-│   │   └── api/            public, admin (未作成)
+│   │   └── api/            public, admin (Phase 1 の対象外)
 │   ├── internal/
-│   │   ├── config/         共有層
+│   │   ├── config/         共有層 — 環境変数の読み込みと検証
 │   │   ├── domain/         共有層 — 構造化 JSON のスキーマ
 │   │   ├── awsx/           共有層 — s3, dynamo, textract, bedrock
 │   │   ├── pipeline/       pdf, extract, normalize, verify
-│   │   └── api/            router, middleware, public, admin (未作成)
+│   │   └── api/            router, middleware, public, admin (Phase 1 の対象外)
 │   ├── tools/              fetch-corpus, build-truth, evaluate (デプロイ対象外)
+│   ├── testdata/           textract/ と bedrock/ に記録済みレスポンス
 │   ├── layers/             Lambda Layer のビルド定義 (Dockerfile + build.sh)
 │   ├── justfile
+│   ├── .golangci.yml
 │   └── go.mod
 └── infra/                  Terraform
     ├── modules/            storage, messaging, compute, pipeline, iam
@@ -57,17 +54,43 @@ folio/
     └── justfile
 ```
 
-- `cmd/` はサブシステム単位でグループ化し、階層を 2 段に揃える。片方だけフラットにしない
-- Lambda 関数名は `cmd/` 以下のパスをハイフンで連結して導出する (`cmd/pipeline/validator` → `dev-folio-pipeline-validator`)
-- `internal/` も同じ分け方。`config` `domain` `awsx` を共有層として最上位に置き、サブシステム固有は `pipeline/` `api/` にまとめる
-- `internal/pipeline/` の 4 つは Step Functions の State に対応する (`pdf` 前処理、`extract` 抽出、`normalize` スキーマ正規化、`verify` 検証)
-- `main.go` には `lambda.Start()` とハンドラの組み立てのみを置き、ロジックは `internal/` に配置する
-- `pkg/` は設けない。外部から import される想定がないため
-- `layers/` は中身で命名し、サブシステム軸では分けない。対応する Go パッケージは作らない
-- ビルドは `provided.al2023` / `arm64`、出力は `bin/{関数名}/bootstrap`
-- `testdata/` の配置規約は `backend/justfile` の冒頭コメントに書いてある。`testdata/pdf/` は arXiv 由来で再配布不可のため git 管理外
+## コードの規約
 
-命名規則やアーキテクチャの詳細は Notion の Develop データベース (親ページ: AWS AIP-C01) を参照する。
+共有層の実装で確立した型がある。新しいパッケージを書くときも、既存を変更するときもこれに揃える。
+
+### AWS SDK のラップ
+
+`internal/awsx/` の 4 パッケージは同じ形をしている。
+
+- **SDK のクライアントではなく `API` インタフェースを受け取る。** 使うメソッドだけを列挙し、`New(api API, ...)` で組み立てる。`*dynamodb.Client` などは `API` を満たすのでそのまま渡せる
+- **テストはフェイクで行い、実 AWS を呼ばない。** `s3test.Fake` のように別パッケージへ出す場合と、`fake_test.go` としてパッケージ内に閉じる場合がある。前者は他パッケージから使う想定があるとき
+- **エラーはセンチネルで公開する** (`ErrNotFound` `ErrJobNotFound` `ErrJobInProgress` など)。呼び出し側は `errors.Is` / `errors.As` で判定でき、SDK の型に依存しない
+- **バケット名・テーブル名は `New` に注入する。** パッケージ内で環境変数を読まない
+
+### 課金 API の扱い
+
+Textract と Bedrock は**記録・再生をインタフェース境界のデコレータとして実装している**。
+
+`Recorder` は実 API を通しつつレスポンスを溜め、`Replayer` は記録から返す。
+どちらも `API` (Bedrock は `Converser`) を満たすので、`New(replayer)` と差し替えるだけでページング畳み込みやリトライを含めた経路全体を実 API なしで検証できる。
+
+記録は `backend/testdata/{textract,bedrock}/` に置く。
+**実レスポンスでない記録には `note` フィールドでその旨を明記する。** 手書きや合成のフィクスチャを実物と誤認すると、通っているテストが何も保証しなくなる。
+
+### テストで実時間・乱数に依存しない
+
+待機・時刻・乱数は注入できる形にする。
+
+- Bedrock の指数バックオフは `WithSleeper` と `WithRandN` で差し替え、テストは実待機しない (テスト全体で 0.2 秒未満)
+- DynamoDB の `updatedAt` は `WithClock` で固定できる
+
+### 外部バイナリの扱い
+
+`internal/pipeline/pdf` は poppler を `os/exec` で呼ぶ。
+
+- 実行ファイルのパスをハードコードせず、`WithBinDir()` → 環境変数 → `/opt/bin` → `PATH` の順で解決する
+- CI にバイナリが無い可能性があるため、`exec.LookPath` で不在を検出したらテストを `t.Skip` する
+- **S3 の読み書きをこの層に持ち込まない。** ローカルのファイルパスを受け渡し、S3 との橋渡しは Lambda 側 (`cmd/`) が担う
 
 ### 依存の扱い
 
@@ -75,8 +98,8 @@ folio/
 以降の実装で新しい依存を追加しないこと。追加が必要なら理由を PR に書く。
 
 `backend/tools/tools.go` は `//go:build tools` を付けた依存保持専用のファイル。
-`aws-lambda-go` は最初の `main.go` が入るまでコードから参照されず、これがないと `go mod tidy` で削除される。
-参照先ができた時点でこのファイルは削除する。
+`aws-lambda-go` はどこからも参照されない間 `go mod tidy` で削除されるため、これで保持している。
+**最初の `main.go` が入って参照先ができたら、このファイルは削除する。**
 
 ## Git / GitHub ワークフロー
 
@@ -96,7 +119,7 @@ push は Bash の `git push`、PR 作成は GitHub MCP を使う (`push_files` �
 - `.claude/settings.json` — チーム共有の権限設定 (git/gh コマンドと GitHub MCP の一部を許可)。個人設定は `.claude/settings.local.json` (gitignore 済み)。
 - スキル: `smart-commit` (コミット〜PR)、`md-linter` (Markdown 静的解析・修正)。
 
-`md-linter` はプロジェクトルートの `.markdownlint.json` を設定として参照するが、まだ存在しない (未作成時は markdownlint-cli2 のデフォルトが適用される)。
+`md-linter` はプロジェクトルートの `.markdownlint.json` を設定として参照する (無い場合は markdownlint-cli2 のデフォルトが適用される)。
 
 ## 制約事項
 
