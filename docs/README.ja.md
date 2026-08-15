@@ -13,6 +13,10 @@ Phase 1 の到達点は、2 つの抽出経路の出力を比較できる状態�
 
 ## アーキテクチャ
 
+![folio のアーキテクチャ](images/architecture.svg)
+
+図の編集元は [images/architecture.drawio](images/architecture.drawio)。更新したら SVG を再エクスポートする。
+
 S3 へのアップロードを起点とするイベント駆動構成。処理は非同期に進む。
 
 | 層     | 責務                               | 主なサービス      |

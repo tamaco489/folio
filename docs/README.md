@@ -13,6 +13,10 @@ Phase 1 is complete when the outputs of the two extraction routes can be compare
 
 ## Architecture
 
+![folio architecture](images/architecture.svg)
+
+The diagram source is [images/architecture.drawio](images/architecture.drawio). Re-export the SVG whenever it changes.
+
 An event-driven pipeline triggered by an S3 upload. Processing is asynchronous.
 
 | Layer      | Responsibility                              | Services          |
