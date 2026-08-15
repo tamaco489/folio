@@ -1,0 +1,16 @@
+{
+  "modelId": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "route": "textract",
+  "recordedAt": "2026-08-15T00:00:00Z",
+  "response": {
+    "text": "{\"title\":\"Learning to Structure Scientific Documents\",\"authors\":[{\"name\":\"Jane Doe\",\"affiliation\":\"Example University\"},{\"name\":\"John Roe\",\"affiliation\":\"Example Institute\"}],\"abstract\":\"We present a pipeline that converts scientific PDFs into structured JSON by combining layout-aware OCR with a large language model.\",\"sections\":[{\"heading\":\"1 Introduction\",\"page\":1},{\"heading\":\"2 Related Work\",\"page\":2},{\"heading\":\"3 Method\",\"page\":3}],\"references\":[{\"title\":\"A Survey of Document Understanding\",\"doi\":\"10.1000/example.0001\"}]}",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 4821,
+      "outputTokens": 318,
+      "totalTokens": 5139
+    },
+    "latencyMs": 6142
+  },
+  "note": "synthetic placeholder fixture; replace with a real recording captured via Recorder once a billed run is approved"
+}
