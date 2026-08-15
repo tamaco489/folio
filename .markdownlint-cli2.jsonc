@@ -1,0 +1,8 @@
+{
+  // ルール定義は .markdownlint.json 側で管理する (md-linter スキルの参照先)
+  // ignores は markdownlint-cli2 専用オプションのためこのファイルにのみ書ける
+  "ignores": [
+    "tmp/**",
+    "node_modules/**"
+  ]
+}
