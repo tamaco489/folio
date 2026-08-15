@@ -3,10 +3,14 @@
 PR タイトルのラベルはこのファイルから選択する。
 ラベルを追加・変更した場合はこのファイルを更新すること。
 
-| ラベル     | 対象スコープ                                             |
-| ---------- | -------------------------------------------------------- |
-| `frontend` | React + TypeScript フロントエンド (`frontend/` 配下)     |
-| `backend`  | Go Lambda 関数 (`backend/api/`, `backend/lambda/` 配下)  |
-| `infra`    | AWS CDK インフラ (`infra/` 配下)                         |
-| `ci`       | CI ワークフロー (`.github/workflows/ci-*.yml`)           |
-| `cd`       | CD ワークフロー・デプロイ (`.github/workflows/cd-*.yml`) |
+ここに定義するのは PR タイトル用のラベルのみ。Issue の分類に使うラベル (`bug` など) は対象外とする。
+
+| ラベル     | 色        | 対象スコープ                                              |
+| ---------- | --------- | --------------------------------------------------------- |
+| `frontend` | `#fb10a9` | フロントエンド (`frontend/` 配下)                         |
+| `backend`  | `#4147d4` | Go の実装 (`backend/` 配下)                               |
+| `infra`    | `#b22ac3` | Terraform (`infra/` 配下)                                 |
+| `ci`       | `#efcc12` | CI ワークフロー (`.github/workflows/ci-*.yml`)            |
+| `cd`       | `#f49c51` | CD ワークフロー・デプロイ (`.github/workflows/cd-*.yml`)  |
+| `docs`     | `#1b072f` | ドキュメント (`docs/`, `README`, `CLAUDE.md`, `.claude/`) |
+| `chore`    | `#0e8a16` | 設定ファイル・依存関係・リポジトリ運用                    |
