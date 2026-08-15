@@ -8,22 +8,22 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // IndexStatusUpdatedAt は status ごとのジョブを更新時刻順に引く GSI
 const IndexStatusUpdatedAt = "gsi-status-updatedAt"
 
-// API は Client が利用する DynamoDB の操作。テストではフェイクに差し替える
+// API は Client が利用する DynamoDB の操作 (テストではフェイクに差し替える)
 type API interface {
-	PutItem(ctx context.Context, params *awsdynamodb.PutItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.PutItemOutput, error)
-	GetItem(ctx context.Context, params *awsdynamodb.GetItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.GetItemOutput, error)
-	UpdateItem(ctx context.Context, params *awsdynamodb.UpdateItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.UpdateItemOutput, error)
-	Query(ctx context.Context, params *awsdynamodb.QueryInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.QueryOutput, error)
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
 }
 
-var _ API = (*awsdynamodb.Client)(nil)
+var _ API = (*dynamodb.Client)(nil)
 
 // Client は awsx 層が公開する DynamoDB クライアント
 type Client struct {
@@ -35,7 +35,7 @@ type Client struct {
 // Option は Client の任意設定
 type Option func(*Client)
 
-// WithClock は時刻の取得方法を差し替える。テストで固定時刻を与えるために使う
+// WithClock は時刻の取得方法を差し替える (テストで固定時刻を与えるために使う)
 func WithClock(now func() time.Time) Option {
 	return func(c *Client) { c.now = now }
 }
@@ -58,11 +58,9 @@ func (c *Client) TableName() string { return c.tableName }
 
 // RegisterJob は条件付き書き込みでジョブを登録する
 //
-// jobId はファイルの SHA-256 なので、同じ PDF の再投入は同じ jobId になる。
-// 未登録か FAILED のときだけ書き込みを通すことで、専用テーブルを持たずに
-// 「成功したものだけ弾く」冪等性を 1 回の書き込みで成立させる。
-// 弾かれた場合は JobExistsError に旧レコードを載せて返すので、
-// 呼び出し側は追加の読み取りなしに PROCESSING か COMPLETED かを判定できる。
+// jobId はファイルの SHA-256 なので、同じ PDF の再投入は同じ jobId になる
+//   - 未登録か FAILED のときだけ書き込みを通すことで、専用テーブルを持たずに「成功したものだけ弾く」冪等性を 1 回の書き込みで成立させる
+//   - 弾かれた場合は JobExistsError に旧レコードを載せて返すので、呼び出し側は追加の読み取りなしに PROCESSING か COMPLETED かを判定できる
 func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, error) {
 	now := c.now().UTC()
 	job := Job{
@@ -77,7 +75,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 		return Job{}, err
 	}
 
-	_, err = c.api.PutItem(ctx, &awsdynamodb.PutItemInput{
+	_, err = c.api.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName:           aws.String(c.tableName),
 		Item:                item,
 		ConditionExpression: aws.String("attribute_not_exists(#jobId) OR #status = :failed"),
@@ -101,9 +99,9 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 	return job, nil
 }
 
-// GetJob は jobId でジョブを取得する。存在しない場合は ErrJobNotFound を返す
+// GetJob は jobId でジョブを取得する (存在しない場合は ErrJobNotFound を返す)
 func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
-	out, err := c.api.GetItem(ctx, &awsdynamodb.GetItemInput{
+	out, err := c.api.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(c.tableName),
 		Key:       jobKey(jobID),
 		// 冪等性の判定に使うため結果整合性の読み取りでは不十分
@@ -120,7 +118,7 @@ func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
 
 // UpdateStatus は既存ジョブの status を更新し、残っている errorReason を消す
 //
-// FAILED は理由の記録が必須のため受け付けない。MarkFailed を使う
+// FAILED は理由の記録が必須のため受け付けない (MarkFailed を使う)
 func (c *Client) UpdateStatus(ctx context.Context, jobID string, status Status) (Job, error) {
 	if !status.Valid() {
 		return Job{}, fmt.Errorf("dynamo: unknown status %q", status)
@@ -165,7 +163,7 @@ func (c *Client) MarkFailed(ctx context.Context, jobID, reason string) (Job, err
 }
 
 func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[string]string, values map[string]types.AttributeValue) (Job, error) {
-	out, err := c.api.UpdateItem(ctx, &awsdynamodb.UpdateItemInput{
+	out, err := c.api.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName:                 aws.String(c.tableName),
 		Key:                       jobKey(jobID),
 		UpdateExpression:          aws.String(expr),
@@ -185,12 +183,13 @@ func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[s
 }
 
 // ListByStatus は GSI で同じ status のジョブを updatedAt の新しい順に取得する
+//
 // limit が 0 以下の場合は DynamoDB の 1 ページ分をそのまま返す
 func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) ([]Job, error) {
 	if !status.Valid() {
 		return nil, fmt.Errorf("dynamo: unknown status %q", status)
 	}
-	in := &awsdynamodb.QueryInput{
+	in := &dynamodb.QueryInput{
 		TableName:              aws.String(c.tableName),
 		IndexName:              aws.String(IndexStatusUpdatedAt),
 		KeyConditionExpression: aws.String("#status = :status"),
@@ -218,11 +217,6 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 		jobs = append(jobs, job)
 	}
 	return jobs, nil
-}
-
-// ListReviewPending はレビュー待ちのジョブを新しい順に取得する
-func (c *Client) ListReviewPending(ctx context.Context, limit int32) ([]Job, error) {
-	return c.ListByStatus(ctx, StatusReviewPending, limit)
 }
 
 func jobKey(jobID string) map[string]types.AttributeValue {

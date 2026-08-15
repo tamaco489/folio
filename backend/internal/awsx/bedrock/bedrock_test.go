@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
-// fakeAPI は ConverseAPI のフェイク。実 API は一切呼ばない
+// fakeAPI は ConverseAPI のフェイク (実 API は一切呼ばない)
 type fakeAPI struct {
-	inputs  []*awsbedrockruntime.ConverseInput
-	outputs []*awsbedrockruntime.ConverseOutput
+	inputs  []*bedrockruntime.ConverseInput
+	outputs []*bedrockruntime.ConverseOutput
 	errs    []error
 }
 
-func (f *fakeAPI) Converse(_ context.Context, params *awsbedrockruntime.ConverseInput, _ ...func(*awsbedrockruntime.Options)) (*awsbedrockruntime.ConverseOutput, error) {
+func (f *fakeAPI) Converse(_ context.Context, params *bedrockruntime.ConverseInput, _ ...func(*bedrockruntime.Options)) (*bedrockruntime.ConverseOutput, error) {
 	i := len(f.inputs)
 	f.inputs = append(f.inputs, params)
 	if i < len(f.errs) && f.errs[i] != nil {
@@ -31,8 +31,8 @@ func (f *fakeAPI) Converse(_ context.Context, params *awsbedrockruntime.Converse
 
 func (f *fakeAPI) calls() int { return len(f.inputs) }
 
-func textOutput(text string) *awsbedrockruntime.ConverseOutput {
-	return &awsbedrockruntime.ConverseOutput{
+func textOutput(text string) *bedrockruntime.ConverseOutput {
+	return &bedrockruntime.ConverseOutput{
 		Output: &types.ConverseOutputMemberMessage{
 			Value: types.Message{
 				Role:    types.ConversationRoleAssistant,
@@ -50,7 +50,7 @@ func textOutput(text string) *awsbedrockruntime.ConverseOutput {
 }
 
 func TestConverseTextInput(t *testing.T) {
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
+	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
 	c := New(api, WithDefaultModelID("model-from-config"))
 
 	resp, err := c.Converse(context.Background(), Request{
@@ -139,40 +139,34 @@ func TestConverseMultimodalInput(t *testing.T) {
 }
 
 func TestConverseValidation(t *testing.T) {
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		req  Request
 		want error
 	}{
-		{
-			name: "model id missing",
+		"異常系_モデル ID が Request にも既定値にもない場合_ErrModelIDRequired が返ること": {
 			req:  Request{Messages: []Message{UserText("x")}},
 			want: ErrModelIDRequired,
 		},
-		{
-			name: "no messages",
+		"異常系_メッセージが 1 件もない場合_ErrEmptyRequest が返ること": {
 			req:  Request{ModelID: "m"},
 			want: ErrEmptyRequest,
 		},
-		{
-			name: "empty text",
+		"異常系_テキストが空文字の場合_ErrEmptyContent が返ること": {
 			req:  Request{ModelID: "m", Messages: []Message{UserText("")}},
 			want: ErrEmptyContent,
 		},
-		{
-			name: "empty image",
+		"異常系_画像のバイト列が空の場合_ErrEmptyContent が返ること": {
 			req:  Request{ModelID: "m", Messages: []Message{UserImage(ImageFormatPNG, nil, "p")}},
 			want: ErrEmptyContent,
 		},
-		{
-			name: "no content",
+		"異常系_content block が 1 つもない場合_ErrEmptyContent が返ること": {
 			req:  Request{ModelID: "m", Messages: []Message{{Role: RoleUser}}},
 			want: ErrEmptyContent,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			api := &fakeAPI{}
 			c := New(api)
 			_, err := c.Converse(context.Background(), tt.req)
@@ -187,7 +181,7 @@ func TestConverseValidation(t *testing.T) {
 }
 
 func TestConverseNoTextContent(t *testing.T) {
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{{
+	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{{
 		Output:     &types.ConverseOutputMemberMessage{Value: types.Message{}},
 		StopReason: types.StopReasonEndTurn,
 	}}}
@@ -199,22 +193,21 @@ func TestConverseNoTextContent(t *testing.T) {
 }
 
 func TestResponseDecodeJSON(t *testing.T) {
-	tests := []struct {
-		name      string
+	tests := map[string]struct {
 		text      string
 		wantTitle string
 		wantErr   bool
 	}{
-		{name: "bare json", text: `{"title":"a"}`, wantTitle: "a"},
-		{name: "fenced json", text: "```json\n{\"title\":\"b\"}\n```", wantTitle: "b"},
-		{name: "fenced without lang", text: "```\n{\"title\":\"c\"}\n```", wantTitle: "c"},
-		{name: "prose around json", text: "以下が結果です\n{\"title\":\"d\"}\nご確認ください", wantTitle: "d"},
-		{name: "no json at all", text: "申し訳ありませんが構造化できませんでした", wantErr: true},
-		{name: "broken json", text: `{"title":}`, wantErr: true},
+		"正常系_JSON のみの応答の場合_そのまま読み込めること":          {text: `{"title":"a"}`, wantTitle: "a"},
+		"正常系_言語指定つきコードフェンスの場合_フェンスを外して読み込めること":   {text: "```json\n{\"title\":\"b\"}\n```", wantTitle: "b"},
+		"正常系_言語指定なしコードフェンスの場合_フェンスを外して読み込めること":   {text: "```\n{\"title\":\"c\"}\n```", wantTitle: "c"},
+		"正常系_前後に散文がある場合_JSON 部分だけ切り出せること":        {text: "以下が結果です\n{\"title\":\"d\"}\nご確認ください", wantTitle: "d"},
+		"異常系_JSON が含まれない場合_ErrInvalidJSON が返ること": {text: "申し訳ありませんが構造化できませんでした", wantErr: true},
+		"異常系_JSON が壊れている場合_ErrInvalidJSON が返ること": {text: `{"title":}`, wantErr: true},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			var got struct {
 				Title string `json:"title"`
 			}

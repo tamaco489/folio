@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-// requirePoppler は poppler が使えない環境でテストをスキップする
-//
-// CI に poppler が入っていない可能性があるため、存在確認で分岐する
+// requirePoppler は poppler が使えない環境でテストをスキップする (CI に poppler が入っていない可能性があるため)
 func requirePoppler(t *testing.T) *Runner {
 	t.Helper()
 
@@ -32,8 +30,7 @@ func TestResolveBinDir(t *testing.T) {
 		t.Errorf("resolveBinDir(%q) = %q, want %q", dir, got, dir)
 	}
 
-	// Layer の既定パスが存在するかは実行環境に依存するため、
-	// 既定パスか PATH 委譲 (空文字) のどちらかであることだけを確かめる
+	// Layer の既定パスが存在するかは実行環境に依存するため、既定パスか PATH 委譲 (空文字) のどちらかであることだけを確かめる
 	got := resolveBinDir("")
 	if got != "" && got != DefaultBinDir {
 		t.Errorf("resolveBinDir(\"\") = %q, want %q or empty", got, DefaultBinDir)
@@ -43,19 +40,18 @@ func TestResolveBinDir(t *testing.T) {
 func TestResolveDPI(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		env  string
 		want int
 	}{
-		{name: "未設定なら既定値", env: "", want: DefaultDPI},
-		{name: "数値を採用する", env: "200", want: 200},
-		{name: "数値でなければ既定値", env: "high", want: DefaultDPI},
-		{name: "ゼロ以下なら既定値", env: "0", want: DefaultDPI},
+		"正常系_環境変数が未設定の場合_既定値になること":   {env: "", want: DefaultDPI},
+		"正常系_数値が設定された場合_その値が採用されること": {env: "200", want: 200},
+		"異常系_数値として解釈できない場合_既定値になること": {env: "high", want: DefaultDPI},
+		"境界値_ゼロが設定された場合_既定値になること":    {env: "0", want: DefaultDPI},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			if got := resolveDPI(tt.env); got != tt.want {
 				t.Errorf("resolveDPI(%q) = %d, want %d", tt.env, got, tt.want)
@@ -115,19 +111,19 @@ func TestBinaryFromBinDir(t *testing.T) {
 func TestClassify(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name   string
+	tests := map[string]struct {
 		stderr string
 		want   error
 	}{
-		{name: "パスワード保護", stderr: "Command Line Error: Incorrect password", want: ErrEncrypted},
-		{name: "壊れたファイル", stderr: "Syntax Error: Couldn't read xref table", want: ErrDamaged},
-		{name: "PDF ではない", stderr: "Syntax Warning: May not be a PDF file", want: ErrDamaged},
-		{name: "未知のエラー", stderr: "something else", want: nil},
+		"異常系_パスワード保護の出力の場合_ErrEncrypted に対応付くこと": {stderr: "Command Line Error: Incorrect password", want: ErrEncrypted},
+		"異常系_xref が読めない出力の場合_ErrDamaged に対応付くこと": {stderr: "Syntax Error: Couldn't read xref table", want: ErrDamaged},
+		"異常系_PDF ではない出力の場合_ErrDamaged に対応付くこと":   {stderr: "Syntax Warning: May not be a PDF file", want: ErrDamaged},
+		"異常系_破損を示す出力の場合_ErrDamaged に対応付くこと":      {stderr: "Syntax Error: PDF file is damaged - attempting to reconstruct xref table", want: ErrDamaged},
+		"異常系_未知の出力の場合_対応付けずに nil が返ること":          {stderr: "something else", want: nil},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := classify(tt.stderr)
 			if tt.want == nil {
@@ -162,14 +158,6 @@ func TestInfo(t *testing.T) {
 	if info.Encrypted {
 		t.Errorf("Encrypted = true, want false")
 	}
-
-	pages, err := r.PageCount(context.Background(), path)
-	if err != nil {
-		t.Fatalf("PageCount() error = %v", err)
-	}
-	if pages != 3 {
-		t.Errorf("PageCount() = %d, want 3", pages)
-	}
 }
 
 func TestInfoDamaged(t *testing.T) {
@@ -188,33 +176,29 @@ func TestInfoDamaged(t *testing.T) {
 func TestParseInfo(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name          string
+	tests := map[string]struct {
 		out           string
 		wantPages     int
 		wantEncrypted bool
 		wantErr       bool
 	}{
-		{
-			name:      "暗号化なし",
+		"正常系_暗号化されていない出力の場合_ページ数が読み取れること": {
 			out:       "Title:          sample\nPages:          12\nEncrypted:      no\n",
 			wantPages: 12,
 		},
-		{
-			name:          "暗号化あり",
+		"正常系_暗号化された出力の場合_Encrypted が true になること": {
 			out:           "Pages:          4\nEncrypted:      yes (print:yes copy:no)\n",
 			wantPages:     4,
 			wantEncrypted: true,
 		},
-		{
-			name:    "ページ数がない",
+		"異常系_ページ数の行がない場合_エラーになること": {
 			out:     "Title:          sample\n",
 			wantErr: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got, err := parseInfo([]byte(tt.out))
 			if tt.wantErr {

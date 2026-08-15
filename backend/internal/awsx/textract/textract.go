@@ -12,6 +12,7 @@ import (
 )
 
 // API は本パッケージが使う Textract の操作だけを切り出したインターフェース
+//
 // *awstextract.Client のほか Recorder と Replayer がこれを満たす
 type API interface {
 	StartDocumentAnalysis(ctx context.Context, params *awstextract.StartDocumentAnalysisInput, optFns ...func(*awstextract.Options)) (*awstextract.StartDocumentAnalysisOutput, error)
@@ -22,8 +23,10 @@ type API interface {
 var (
 	// ErrJobInProgress はジョブが未完了であることを示す
 	ErrJobInProgress = errors.New("textract: job is in progress")
+
 	// ErrJobFailed はジョブが失敗したことを示す
 	ErrJobFailed = errors.New("textract: job failed")
+
 	// ErrInvalidInput は呼び出し側の引数不備を示す
 	ErrInvalidInput = errors.New("textract: invalid input")
 )
@@ -40,20 +43,15 @@ func New(api API) *Client {
 
 // S3Location は Textract に渡す S3 上のオブジェクト
 type S3Location struct {
-	Bucket  string
-	Key     string
-	Version string
+	Bucket string
+	Key    string
 }
 
 func (l S3Location) toS3Object() *types.S3Object {
-	o := &types.S3Object{
+	return &types.S3Object{
 		Bucket: aws.String(l.Bucket),
 		Name:   aws.String(l.Key),
 	}
-	if l.Version != "" {
-		o.Version = aws.String(l.Version)
-	}
-	return o
 }
 
 func (l S3Location) validate() error {
@@ -64,6 +62,7 @@ func (l S3Location) validate() error {
 }
 
 // StartAnalysisInput は非同期解析の起動に必要な値
+//
 // FeatureTypes は #34 の検証で組み合わせを差し替えるため、必ず呼び出し側が指定する
 type StartAnalysisInput struct {
 	Document           S3Location
@@ -73,8 +72,6 @@ type StartAnalysisInput struct {
 	JobTag             string
 	ClientRequestToken string
 	QueriesConfig      *types.QueriesConfig
-	OutputConfig       *types.OutputConfig
-	KMSKeyID           string
 }
 
 // StartDocumentAnalysis は非同期解析を開始し、ジョブ ID を返す
@@ -93,16 +90,12 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 		DocumentLocation: &types.DocumentLocation{S3Object: in.Document.toS3Object()},
 		FeatureTypes:     in.FeatureTypes,
 		QueriesConfig:    in.QueriesConfig,
-		OutputConfig:     in.OutputConfig,
 	}
 	if in.JobTag != "" {
 		params.JobTag = aws.String(in.JobTag)
 	}
 	if in.ClientRequestToken != "" {
 		params.ClientRequestToken = aws.String(in.ClientRequestToken)
-	}
-	if in.KMSKeyID != "" {
-		params.KMSKeyId = aws.String(in.KMSKeyID)
 	}
 	if in.SNSTopicARN != "" || in.RoleARN != "" {
 		if in.SNSTopicARN == "" || in.RoleARN == "" {
@@ -133,11 +126,11 @@ type AnalysisResult struct {
 	Warnings         []types.Warning
 	StatusMessage    string
 	ModelVersion     string
-	// Pages は取得に要したレスポンス数
-	Pages int
+	Pages            int // Pages は取得に要したレスポンス数
 }
 
 // GetDocumentAnalysis はジョブ ID から結果を取得し、ページングを畳んで Block 配列をまとめて返す
+//
 // SNS の完了通知から得たジョブ ID をそのまま渡せる
 func (c *Client) GetDocumentAnalysis(ctx context.Context, jobID string) (*AnalysisResult, error) {
 	if jobID == "" {
@@ -194,6 +187,7 @@ func (c *Client) GetDocumentAnalysis(ctx context.Context, jobID string) (*Analys
 }
 
 // DetectInput は DetectDocumentText の入力
+//
 // Bytes を指定した場合は S3 ではなくバイト列を送る
 type DetectInput struct {
 	Document S3Location
@@ -208,6 +202,7 @@ type DetectResult struct {
 }
 
 // DetectDocumentText は OCR のみの同期 API を呼ぶ
+//
 // #34 で FeatureTypes 付きの解析と比較するベースラインとして使う
 func (c *Client) DetectDocumentText(ctx context.Context, in DetectInput) (*DetectResult, error) {
 	doc := &types.Document{}
@@ -239,6 +234,7 @@ func (c *Client) DetectDocumentText(ctx context.Context, in DetectInput) (*Detec
 }
 
 // ParseFeatureTypes は文字列の並びを FeatureType に変換する
+//
 // 組み合わせは未確定のため、環境変数や設定値から渡せるようにしている
 func ParseFeatureTypes(values []string) ([]types.FeatureType, error) {
 	if len(values) == 0 {

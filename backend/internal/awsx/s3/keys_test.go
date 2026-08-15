@@ -13,23 +13,22 @@ func TestKeys(t *testing.T) {
 
 	const jobID = "01JQ0000000000000000000000"
 
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		got  string
 		want string
 	}{
-		{"original pdf", s3.OriginalPDFKey(jobID), "uploads/" + jobID + "/original.pdf"},
-		{"page image", s3.PageImageKey(jobID, 1), "work/" + jobID + "/pages/page-0001.png"},
-		{"page image max", s3.PageImageKey(jobID, s3.MaxPageNumber), "work/" + jobID + "/pages/page-9999.png"},
-		{"textract raw", s3.TextractRawKey(jobID), "work/" + jobID + "/textract/raw.json"},
-		{"text layer", s3.TextLayerKey(jobID), "work/" + jobID + "/text/layer.txt"},
-		{"result textract", s3.ResultTextractKey(jobID), "outputs/" + jobID + "/result-textract.json"},
-		{"result bedrock", s3.ResultBedrockKey(jobID), "outputs/" + jobID + "/result-bedrock.json"},
-		{"comparison", s3.ComparisonKey(jobID), "outputs/" + jobID + "/comparison.json"},
+		"正常系_受領した PDF の場合_uploads 配下のキーになること":  {s3.OriginalPDFKey(jobID), "uploads/" + jobID + "/original.pdf"},
+		"正常系_ページ画像の場合_work 配下の 4 桁ゼロ埋めキーになること": {s3.PageImageKey(jobID, 1), "work/" + jobID + "/pages/page-0001.png"},
+		"正常系_Textract の生出力の場合_work 配下のキーになること": {s3.TextractRawKey(jobID), "work/" + jobID + "/textract/raw.json"},
+		"正常系_テキストレイヤーの場合_work 配下のキーになること":      {s3.TextLayerKey(jobID), "work/" + jobID + "/text/layer.txt"},
+		"正常系_経路 A の抽出結果の場合_outputs 配下のキーになること": {s3.ResultTextractKey(jobID), "outputs/" + jobID + "/result-textract.json"},
+		"正常系_経路 B の抽出結果の場合_outputs 配下のキーになること": {s3.ResultBedrockKey(jobID), "outputs/" + jobID + "/result-bedrock.json"},
+		"正常系_比較結果の場合_outputs 配下のキーになること":       {s3.ComparisonKey(jobID), "outputs/" + jobID + "/comparison.json"},
+		"境界値_上限ページの画像の場合_4 桁に収まること":            {s3.PageImageKey(jobID, s3.MaxPageNumber), "work/" + jobID + "/pages/page-9999.png"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			if tt.got != tt.want {
@@ -83,23 +82,22 @@ func TestKeyPrefixesAreDistinct(t *testing.T) {
 func TestJobIDFromUploadKey(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		key     string
 		want    string
 		wantErr bool
 	}{
-		{name: "upload key", key: "uploads/job-1/original.pdf", want: "job-1"},
-		{name: "work key", key: "work/job-1/text/layer.txt", wantErr: true},
-		{name: "output key", key: "outputs/job-1/comparison.json", wantErr: true},
-		{name: "other object", key: "uploads/job-1/other.pdf", wantErr: true},
-		{name: "empty job id", key: "uploads//original.pdf", wantErr: true},
-		{name: "extra segment", key: "uploads/job-1/nested/original.pdf", wantErr: true},
-		{name: "empty key", key: "", wantErr: true},
+		"正常系_uploads 配下のキーの場合_jobID が取り出せること":    {key: "uploads/job-1/original.pdf", want: "job-1"},
+		"異常系_work 配下のキーの場合_エラーになること":             {key: "work/job-1/text/layer.txt", wantErr: true},
+		"異常系_outputs 配下のキーの場合_エラーになること":          {key: "outputs/job-1/comparison.json", wantErr: true},
+		"異常系_uploads 配下でもオブジェクト名が異なる場合_エラーになること": {key: "uploads/job-1/other.pdf", wantErr: true},
+		"異常系_階層が深すぎる場合_エラーになること":                 {key: "uploads/job-1/nested/original.pdf", wantErr: true},
+		"境界値_jobID が空の場合_エラーになること":               {key: "uploads//original.pdf", wantErr: true},
+		"境界値_キーが空文字の場合_エラーになること":                 {key: "", wantErr: true},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			got, err := s3.JobIDFromUploadKey(tt.key)

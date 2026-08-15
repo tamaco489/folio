@@ -10,21 +10,24 @@ import (
 func TestPageFileName(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
+	tests := map[string]struct {
 		page int
 		want string
 	}{
-		{page: 1, want: "page-0001.png"},
-		{page: 42, want: "page-0042.png"},
-		{page: 999, want: "page-0999.png"},
-		{page: 1000, want: "page-1000.png"},
-		{page: 3000, want: "page-3000.png"},
+		"正常系_1 ページ目の場合_4 桁ゼロ埋めになること":    {page: 1, want: "page-0001.png"},
+		"正常系_2 桁のページの場合_4 桁ゼロ埋めになること":   {page: 42, want: "page-0042.png"},
+		"境界値_3 桁の上限の場合_4 桁ゼロ埋めのままであること": {page: 999, want: "page-0999.png"},
+		"境界値_4 桁に繰り上がる場合_桁が増えないこと":      {page: 1000, want: "page-1000.png"},
+		"境界値_非同期処理の上限ページの場合_4 桁に収まること":  {page: 3000, want: "page-3000.png"},
 	}
 
-	for _, tt := range tests {
-		if got := PageFileName(tt.page); got != tt.want {
-			t.Errorf("PageFileName(%d) = %q, want %q", tt.page, got, tt.want)
-		}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if got := PageFileName(tt.page); got != tt.want {
+				t.Errorf("PageFileName(%d) = %q, want %q", tt.page, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -72,7 +75,7 @@ func TestRasterize(t *testing.T) {
 	})
 	outDir := filepath.Join(tmp, "pages")
 
-	got, err := r.Rasterize(context.Background(), path, outDir)
+	got, err := r.Rasterize(context.Background(), path, outDir, 0, 0)
 	if err != nil {
 		t.Fatalf("Rasterize() error = %v", err)
 	}
@@ -98,7 +101,7 @@ func TestRasterize(t *testing.T) {
 	}
 }
 
-func TestRasterizePagesRange(t *testing.T) {
+func TestRasterizeRange(t *testing.T) {
 	r := requirePoppler(t)
 
 	tmp := t.TempDir()
@@ -109,9 +112,9 @@ func TestRasterizePagesRange(t *testing.T) {
 	})
 	outDir := filepath.Join(tmp, "pages")
 
-	got, err := r.RasterizePages(context.Background(), path, outDir, 2, 3)
+	got, err := r.Rasterize(context.Background(), path, outDir, 2, 3)
 	if err != nil {
-		t.Fatalf("RasterizePages() error = %v", err)
+		t.Fatalf("Rasterize() error = %v", err)
 	}
 
 	want := []string{
@@ -128,11 +131,11 @@ func TestRasterizePagesRange(t *testing.T) {
 	}
 }
 
-func TestRasterizePagesInvalidRange(t *testing.T) {
+func TestRasterizeInvalidRange(t *testing.T) {
 	t.Parallel()
 
 	r := NewRunner()
-	if _, err := r.RasterizePages(context.Background(), "sample.pdf", t.TempDir(), 3, 2); err == nil {
-		t.Fatal("RasterizePages() error = nil, want error")
+	if _, err := r.Rasterize(context.Background(), "sample.pdf", t.TempDir(), 3, 2); err == nil {
+		t.Fatal("Rasterize() error = nil, want error")
 	}
 }

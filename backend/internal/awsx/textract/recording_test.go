@@ -162,21 +162,21 @@ func TestRecordingValidateRejectsBrokenPaging(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]textract.Recording{
-		"最終ページにトークンが残る": {
+		"異常系_最終ページにトークンが残る場合_検証エラーになること": {
 			AnalysisPages: []textract.AnalysisPage{
 				{JobStatus: types.JobStatusSucceeded, NextToken: "dangling"},
 			},
 		},
-		"中間ページにトークンがない": {
+		"異常系_中間ページにトークンがない場合_検証エラーになること": {
 			AnalysisPages: []textract.AnalysisPage{
 				{JobStatus: types.JobStatusSucceeded},
 				{JobStatus: types.JobStatusSucceeded},
 			},
 		},
-		"ジョブ状態がない": {
+		"異常系_ジョブ状態がない場合_検証エラーになること": {
 			AnalysisPages: []textract.AnalysisPage{{}},
 		},
-		"記録が空": {},
+		"境界値_記録が空の場合_検証エラーになること": {},
 	}
 
 	for name, rec := range tests {

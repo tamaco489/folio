@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 )
 
 // testdataDir は justfile が定める記録の配置先
@@ -19,19 +19,18 @@ const samplePaperID = "2301.07041"
 
 // 記録済みレスポンスを再生し、実 API を呼ばずに構造化 JSON まで取り出せることを確かめる
 func TestReplayerReplaysRecordedResponses(t *testing.T) {
-	tests := []struct {
-		name      string
+	tests := map[string]struct {
 		route     Route
 		wantInput int32
 	}{
-		{name: "route A", route: RouteTextract, wantInput: 4821},
-		{name: "route B", route: RouteBedrock, wantInput: 2317},
+		"正常系_経路 A の記録の場合_実 API を呼ばずに構造化 JSON まで取り出せること": {route: RouteTextract, wantInput: 4821},
+		"正常系_経路 B の記録の場合_実 API を呼ばずに構造化 JSON まで取り出せること": {route: RouteBedrock, wantInput: 2317},
 	}
 
 	replayer := NewReplayer(testdataDir())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			resp, err := replayer.Converse(context.Background(), Request{
 				RecordKey: RecordKey(samplePaperID, tt.route),
 			})
@@ -74,7 +73,7 @@ func TestReplayerErrors(t *testing.T) {
 // 記録モードが応答をファイルに残し、再生モードで読み戻せることを確かめる
 func TestRecorderRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"recorded"}`)}}
+	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{textOutput(`{"title":"recorded"}`)}}
 	live := New(api, WithDefaultModelID("m"))
 
 	recorder := NewRecorder(live, dir, RouteBedrock)

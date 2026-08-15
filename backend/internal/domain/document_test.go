@@ -21,6 +21,7 @@ func readFixture(t *testing.T, name string) []byte {
 }
 
 // asAny は JSON をキーと値の集合へ落とす
+//
 // バイト列の比較ではインデントやキー順の差で落ちるため、意味的な同値で比較する
 func asAny(t *testing.T, b []byte) any {
 	t.Helper()
@@ -33,16 +34,15 @@ func asAny(t *testing.T, b []byte) any {
 }
 
 func TestDocumentRoundTrip(t *testing.T) {
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		fixture string
 	}{
-		{name: "経路 A の抽出結果", fixture: "result-textract.json"},
-		{name: "経路 B の抽出結果 (欠落しうるフィールドを含む)", fixture: "result-bedrock.json"},
+		"正常系_経路 A の抽出結果の場合_往復してもキーと値が変わらないこと":      {fixture: "result-textract.json"},
+		"正常系_経路 B の抽出結果の場合_欠落しうるフィールドを含んでも往復できること": {fixture: "result-bedrock.json"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			original := readFixture(t, tt.fixture)
 
 			var doc domain.Document

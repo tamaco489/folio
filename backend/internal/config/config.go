@@ -47,12 +47,9 @@ func (e Env) Valid() bool {
 	}
 }
 
-func (e Env) String() string { return string(e) }
-
 // Requirement は Lambda ごとに必須とする環境変数を表す
 //
-// 5 つの Lambda は必要とする設定値が異なるため、構造体は 1 つに保ち、
-// 何を必須とするかだけを呼び出し側が宣言する
+// 5 つの Lambda は必要とする設定値が異なるため、構造体は 1 つに保ち、何を必須とするかだけを呼び出し側が宣言する
 type Requirement string
 
 const (
@@ -65,8 +62,10 @@ const (
 var (
 	// ErrMissingEnv は必須の環境変数が設定されていないことを表す
 	ErrMissingEnv = errors.New("required environment variable is not set")
+
 	// ErrInvalidEnv は環境変数の値が想定外であることを表す
 	ErrInvalidEnv = errors.New("environment variable has an unexpected value")
+
 	// ErrUnknownRequirement は未知の Requirement が渡されたことを表す
 	ErrUnknownRequirement = errors.New("unknown requirement")
 )
@@ -75,16 +74,11 @@ var (
 //
 // S3 のキーは jobId から規則で導出できるため、プレフィックスごとの設定値は持たない
 type Config struct {
-	// Env は環境識別子。リソース名の接頭辞 {環境}-folio- に対応する
-	Env Env
-	// Region は AWS リージョン
-	Region string
-	// DocumentsBucket は PDF・中間データ・成果物を置く S3 バケット名
-	DocumentsBucket string
-	// JobsTable は処理状態と冪等性を管理する DynamoDB テーブル名
-	JobsTable string
-	// BedrockModelID は構造化に用いる Bedrock のモデル ID
-	BedrockModelID string
+	Env             Env    // Env は環境識別子 (リソース名の接頭辞 {環境}-folio- に対応する)
+	Region          string // Region は AWS リージョン
+	DocumentsBucket string // DocumentsBucket は PDF・中間データ・成果物を置く S3 バケット名
+	JobsTable       string // JobsTable は処理状態と冪等性を管理する DynamoDB テーブル名
+	BedrockModelID  string // BedrockModelID は構造化に用いる Bedrock のモデル ID
 }
 
 // Load は環境変数から設定を読み込み、required に挙げた項目が揃っているかを検証する
@@ -135,7 +129,7 @@ func Load(required ...Requirement) (Config, error) {
 	return cfg, nil
 }
 
-// lookup は環境変数を取得する。空白のみの値は未設定として扱う
+// lookup は環境変数を取得する (空白のみの値は未設定として扱う)
 func lookup(key string) string {
 	return strings.TrimSpace(os.Getenv(key))
 }
@@ -143,8 +137,7 @@ func lookup(key string) string {
 // LoadAWS は既定のクレデンシャルチェーンから AWS の設定を読み込む
 //
 // リージョンは SDK の解決順に委ねず Config.Region で上書きする
-// SDK 既定に任せると、AWS_REGION 未設定のローカル実行でプロファイルのリージョンが採用され、
-// Config.Region が指す us-east-1 との乖離が黙って生じる
+// SDK 既定に任せると、AWS_REGION 未設定のローカル実行でプロファイルのリージョンが採用され、Config.Region が指す us-east-1 との乖離が黙って生じる
 func (c Config) LoadAWS(ctx context.Context) (aws.Config, error) {
 	return awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(c.Region))
 }

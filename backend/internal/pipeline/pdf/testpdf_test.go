@@ -11,8 +11,7 @@ import (
 
 // テスト用の PDF は実行時に自前で生成する
 //
-// arXiv 由来の PDF は再配布不可のため testdata に置けず、
-// 依存追加も禁止されているため最小限の PDF を組み立てる
+// arXiv 由来の PDF は再配布不可のため testdata に置けず、依存追加も禁止されているため最小限の PDF を組み立てる
 
 // textPageContent はテキストレイヤーを持つページの内容ストリームを組み立てる
 func textPageContent(lines []string) string {
@@ -56,8 +55,7 @@ func writeTestPDF(t *testing.T, path string, contents []string) string {
 
 // buildTestPDF は非圧縮の PDF バイト列を組み立てる
 //
-// オブジェクト番号は 1=Catalog, 2=Pages, 以降ページごとに
-// (2i+1)=Page, (2i+2)=Contents, 最後にフォントを置く
+// オブジェクト番号は 1=Catalog, 2=Pages, 以降ページごとに (2i+1)=Page, (2i+2)=Contents, 最後にフォントを置く
 func buildTestPDF(contents []string) []byte {
 	pageCount := len(contents)
 	fontNum := 2*pageCount + 3

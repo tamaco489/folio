@@ -13,25 +13,16 @@ const pageBreak = '\f'
 
 // TextResult はテキストレイヤー抽出の結果
 type TextResult struct {
-	// Path は抽出したテキストの書き出し先
-	Path string
-
-	// Chars は空白を除いた文字数
-	Chars int
-
-	// Pages は抽出できたページ数
-	Pages int
-
-	// HasTextLayer はテキストレイヤーを持つと判定したか
-	HasTextLayer bool
+	Path         string // Path は抽出したテキストの書き出し先
+	Chars        int    // Chars は空白を除いた文字数
+	Pages        int    // Pages は抽出できたページ数
+	HasTextLayer bool   // HasTextLayer はテキストレイヤーを持つと判定したか
 }
 
 // ExtractText は PDF のテキストレイヤーを抽出する
 //
 // -layout は付けない
-// 二段組の論文で物理レイアウトを保つと左右の段が行単位で混ざり、
-// 検証層 (#23) が抽出値を原文と突合する際の部分一致が壊れるため、
-// 読み順を優先する既定の動作を使う
+// 二段組の論文で物理レイアウトを保つと左右の段が行単位で混ざり、検証層 (#23) が抽出値を原文と突合する際の部分一致が壊れるため、読み順を優先する既定の動作を使う
 func (r *Runner) ExtractText(ctx context.Context, pdfPath, outPath string) (TextResult, error) {
 	if dir := filepath.Dir(outPath); dir != "" {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -61,8 +52,7 @@ func (r *Runner) ExtractText(ctx context.Context, pdfPath, outPath string) (Text
 
 // countText は空白を除いた文字数とページ数を数える
 //
-// ページ数は pdftotext が各ページ末尾に置く改ページ文字から求める
-// pdfinfo をもう一度起動せずに済ませるための措置
+// ページ数は pdftotext が各ページ末尾に置く改ページ文字から求める (pdfinfo をもう一度起動せずに済ませるための措置)
 func countText(text string) (chars, pages int) {
 	for _, r := range text {
 		switch {
