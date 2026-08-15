@@ -73,23 +73,22 @@ func TestLoadRegionDefaults(t *testing.T) {
 }
 
 func TestLoadEnvironmentValidation(t *testing.T) {
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		value   string
 		want    Env
 		wantErr error
 	}{
-		{name: "dev", value: "dev", want: EnvDev},
-		{name: "stg", value: "stg", want: EnvStg},
-		{name: "prd", value: "prd", want: EnvPrd},
-		{name: "空文字は欠落", value: "", wantErr: ErrMissingEnv},
-		{name: "空白のみは欠落", value: "   ", wantErr: ErrMissingEnv},
-		{name: "想定外の値", value: "prod", wantErr: ErrInvalidEnv},
-		{name: "大文字は認めない", value: "DEV", wantErr: ErrInvalidEnv},
+		"正常系_dev が指定された場合_EnvDev として読み込まれること": {value: "dev", want: EnvDev},
+		"正常系_stg が指定された場合_EnvStg として読み込まれること": {value: "stg", want: EnvStg},
+		"正常系_prd が指定された場合_EnvPrd として読み込まれること": {value: "prd", want: EnvPrd},
+		"異常系_空文字の場合_ErrMissingEnv が返ること":      {value: "", wantErr: ErrMissingEnv},
+		"異常系_空白のみの場合_ErrMissingEnv が返ること":     {value: "   ", wantErr: ErrMissingEnv},
+		"異常系_想定外の値の場合_ErrInvalidEnv が返ること":    {value: "prod", wantErr: ErrInvalidEnv},
+		"異常系_大文字の場合_ErrInvalidEnv が返ること":      {value: "DEV", wantErr: ErrInvalidEnv},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			env := fullEnv()
 			env[EnvKeyEnvironment] = tt.value
 			setEnv(t, env)
@@ -115,18 +114,17 @@ func TestLoadEnvironmentValidation(t *testing.T) {
 }
 
 func TestLoadMissingRequiredValue(t *testing.T) {
-	tests := []struct {
-		name        string
+	tests := map[string]struct {
 		missingKey  string
 		requirement Requirement
 	}{
-		{name: "バケット名", missingKey: EnvKeyDocumentsBucket, requirement: RequireDocumentsBucket},
-		{name: "テーブル名", missingKey: EnvKeyJobsTable, requirement: RequireJobsTable},
-		{name: "モデル ID", missingKey: EnvKeyBedrockModelID, requirement: RequireBedrockModelID},
+		"異常系_必須のバケット名が欠落した場合_ErrMissingEnv が返ること":   {missingKey: EnvKeyDocumentsBucket, requirement: RequireDocumentsBucket},
+		"異常系_必須のテーブル名が欠落した場合_ErrMissingEnv が返ること":   {missingKey: EnvKeyJobsTable, requirement: RequireJobsTable},
+		"異常系_必須のモデル ID が欠落した場合_ErrMissingEnv が返ること": {missingKey: EnvKeyBedrockModelID, requirement: RequireBedrockModelID},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			env := fullEnv()
 			env[tt.missingKey] = ""
 			setEnv(t, env)
@@ -229,16 +227,15 @@ func isolateAWSEnv(t *testing.T) {
 
 // SDK の解決順ではなく Config.Region が採用されることを確かめる
 func TestConfigLoadAWSUsesConfigRegion(t *testing.T) {
-	tests := []struct {
-		name      string
+	tests := map[string]struct {
 		awsRegion string
 	}{
-		{name: "AWS_REGION 未設定"},
-		{name: "AWS_REGION が別リージョン", awsRegion: "ap-northeast-1"},
+		"正常系_AWS_REGION が未設定の場合_Config.Region が採用されること":    {},
+		"正常系_AWS_REGION が別リージョンの場合_Config.Region が採用されること": {awsRegion: "ap-northeast-1"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			env := fullEnv()
 			env[EnvKeyRegion] = tt.awsRegion
 			setEnv(t, env)

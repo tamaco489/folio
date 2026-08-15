@@ -82,18 +82,18 @@ func TestStartDocumentAnalysisRejectsInvalidInput(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]textract.StartAnalysisInput{
-		"バケット未指定": {
+		"異常系_バケットが未指定の場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Key: "uploads/job-1/original.pdf"},
 			FeatureTypes: []types.FeatureType{types.FeatureTypeLayout},
 		},
-		"FeatureTypes 未指定": {
+		"異常系_FeatureTypes が未指定の場合_ErrInvalidInput が返ること": {
 			Document: textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
 		},
-		"未知の FeatureType": {
+		"異常系_未知の FeatureType の場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
 			FeatureTypes: []types.FeatureType{"LAYOUTS"},
 		},
-		"SNS トピックのみ指定": {
+		"異常系_SNS トピックのみ指定した場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
 			FeatureTypes: []types.FeatureType{types.FeatureTypeLayout},
 			SNSTopicARN:  "arn:aws:sns:ap-northeast-1:000000000000:dev-folio-textract",

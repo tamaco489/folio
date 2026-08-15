@@ -10,21 +10,24 @@ import (
 func TestPageFileName(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
+	tests := map[string]struct {
 		page int
 		want string
 	}{
-		{page: 1, want: "page-0001.png"},
-		{page: 42, want: "page-0042.png"},
-		{page: 999, want: "page-0999.png"},
-		{page: 1000, want: "page-1000.png"},
-		{page: 3000, want: "page-3000.png"},
+		"正常系_1 ページ目の場合_4 桁ゼロ埋めになること":    {page: 1, want: "page-0001.png"},
+		"正常系_2 桁のページの場合_4 桁ゼロ埋めになること":   {page: 42, want: "page-0042.png"},
+		"境界値_3 桁の上限の場合_4 桁ゼロ埋めのままであること": {page: 999, want: "page-0999.png"},
+		"境界値_4 桁に繰り上がる場合_桁が増えないこと":      {page: 1000, want: "page-1000.png"},
+		"境界値_非同期処理の上限ページの場合_4 桁に収まること":  {page: 3000, want: "page-3000.png"},
 	}
 
-	for _, tt := range tests {
-		if got := PageFileName(tt.page); got != tt.want {
-			t.Errorf("PageFileName(%d) = %q, want %q", tt.page, got, tt.want)
-		}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if got := PageFileName(tt.page); got != tt.want {
+				t.Errorf("PageFileName(%d) = %q, want %q", tt.page, got, tt.want)
+			}
+		})
 	}
 }
 

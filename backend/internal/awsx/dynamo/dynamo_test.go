@@ -61,16 +61,15 @@ func TestRegisterJobNew(t *testing.T) {
 }
 
 func TestRegisterJobConflict(t *testing.T) {
-	tests := []struct {
-		name   string
+	tests := map[string]struct {
 		status Status
 	}{
-		{"処理中は二重起動を防ぐ", StatusProcessing},
-		{"完了済みは再処理しない", StatusCompleted},
-		{"レビュー待ちは再処理しない", StatusReviewPending},
+		"異常系_既存が PROCESSING の場合_二重起動を防いで弾かれること":   {StatusProcessing},
+		"異常系_既存が COMPLETED の場合_再処理せずに弾かれること":      {StatusCompleted},
+		"異常系_既存が REVIEW_PENDING の場合_再処理せずに弾かれること": {StatusReviewPending},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			f := newFakeDynamo()
 			f.seed(Job{
 				JobID:     "hash-1",
@@ -319,19 +318,24 @@ func TestListByStatusLimit(t *testing.T) {
 }
 
 func TestStatusReprocessable(t *testing.T) {
-	tests := map[Status]bool{
-		StatusProcessing:    false,
-		StatusCompleted:     false,
-		StatusReviewPending: false,
-		StatusFailed:        true,
+	tests := map[string]struct {
+		status Status
+		want   bool
+	}{
+		"正常系_PROCESSING の場合_再処理できないこと":     {status: StatusProcessing, want: false},
+		"正常系_COMPLETED の場合_再処理できないこと":      {status: StatusCompleted, want: false},
+		"正常系_REVIEW_PENDING の場合_再処理できないこと": {status: StatusReviewPending, want: false},
+		"正常系_FAILED の場合_再処理できること":          {status: StatusFailed, want: true},
 	}
-	for status, want := range tests {
-		if got := status.Reprocessable(); got != want {
-			t.Errorf("%v.Reprocessable() = %v, want %v", status, got, want)
-		}
-		if !status.Valid() {
-			t.Errorf("%v should be valid", status)
-		}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := tt.status.Reprocessable(); got != tt.want {
+				t.Errorf("%v.Reprocessable() = %v, want %v", tt.status, got, tt.want)
+			}
+			if !tt.status.Valid() {
+				t.Errorf("%v should be valid", tt.status)
+			}
+		})
 	}
 	if Status("UNKNOWN").Valid() {
 		t.Error("UNKNOWN should be invalid")

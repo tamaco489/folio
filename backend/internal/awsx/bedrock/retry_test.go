@@ -108,26 +108,22 @@ func TestConverseBackoffCappedAtMaxDelay(t *testing.T) {
 
 // full jitter が有効な場合、待機時間が [0, 指数バックオフ値] に収まることを確かめる
 func TestConverseBackoffJitter(t *testing.T) {
-	tests := []struct {
-		name  string
+	tests := map[string]struct {
 		randN func(int64) int64
 		want  []time.Duration
 	}{
-		{
-			name:  "乱数が下限",
+		"境界値_乱数が下限を返す場合_待機時間がゼロになること": {
 			randN: func(int64) int64 { return 0 },
 			want:  []time.Duration{0, 0},
 		},
-		{
-			name:  "乱数が中央",
+		"正常系_乱数が中央を返す場合_指数バックオフ値の半分になること": {
 			randN: func(n int64) int64 { return n / 2 },
 			want: []time.Duration{
 				time.Duration((int64(500*time.Millisecond) + 1) / 2),
 				time.Duration((int64(time.Second) + 1) / 2),
 			},
 		},
-		{
-			name:  "乱数が上限",
+		"境界値_乱数が上限を返す場合_指数バックオフ値そのものになること": {
 			randN: func(n int64) int64 { return n - 1 },
 			want:  []time.Duration{500 * time.Millisecond, time.Second},
 		},
@@ -135,8 +131,8 @@ func TestConverseBackoffJitter(t *testing.T) {
 
 	upper := []time.Duration{500 * time.Millisecond, time.Second}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			api := &fakeAPI{errs: []error{throttling(), throttling(), nil}}
 			sleeper := &fakeSleeper{}
 			rc := testRetryConfig()
@@ -212,26 +208,25 @@ func TestConverseAbortsWhenSleeperFails(t *testing.T) {
 }
 
 func TestIsRetryable(t *testing.T) {
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		err  error
 		want bool
 	}{
-		{name: "nil", err: nil, want: false},
-		{name: "throttling", err: &types.ThrottlingException{}, want: true},
-		{name: "service unavailable", err: &types.ServiceUnavailableException{}, want: true},
-		{name: "internal server", err: &types.InternalServerException{}, want: true},
-		{name: "model timeout", err: &types.ModelTimeoutException{}, want: true},
-		{name: "model not ready", err: &types.ModelNotReadyException{}, want: true},
-		{name: "validation", err: &types.ValidationException{}, want: false},
-		{name: "access denied", err: &types.AccessDeniedException{}, want: false},
-		{name: "quota exceeded", err: &types.ServiceQuotaExceededException{}, want: false},
-		{name: "context canceled", err: context.Canceled, want: false},
-		{name: "wrapped throttling", err: errors.Join(errors.New("outer"), &types.ThrottlingException{}), want: true},
+		"正常系_スロットリングの場合_リトライ対象と判定されること":       {err: &types.ThrottlingException{}, want: true},
+		"正常系_サービス利用不可の場合_リトライ対象と判定されること":      {err: &types.ServiceUnavailableException{}, want: true},
+		"正常系_内部エラーの場合_リトライ対象と判定されること":         {err: &types.InternalServerException{}, want: true},
+		"正常系_モデルのタイムアウトの場合_リトライ対象と判定されること":    {err: &types.ModelTimeoutException{}, want: true},
+		"正常系_モデル未準備の場合_リトライ対象と判定されること":        {err: &types.ModelNotReadyException{}, want: true},
+		"正常系_ラップされたスロットリングの場合_リトライ対象と判定されること": {err: errors.Join(errors.New("outer"), &types.ThrottlingException{}), want: true},
+		"異常系_入力不正の場合_リトライ対象外と判定されること":         {err: &types.ValidationException{}, want: false},
+		"異常系_権限不足の場合_リトライ対象外と判定されること":         {err: &types.AccessDeniedException{}, want: false},
+		"異常系_クォータ超過の場合_リトライ対象外と判定されること":       {err: &types.ServiceQuotaExceededException{}, want: false},
+		"異常系_ctx がキャンセルされた場合_リトライ対象外と判定されること": {err: context.Canceled, want: false},
+		"境界値_エラーが nil の場合_リトライ対象外と判定されること":    {err: nil, want: false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			if got := IsRetryable(tt.err); got != tt.want {
 				t.Errorf("IsRetryable = %v, want %v", got, tt.want)
 			}

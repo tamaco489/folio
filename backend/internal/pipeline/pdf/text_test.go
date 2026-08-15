@@ -11,20 +11,19 @@ import (
 func TestCountText(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name      string
+	tests := map[string]struct {
 		text      string
 		wantChars int
 		wantPages int
 	}{
-		{name: "空文字", text: "", wantChars: 0, wantPages: 1},
-		{name: "空白は数えない", text: "a b\tc\nd", wantChars: 4, wantPages: 1},
-		{name: "改ページでページを数える", text: "abc\fdef\f", wantChars: 6, wantPages: 2},
-		{name: "日本語も 1 文字として数える", text: "論文\f", wantChars: 2, wantPages: 1},
+		"境界値_空文字の場合_0 文字 1 ページになること":      {text: "", wantChars: 0, wantPages: 1},
+		"正常系_空白を含む場合_空白を除いた文字数になること":      {text: "a b\tc\nd", wantChars: 4, wantPages: 1},
+		"正常系_改ページを含む場合_改ページの数だけページを数えること": {text: "abc\fdef\f", wantChars: 6, wantPages: 2},
+		"正常系_日本語を含む場合_1 文字として数えること":       {text: "論文\f", wantChars: 2, wantPages: 1},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			chars, pages := countText(tt.text)
 			if chars != tt.wantChars {
@@ -40,21 +39,20 @@ func TestCountText(t *testing.T) {
 func TestHasTextLayer(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name  string
+	tests := map[string]struct {
 		chars int
 		pages int
 		want  bool
 	}{
-		{name: "テキストなし", chars: 0, pages: 10, want: false},
-		{name: "スタンプ程度のノイズ", chars: 30, pages: 10, want: false},
-		{name: "閾値ちょうど", chars: 500, pages: 10, want: true},
-		{name: "本文相当", chars: 20000, pages: 10, want: true},
-		{name: "ページ数がゼロ", chars: 100, pages: 0, want: false},
+		"正常系_テキストが 1 文字もない場合_テキストレイヤーなしと判定されること":    {chars: 0, pages: 10, want: false},
+		"正常系_スタンプ程度のノイズしかない場合_テキストレイヤーなしと判定されること":   {chars: 30, pages: 10, want: false},
+		"正常系_本文相当の文字数がある場合_テキストレイヤーありと判定されること":      {chars: 20000, pages: 10, want: true},
+		"境界値_1 ページあたりが閾値ちょうどの場合_テキストレイヤーありと判定されること": {chars: 500, pages: 10, want: true},
+		"境界値_ページ数がゼロの場合_ゼロ除算せず false になること":         {chars: 100, pages: 0, want: false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			if got := hasTextLayer(tt.chars, tt.pages, DefaultMinCharsPerPage); got != tt.want {
 				t.Errorf("hasTextLayer(%d, %d) = %v, want %v", tt.chars, tt.pages, got, tt.want)
