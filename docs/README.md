@@ -66,6 +66,8 @@ Roles are separated by prefix within a single bucket.
 uploads/{jobId}/original.pdf          Received PDF. Event trigger point
 work/{jobId}/pages/page-NNNN.png      Rasterized pages
 work/{jobId}/textract/raw.json        Raw Textract output
+work/{jobId}/textract/callback.json   Data needed to answer the Textract completion notification (task token etc.)
+work/{jobId}/bedrock/page-NNNN.json   Per-page extraction result of Route B
 work/{jobId}/text/layer.txt           Extracted text layer
 outputs/{jobId}/result-textract.json  Route A result
 outputs/{jobId}/result-bedrock.json   Route B result

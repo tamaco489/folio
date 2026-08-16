@@ -22,16 +22,19 @@ const (
 const MaxPageNumber = 9999
 
 const (
-	objectOriginalPDF     = "original.pdf"
-	objectTextractRaw     = "raw.json"
-	objectTextLayer       = "layer.txt"
-	objectResultTextract  = "result-textract.json"
-	objectResultBedrock   = "result-bedrock.json"
-	objectComparison      = "comparison.json"
-	segmentPages          = "pages"
-	segmentTextract       = "textract"
-	segmentText           = "text"
-	pageImageNameTemplate = "page-%04d.png"
+	objectOriginalPDF      = "original.pdf"
+	objectTextractRaw      = "raw.json"
+	objectTextractCallback = "callback.json"
+	objectTextLayer        = "layer.txt"
+	objectResultTextract   = "result-textract.json"
+	objectResultBedrock    = "result-bedrock.json"
+	objectComparison       = "comparison.json"
+	segmentPages           = "pages"
+	segmentTextract        = "textract"
+	segmentText            = "text"
+	segmentBedrock         = "bedrock"
+	pageImageNameTemplate  = "page-%04d.png"
+	pageResultNameTemplate = "page-%04d.json"
 )
 
 // OriginalPDFKey は受領した PDF のキーを組み立てる
@@ -47,6 +50,20 @@ func PageImageKey(jobID string, page int) string {
 // TextractRawKey は Textract の生出力のキーを組み立てる
 func TextractRawKey(jobID string) string {
 	return join(PrefixWork, jobID, segmentTextract, objectTextractRaw)
+}
+
+// TextractCallbackKey は Textract の完了通知を受けて Step Functions へ応答するために要する情報 (タスクトークンなど) のキーを組み立てる
+//
+// タスクトークンは Textract の JobTag (64 文字上限) に収まらないため、起動側が S3 に退避し、通知を受けた側が読み戻す
+func TextractCallbackKey(jobID string) string {
+	return join(PrefixWork, jobID, segmentTextract, objectTextractCallback)
+}
+
+// BedrockPageResultKey は経路 B (Bedrock) のページ単位の抽出結果のキーを組み立てる
+//
+// Map から 1 ページずつ書き出され、結合は Map の外で行う。ページ画像と同じ 4 桁ゼロ埋めで辞書順とページ順を揃える
+func BedrockPageResultKey(jobID string, page int) string {
+	return join(PrefixWork, jobID, segmentBedrock, fmt.Sprintf(pageResultNameTemplate, page))
 }
 
 // TextLayerKey は PDF から抽出したテキストレイヤーのキーを組み立てる
