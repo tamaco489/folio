@@ -31,14 +31,14 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 | Terraform      | ルートの `.tool-versions` のバージョン ([asdf](https://asdf-vm.com/) で管理)                          |
 | AWS 認証       | `AWS_PROFILE` などで対象アカウントの認証情報を用意する。リージョンは `us-east-1`                      |
 | アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない    |
-| state バケット | `prd-folio-tfstate` (`ap-northeast-1`) が存在すること。Terraform の管理外で、ユーザーが事前に作成する |
+| state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
 
 `terraform.tfvars` には `env` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
 plan の段階で `TF_VAR_account_id` と認証情報のアカウントが一致することを検査する。
 
 ## state
 
-state は S3 backend (`prd-folio-tfstate`) に置き、key を `envs/{env}/terraform.tfstate` として環境ごとに分ける。
+state は環境ごとの S3 バケット `{env}-folio-tfstate` に置き、key は `envs/{env}/terraform.tfstate` とする。
 state バケットは `ap-northeast-1`、リソースは `us-east-1` にある。backend の `region` は state バケットの所在を指し、provider の `region` とは独立している。
 ロックは S3 ネイティブロック (`use_lockfile = true`) を使い、DynamoDB のロックテーブルは使わない。
 

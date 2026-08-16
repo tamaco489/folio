@@ -31,14 +31,14 @@ Phase 1 has a single environment, `dev`. No `stg` or `prd` directory is created.
 | Terraform    | Version pinned in the root `.tool-versions` (managed with [asdf](https://asdf-vm.com/))                 |
 | AWS auth     | Credentials for the target account (e.g. `AWS_PROFILE`). Resources live in `us-east-1`                  |
 | Account ID   | Set the 12-digit ID in `TF_VAR_account_id` (used in the documents bucket name). Never written to a file |
-| State bucket | `prd-folio-tfstate` (`ap-northeast-1`) must exist. It is outside Terraform and created by the user      |
+| State bucket | `{env}-folio-tfstate` (`ap-northeast-1`) must exist per environment (`dev-folio-tfstate` for dev). It is outside Terraform and created by the user |
 
 `terraform.tfvars` holds only `env`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
 `plan` fails early if `TF_VAR_account_id` does not match the account of the current credentials.
 
 ## State
 
-State lives in the S3 backend `prd-folio-tfstate`, keyed per environment as `envs/{env}/terraform.tfstate`.
+State lives in a per-environment S3 bucket `{env}-folio-tfstate`, keyed as `envs/{env}/terraform.tfstate`.
 The state bucket is in `ap-northeast-1` while resources are in `us-east-1`; the backend `region` refers to the bucket's location and is independent of the provider `region`.
 Locking uses S3 native locking (`use_lockfile = true`); no DynamoDB lock table is used.
 

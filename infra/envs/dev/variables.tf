@@ -1,5 +1,4 @@
-# default を置かず terraform.tfvars で明示する
-# 環境ディレクトリを複製して stg / prd を作るとき、値の指定漏れが暗黙に dev へ落ちるのを防ぐため
+# default を置かず terraform.tfvars で明示する (環境ディレクトリを複製して stg / prd を作るとき、値の指定漏れが暗黙に dev へ落ちるのを防ぐため)
 variable "env" {
   description = "Environment identifier used as the resource name prefix (dev, stg, prd)."
   type        = string
