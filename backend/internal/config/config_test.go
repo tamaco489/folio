@@ -21,6 +21,7 @@ func setEnv(t *testing.T, values map[string]string) {
 		EnvKeyTextractSNSTopicARN,
 		EnvKeyTextractRoleARN,
 		EnvKeyTextractFeatureTypes,
+		EnvKeyCrossrefMailto,
 	} {
 		t.Setenv(key, values[key])
 	}
@@ -36,6 +37,7 @@ func fullEnv() map[string]string {
 		EnvKeyTextractSNSTopicARN:  "arn:aws:sns:us-east-1:000000000000:dev-folio-textract-completion",
 		EnvKeyTextractRoleARN:      "arn:aws:iam::000000000000:role/dev-folio-textract-publish-role",
 		EnvKeyTextractFeatureTypes: "LAYOUT,TABLES,FORMS",
+		EnvKeyCrossrefMailto:       "folio@example.com",
 	}
 }
 
@@ -70,6 +72,24 @@ func TestLoadAllValuesPresent(t *testing.T) {
 	}
 	if cfg.TextractFeatureTypes != "LAYOUT,TABLES,FORMS" {
 		t.Errorf("TextractFeatureTypes = %q", cfg.TextractFeatureTypes)
+	}
+	if cfg.CrossrefMailto != "folio@example.com" {
+		t.Errorf("CrossrefMailto = %q", cfg.CrossrefMailto)
+	}
+}
+
+// Crossref の連絡先は任意であり、未設定でも Load が失敗しない (public pool で動く)
+func TestLoadCrossrefMailtoIsOptional(t *testing.T) {
+	env := fullEnv()
+	env[EnvKeyCrossrefMailto] = ""
+	setEnv(t, env)
+
+	cfg, err := Load(RequireDocumentsBucket, RequireJobsTable)
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if cfg.CrossrefMailto != "" {
+		t.Errorf("CrossrefMailto = %q, want empty", cfg.CrossrefMailto)
 	}
 }
 
