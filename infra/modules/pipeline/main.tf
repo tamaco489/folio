@@ -4,7 +4,7 @@ locals {
   state_machine_name = "${local.name_prefix}-pipeline"
 
   # ロググループの保持期間 (日)
-  # dev は評価用で、失敗の調査は当日から週明けまでに行うため 3 日にする (compute の Lambda ロググループと同じ)
+  # dev は評価用で監査の要件がなく、ログは失敗直後の調査にしか使わないため 3 日にする (compute の Lambda ロググループと同じ)
   log_retention_days = 3
 }
 
