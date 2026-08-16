@@ -10,33 +10,10 @@ package bedrockroute
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/domain"
-)
-
-// ページ 1 枚あたりの推論設定
-//
-// 表を含むページでも 1 ページ分の JSON は数千トークンに収まるため、上限は余裕を見た固定値とする
-// 温度を 0 にするのは、同じページ画像から毎回同じ構造化結果を得て経路間の差分を安定させるため
-const (
-	maxTokens   int32   = 8192
-	temperature float32 = 0
-)
-
-var (
-	// ErrInvalidPage はページ番号が 1 未満の場合に返る
-	ErrInvalidPage = errors.New("bedrockroute: page number must be 1 or greater")
-
-	// ErrEmptyImage はページ画像が空の場合に返る
-	ErrEmptyImage = errors.New("bedrockroute: page image is empty")
-
-	// ErrPageDecode はモデルの応答をページ結果として解釈できない場合に返る
-	//
-	// この層ではリトライしない — awsx/bedrock のリトライはスロットリング向けであり、解釈できない応答を送り直すかは呼び出し側が決める
-	ErrPageDecode = errors.New("bedrockroute: response is not a valid page result")
 )
 
 // PageInput は 1 ページ分の抽出への入力

@@ -1,11 +1,3 @@
-// Package textractparser は経路 A の Lambda (textract-parser) のロジックを担う
-//
-// Textract の非同期解析は起動から完了まで Lambda の実行時間を超えうるため、待ち合わせは Step Functions のコールバックパターン (waitForTaskToken) で行う
-// 1 つの Lambda が 2 種類のイベントを受け、種類で分岐する
-//   - 起動 (start): Step Functions から呼ばれ、Textract を開始してタスクトークンを S3 へ退避する
-//   - 完了通知 (callback): SNS から呼ばれ、結果を取得・構造化して SendTaskSuccess / SendTaskFailure で State Machine を再開させる
-//
-// 出力は S3 キーと小さな判定結果だけとし、実体は含めない (State 間の上限 256KB)
 package textractparser
 
 import (
@@ -14,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -26,51 +17,6 @@ import (
 	"github.com/tamaco489/folio/backend/internal/domain"
 	"github.com/tamaco489/folio/backend/internal/pipeline/extract/textractroute"
 )
-
-// snsEventSource は SNS が Lambda に配送するイベントの EventSource (aws-lambda-go の events/testdata/sns-event.json に同じ)
-const snsEventSource = "aws:sns"
-
-// SendTaskFailure の Error に入れる失敗の種別
-//
-// State Machine (#30) の Catch と部分失敗の扱い (#24) はこの値で分岐する
-const (
-	// FailureTextractJob は Textract のジョブ自体が失敗した (文書を解析できなかった) ことを表す
-	FailureTextractJob = "TextractJobFailed"
-
-	// FailureExtract は Textract は成功したが、結果の取得・構造化・保存のいずれかが失敗したことを表す
-	FailureExtract = "ExtractFailed"
-)
-
-var (
-	// ErrEmptyJobID は起動の入力に jobId が含まれないことを示す
-	ErrEmptyJobID = errors.New("textractparser: job id is empty")
-
-	// ErrEmptyTaskToken は起動の入力に taskToken が含まれないことを示す
-	ErrEmptyTaskToken = errors.New("textractparser: task token is empty")
-
-	// ErrEmptyJobTag は完了通知に JobTag (= jobId) が含まれないことを示す
-	ErrEmptyJobTag = errors.New("textractparser: completion notification has no job tag")
-)
-
-// RetryableError は Textract の一時的な失敗を表す
-//
-// Lambda はエラーの型名を errorType として Step Functions に見せるため、Retry の ErrorEquals はこの型名 ("RetryableError") で照合する
-type RetryableError struct {
-	Err error
-}
-
-func (e *RetryableError) Error() string { return "textractparser: retryable: " + e.Err.Error() }
-
-func (e *RetryableError) Unwrap() error { return e.Err }
-
-// PermanentError は RetryableError に該当しない起動の失敗を表す (入力不正、Textract による文書の拒否、S3 の失敗など)
-type PermanentError struct {
-	Err error
-}
-
-func (e *PermanentError) Error() string { return "textractparser: " + e.Err.Error() }
-
-func (e *PermanentError) Unwrap() error { return e.Err }
 
 // StartInput は Step Functions が waitForTaskToken で渡す起動の入力
 //
@@ -355,40 +301,4 @@ func (h *Handler) respond(ctx context.Context, cb Callback, err error) error {
 		return nil
 	}
 	return err
-}
-
-// classify は起動のエラーを Step Functions が Retry の対象にできる型とそれ以外に分ける
-func classify(err error) error {
-	if isTransient(err) {
-		return &RetryableError{Err: err}
-	}
-	return &PermanentError{Err: err}
-}
-
-// isTransient は Textract の一時的な失敗かを判定する
-//
-// スロットリングと同時実行数の上限は時間を置けば解消するため Retry に委ね、文書や引数に起因する失敗は対象にしない
-func isTransient(err error) bool {
-	if _, ok := errors.AsType[*awstextracttypes.ProvisionedThroughputExceededException](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[*awstextracttypes.LimitExceededException](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[*awstextracttypes.ThrottlingException](err); ok {
-		return true
-	}
-	_, ok := errors.AsType[*awstextracttypes.InternalServerError](err)
-	return ok
-}
-
-// ParseFeatureTypes はカンマ区切りの設定値 (config.Config.TextractFeatureTypes) を FeatureTypes に変換する
-func ParseFeatureTypes(spec string) ([]awstextracttypes.FeatureType, error) {
-	var values []string
-	for v := range strings.SplitSeq(spec, ",") {
-		if v = strings.TrimSpace(v); v != "" {
-			values = append(values, v)
-		}
-	}
-	return textract.ParseFeatureTypes(values)
 }

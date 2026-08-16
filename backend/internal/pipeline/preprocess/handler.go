@@ -1,12 +1,7 @@
-// Package preprocess は Step Functions の前処理 State のロジックを担う
-//
-// PDF を /tmp へ落として poppler に渡し、ページ画像とテキストレイヤーを S3 へ書き戻す
-// 出力は S3 キーと判定結果だけとし、実体は含めない (State 間の上限 256KB)
 package preprocess
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -16,32 +11,6 @@ import (
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/domain"
 	"github.com/tamaco489/folio/backend/internal/pipeline/pdf"
-)
-
-const (
-	// DefaultChunkPages は 1 回のラスタライズで /tmp に置くページ数
-	//
-	// Lambda の /tmp は既定 512MB であり、全ページを溜めると大きな PDF で溢れる
-	// 描画したページはアップロードのたびに消すため、/tmp の占有はこの枚数分で頭打ちになる
-	DefaultChunkPages = 25
-
-	contentTypePNG  = "image/png"
-	contentTypeText = "text/plain; charset=utf-8"
-
-	fileOriginalPDF = "original.pdf"
-	fileTextLayer   = "layer.txt"
-	dirPages        = "pages"
-	workDirPattern  = "preprocess-*"
-)
-
-var (
-	// ErrEmptyJobID は入力に jobId が含まれないことを示す
-	ErrEmptyJobID = errors.New("preprocess: job id is empty")
-
-	// ErrPageCountMismatch は描画できたページ数が pdfinfo の報告と食い違うことを示す
-	//
-	// 後段は pageCount からページ画像のキーを導出するため、欠けたまま進めない
-	ErrPageCountMismatch = errors.New("preprocess: rendered page count does not match the document")
 )
 
 // Input は前処理 State の入力

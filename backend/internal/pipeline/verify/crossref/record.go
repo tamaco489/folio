@@ -3,7 +3,6 @@ package crossref
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,9 +11,6 @@ import (
 	"strings"
 	"time"
 )
-
-// ErrRecordingNotFound は再生対象の記録が見つからない場合に返る
-var ErrRecordingNotFound = errors.New("crossref: recording not found")
 
 // maxRecordNameLen は記録ファイル名の上限 (検索の URL は長くなりうる)
 const maxRecordNameLen = 100
