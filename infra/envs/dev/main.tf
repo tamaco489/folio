@@ -10,6 +10,8 @@ module "storage" {
 }
 
 # TF_VAR_account_id と認証情報のアカウントが食い違ったまま apply すると別アカウントの ID を名前に含むバケットが作られるため、plan の段階で止める
+# 属性はどこからも参照せず postcondition のためだけに宣言しているので、tflint の未使用検査は抑止する
+# tflint-ignore: terraform_unused_declarations
 data "aws_caller_identity" "current" {
   lifecycle {
     postcondition {

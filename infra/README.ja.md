@@ -16,6 +16,8 @@ infra/
 │   ├── compute/        Lambda 関数と Layer
 │   ├── pipeline/       Step Functions ステートマシン
 │   └── iam/            Lambda・Step Functions・Textract のロールとポリシー
+├── scripts/            justfile から呼ぶシェルスクリプト (validate, lint)
+├── .tflint.hcl         TFLint の設定 (CI と just lint で共用)
 └── justfile            レシピの宣言のみ
 ```
 
@@ -29,6 +31,8 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 | 項目           | 内容                                                                                                                                            |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Terraform      | ルートの `.tool-versions` のバージョン ([asdf](https://asdf-vm.com/) で管理)                                                                    |
+| tflint         | 同じく `.tool-versions` で固定し、CI も同じ行を読む。`just lint` の `tflint --init` が aws ルールセットを GitHub から取得する                   |
+| Trivy          | 同じく `.tool-versions` で固定し、CI も同じ行を読む。`just scan` はチェック定義をスキャン時に取得する                                           |
 | AWS 認証       | `AWS_PROFILE` などで対象アカウントの認証情報を用意する。リージョンは `us-east-1`                                                                |
 | アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない                                              |
 | state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
@@ -49,12 +53,23 @@ state バケットは `ap-northeast-1`、リソースは `us-east-1` にある�
 ```sh
 cd infra
 just init          # terraform -chdir=envs/dev init
-just validate      # terraform -chdir=envs/dev validate
 just plan          # terraform -chdir=envs/dev plan
 just fmt           # terraform fmt -recursive
 just fmt-check     # terraform fmt -check -recursive
+just validate      # scripts/validate.sh: envs/dev と modules/* を init -backend=false のうえで validate する (AWS の認証情報は不要)
+just lint          # scripts/lint.sh: tflint --init と tflint --recursive (.tflint.hcl)
+just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 ```
 
 `just apply` と `just destroy` はユーザーが実行する。`-auto-approve` は付けておらず、確認は Terraform 側の対話に任せる。
 
 初回の `just init` で生成される `envs/dev/.terraform.lock.hcl` はコミットする。
+`just validate` は各モジュールも単体で validate する (`envs/dev` に未結線のものも含む)。その際に `modules/*/` に書かれる lock ファイルは git 管理外にしている。
+
+## CI
+
+`.github/workflows/ci-infra.yml` は `infra/**`、`.tool-versions`、ワークフロー自身を変更した PR で動く。`permissions: contents: read` で AWS の認証情報を使わないため、fork からの PR でも実行される。
+ジョブは 3 つ並列で、`terraform fmt -check` と `just validate`、`just lint` (tflint の `terraform` recommended プリセットと `aws` ルールセット)、`trivy config` (設定ミスの検査、MEDIUM 以上で失敗) を実行する。
+`terraform plan` は CI に含めない。
+意図して無効にしている設定は、リソース直前の理由コメントの直後に `#trivy:ignore:<id>` を置いて抑止しており、`just scan` と CI の検出は 0 件になる。
+チェック定義はスキャン時に取得されるため、新しいチェックで落ちたら設定を直すか理由付きの ignore を足す。

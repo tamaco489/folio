@@ -32,6 +32,13 @@ locals {
 # S3: PDF・中間データ・成果物を 1 バケットに置く
 # ------------------------------------------------------------------------------
 
+# バージョニングは有効化しない (aws_s3_bucket_versioning を定義しない)
+# jobId が PDF の SHA-256 なので同じキーには同じ内容しか来ず、outputs/ の上書きは finalizer の再実行 (同じ結果) だけのため
+# 世代を保つ理由がなく、有効化すると work/ の失効ルールに noncurrent 版の扱いが加わって複雑になる
+# アクセスログも有効化しない (aws_s3_bucket_logging を定義しない)
+# 評価段階では監査の要件がなく、ログの保存先バケットとその失効管理が増えるだけのため
+#trivy:ignore:AVD-AWS-0090
+#trivy:ignore:AVD-AWS-0089
 resource "aws_s3_bucket" "documents" {
   bucket        = local.documents_bucket_name
   force_destroy = local.is_disposable
@@ -49,6 +56,7 @@ resource "aws_s3_bucket_public_access_block" "documents" {
 # SSE-S3 (AES256) を既定にし、KMS は使わない
 # 評価段階では鍵の分離や監査の要件がなく、SSE-KMS にすると Lambda と Textract のロールに kms:Decrypt を配る必要が生じる
 # ページ画像のような小さなオブジェクトの大量書き込みで KMS API の課金も乗る
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "documents" {
   bucket = aws_s3_bucket.documents.id
 
@@ -58,10 +66,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "documents" {
     }
   }
 }
-
-# バージョニングは有効化しない (aws_s3_bucket_versioning を定義しない)
-# jobId が PDF の SHA-256 なので同じキーには同じ内容しか来ず、outputs/ の上書きは finalizer の再実行 (同じ結果) だけのため
-# 世代を保つ理由がなく、有効化すると work/ の失効ルールに noncurrent 版の扱いが加わって複雑になる
 
 # EventBridge へのイベント送信を有効化する
 # S3 側では通知を uploads/ に絞れない (EventBridge 通知はバケット全体が対象)
@@ -107,6 +111,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "documents" {
 
 # 属性は設計で確定した 6 つ (jobId, status, filename, createdAt, updatedAt, errorReason) に限る
 # attribute ブロックに書くのはキーに使う 3 つだけ (DynamoDB はキー以外のスキーマを持たず、キーに使わない属性を書くと plan が収束しない)
+# 暗号化は AWS 所有キーの既定のままにし、CMK は使わない (S3 と同じく鍵の分離や監査の要件がなく、kms:Decrypt の配布と KMS API の課金を避けるため)
+#trivy:ignore:AVD-AWS-0025
 resource "aws_dynamodb_table" "jobs" {
   name         = local.jobs_table_name
   billing_mode = "PAY_PER_REQUEST"
@@ -153,6 +159,7 @@ resource "aws_dynamodb_table" "jobs" {
   # 文書は数か月後に再投入されることがあり、短期の TTL では冪等性を保てない
 
   # 状態テーブルは同じ PDF の再投入で復元できるため、使い捨ての dev では PITR を持たない
+  #trivy:ignore:AVD-AWS-0024
   point_in_time_recovery {
     enabled = !local.is_disposable
   }

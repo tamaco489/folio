@@ -1,0 +1,122 @@
+name: ci-infra
+
+on:
+  pull_request:
+    paths:
+      - infra/**
+      # terraform / tflint / trivy の版はここから読む
+      - .tool-versions
+      # ワークフロー自身の変更も同じ検証を通す
+      - .github/workflows/ci-infra.yml
+
+# AWS の認証情報や secrets を使わないため fork からの PR でもそのまま動く
+# terraform plan は含めない (OIDC が要り、plan のログにアカウント固有の情報が残るため)
+permissions:
+  contents: read
+
+# 同一 PR への連続 push で古い実行を打ち切る
+concurrency:
+  group: ci-infra-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  terraform:
+    name: terraform fmt and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read Terraform version
+        id: terraform-version
+        # setup-terraform には .tool-versions を読む入力が無いため、asdf と同じ行から版を取り出して渡す
+        # (golangci-lint のような 2 か所管理を避ける)
+        run: |
+          version=$(awk '$1 == "terraform" { print $2 }' "$GITHUB_WORKSPACE/.tool-versions")
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ steps.terraform-version.outputs.version }}
+          # 後続ステップで stdout / exitcode の outputs を使わないためラッパーは入れない
+          # (ラッパーは exit code 2 を成功として丸めるため、素の終了コードで判定したい)
+          terraform_wrapper: false
+
+      - name: Setup just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      - name: Check formatting
+        run: just fmt-check
+
+      - name: Validate
+        # scripts/validate.sh: envs/dev と modules/* を init -backend=false のうえで validate する
+        # (未結線のモジュールも対象。AWS の認証情報は使わない)
+        run: just validate
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@6e1e0642c0289bd619021bf6b34e3c08ed1e005a # v6.3.0
+        with:
+          # asdf と同じ値を使うためルートの .tool-versions から tflint 行を読む
+          tflint_version_file: .tool-versions
+          # tflint --init が取得するプラグイン (aws ルールセット) をキャッシュする
+          # キーは .tflint.hcl の内容から作られる
+          cache: true
+          tflint_config_path: infra/.tflint.hcl
+
+      - name: Setup just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      - name: Run TFLint
+        # scripts/lint.sh: tflint --init のうえで envs/* と modules/* を .tflint.hcl で検査する
+        run: just lint
+        env:
+          # tflint --init は GitHub API でプラグインのリリースを引くため、未認証のレート制限 (IP ごとに 60 回/時) を避ける
+          GITHUB_TOKEN: ${{ github.token }}
+
+  trivy-config:
+    name: trivy config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read Trivy version
+        id: trivy-version
+        # trivy-action には .tool-versions を読む入力が無いため、asdf と同じ行から版を取り出して渡す (v を付ける)
+        run: |
+          version=$(awk '$1 == "trivy" { print $2 }' "$GITHUB_WORKSPACE/.tool-versions")
+          test -n "$version"
+          echo "version=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy config scan
+        # ローカルの just scan と同じ検査。意図した無効化は #trivy:ignore:<id> をリソース直前の理由コメントと並べて抑止する
+        # チェック定義 (trivy-checks) はスキャン時に最新を取得するため、新しいチェックで落ちたら直すか理由付きの ignore を足す
+        # SARIF の Code Scanning 連携は入れない (security-events: write が要り、fork からの PR で失敗するため)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ steps.trivy-version.outputs.version }}
+          scan-type: config
+          # uses ステップには defaults.run.working-directory が効かない
+          scan-ref: infra
+          # env の値 (dev) を与えて評価する。is_disposable のような env 依存の条件が実際の dev の値で検査される
+          tf-vars: infra/envs/dev/terraform.tfvars
+          # MEDIUM まで落とす。S3 バージョニングと DynamoDB PITR は MEDIUM で、意図した無効化を ID 付きで残すため
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: "1"
+          format: table
