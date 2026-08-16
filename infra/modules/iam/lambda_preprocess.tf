@@ -1,5 +1,6 @@
 resource "aws_iam_role" "lambda_preprocess" {
   name               = "${local.name_prefix}-lambda-preprocess-role"
+  description        = "Execution role of the preprocessor Lambda (reads uploads/, writes page images and the text layer to work/)."
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
 

@@ -20,6 +20,7 @@ locals {
 
   # 5 関数の定義 (キーは他モジュールとの受け渡しに使う識別子で、for_each のキーもこの静的な文字列に限る)
   # name は cmd/pipeline/{dir} をハイフンで連結した backend の関数名で、zip の名前 (bin/{name}.zip) と一致する
+  # description は英語 1 文で、コンソールと list-functions の一覧で責務が読めるようにする (docs/README.md の Lambda 一覧と揃える)
   # environment は backend/internal/config の Require* に対応する必須の環境変数だけを持ち、全関数に共通の FOLIO_ENV は関数側で merge する
   #   AWS_REGION は Lambda ランタイムの予約変数で設定できない (未設定でも backend が us-east-1 を既定にする)
   #   poppler 用の FOLIO_POPPLER_BIN_DIR と FOLIO_RASTERIZE_DPI は Layer の /opt/bin と既定 DPI で自動解決するため設定しない
@@ -31,6 +32,7 @@ locals {
     # 上限の PDF の転送とハッシュ計算に DynamoDB の条件付き PutItem を含めても 300 秒あれば足りる想定 (評価対象の論文は数 MB なので通常は数秒)
     validator = {
       name              = "pipeline-validator"
+      description       = "Validates the uploaded PDF and registers the job (idempotency check)."
       role_arn          = var.lambda_validate_role_arn
       memory_size       = 512
       timeout           = 300
@@ -47,6 +49,7 @@ locals {
     # pdftoppm は CPU 依存で、メモリに比例する vCPU 割り当てが実行時間を決めるため 5 本で最も大きい 1024 MB にする (20 ページなら数十秒で終わる)
     preprocessor = {
       name              = "pipeline-preprocessor"
+      description       = "Rasterizes pages and extracts the text layer for both routes."
       role_arn          = var.lambda_preprocess_role_arn
       memory_size       = 1024
       timeout           = 900
@@ -61,6 +64,7 @@ locals {
     # 同じ関数を両パスで使うため、長い方の通知パスに合わせて 600 秒にする
     textract-parser = {
       name              = "pipeline-textract-parser"
+      description       = "Route A: starts Textract, then structures its output through Bedrock on the SNS callback."
       role_arn          = var.lambda_parser_role_arn
       memory_size       = 512
       timeout           = 600
@@ -79,6 +83,7 @@ locals {
     # 予約同時実行数は設定しない (並列度は Map の MaxConcurrency と関数内の指数バックオフで制御し、アカウントの同時実行枠を固定で切り出さない)
     bedrock-parser = {
       name              = "pipeline-bedrock-parser"
+      description       = "Route B: structures one page image through Bedrock (runs inside the Map)."
       role_arn          = var.lambda_parser_role_arn
       memory_size       = 512
       timeout           = 300
@@ -94,6 +99,7 @@ locals {
     # FOLIO_CROSSREF_MAILTO は任意で、空なら環境変数そのものを置かない (空文字を渡しても backend は public pool として扱うが、設定の有無で意図を明示する)
     finalizer = {
       name              = "pipeline-finalizer"
+      description       = "Normalizes, verifies and persists the results of both routes."
       role_arn          = var.lambda_finalize_role_arn
       memory_size       = 512
       timeout           = 300

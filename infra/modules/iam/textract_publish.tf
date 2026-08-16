@@ -1,6 +1,7 @@
 # Lambda に付けるロールではなく、StartDocumentAnalysis の NotificationChannel.RoleArn として Textract に渡す
 resource "aws_iam_role" "textract_publish" {
   name               = "${local.name_prefix}-textract-publish-role"
+  description        = "Assumed by Amazon Textract to publish job completion notifications to the SNS topic."
   assume_role_policy = data.aws_iam_policy_document.textract_publish_assume.json
 }
 

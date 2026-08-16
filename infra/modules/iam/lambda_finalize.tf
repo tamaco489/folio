@@ -1,5 +1,6 @@
 resource "aws_iam_role" "lambda_finalize" {
   name               = "${local.name_prefix}-lambda-finalize-role"
+  description        = "Execution role of the finalizer Lambda (reads work/, writes outputs/, updates the job status)."
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
 
