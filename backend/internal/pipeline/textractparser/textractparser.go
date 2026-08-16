@@ -105,6 +105,8 @@ type Callback struct {
 }
 
 // Result は SendTaskSuccess で Step Functions へ返す Task の出力
+//
+// ResultKey は正規化前の中間結果 (s3.TextractDocumentKey) であり、finalizer がこれを読んで outputs/ へ最終成果物を書く
 type Result struct {
 	JobID     string `json:"jobId"`
 	ResultKey string `json:"resultKey"`
@@ -293,7 +295,9 @@ func (h *Handler) callback(ctx context.Context, message []byte) error {
 	return h.respond(ctx, cb, h.states.SendTaskSuccess(ctx, cb.TaskToken, result))
 }
 
-// process は Textract の結果を取得して構造化し、生出力と結果を S3 へ保存する
+// process は Textract の結果を取得して構造化し、生出力と正規化前の結果を S3 (work/) へ保存する
+//
+// outputs/ の最終成果物は finalizer だけが書く
 func (h *Handler) process(ctx context.Context, cb Callback) (Result, error) {
 	analysis, err := h.analyzer.GetDocumentAnalysis(ctx, cb.TextractJobID)
 	if err != nil {
@@ -323,7 +327,7 @@ func (h *Handler) process(ctx context.Context, cb Callback) (Result, error) {
 	doc.Provenance.ExtractedAt = finished
 	doc.Provenance.DurationMs = finished.Sub(cb.StartedAt).Milliseconds()
 
-	resultKey := s3.ResultTextractKey(cb.JobID)
+	resultKey := s3.TextractDocumentKey(cb.JobID)
 	if err := h.docs.PutJSON(ctx, resultKey, doc); err != nil {
 		return Result{}, err
 	}

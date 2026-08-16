@@ -25,6 +25,7 @@ const (
 	objectOriginalPDF      = "original.pdf"
 	objectTextractRaw      = "raw.json"
 	objectTextractCallback = "callback.json"
+	objectTextractDocument = "document.json"
 	objectTextLayer        = "layer.txt"
 	objectResultTextract   = "result-textract.json"
 	objectResultBedrock    = "result-bedrock.json"
@@ -57,6 +58,14 @@ func TextractRawKey(jobID string) string {
 // タスクトークンは Textract の JobTag (64 文字上限) に収まらないため、起動側が S3 に退避し、通知を受けた側が読み戻す
 func TextractCallbackKey(jobID string) string {
 	return join(PrefixWork, jobID, segmentTextract, objectTextractCallback)
+}
+
+// TextractDocumentKey は textract-parser が構造化した正規化前の結果のキーを組み立てる
+//
+// finalizer がこれを読んで正規化・検証し、outputs/ へ最終成果物を書く
+// 最終成果物 (ResultTextractKey) と分けるのは、finalizer の再実行が自分の出力を入力として読み、Textract の確信度の上書きと警告の重複で冪等でなくなるのを防ぐため
+func TextractDocumentKey(jobID string) string {
+	return join(PrefixWork, jobID, segmentTextract, objectTextractDocument)
 }
 
 // BedrockPageResultKey は経路 B (Bedrock) のページ単位の抽出結果のキーを組み立てる

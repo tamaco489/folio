@@ -24,6 +24,7 @@ const (
 	EnvKeyTextractSNSTopicARN  = "FOLIO_TEXTRACT_SNS_TOPIC_ARN"
 	EnvKeyTextractRoleARN      = "FOLIO_TEXTRACT_ROLE_ARN"
 	EnvKeyTextractFeatureTypes = "FOLIO_TEXTRACT_FEATURE_TYPES"
+	EnvKeyCrossrefMailto       = "FOLIO_CROSSREF_MAILTO"
 )
 
 // DefaultRegion は AWS_REGION が未設定のときに用いるリージョン
@@ -92,6 +93,7 @@ type Config struct {
 	TextractSNSTopicARN  string // TextractSNSTopicARN は Textract が完了通知を発行する SNS トピックの ARN
 	TextractRoleARN      string // TextractRoleARN は Textract が SNS へ発行するために引き受ける IAM ロールの ARN
 	TextractFeatureTypes string // TextractFeatureTypes は Textract の FeatureTypes (カンマ区切り。未設定なら DefaultTextractFeatureTypes)
+	CrossrefMailto       string // CrossrefMailto は Crossref の polite pool に入るための連絡先 (任意で、未設定なら public pool で動く)
 }
 
 // Load は環境変数から設定を読み込み、required に挙げた項目が揃っているかを検証する
@@ -108,6 +110,7 @@ func Load(required ...Requirement) (Config, error) {
 		TextractSNSTopicARN:  lookup(EnvKeyTextractSNSTopicARN),
 		TextractRoleARN:      lookup(EnvKeyTextractRoleARN),
 		TextractFeatureTypes: lookup(EnvKeyTextractFeatureTypes),
+		CrossrefMailto:       lookup(EnvKeyCrossrefMailto),
 	}
 	if cfg.Region == "" {
 		cfg.Region = DefaultRegion
