@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
 )
@@ -51,7 +51,7 @@ func TestStartDocumentAnalysisPassesFeatureTypes(t *testing.T) {
 
 	jobID, err := c.StartDocumentAnalysis(context.Background(), textract.StartAnalysisInput{
 		Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
-		FeatureTypes: []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables},
+		FeatureTypes: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables},
 		SNSTopicARN:  "arn:aws:sns:ap-northeast-1:000000000000:dev-folio-textract",
 		RoleARN:      "arn:aws:iam::000000000000:role/dev-folio-textract-sns",
 		JobTag:       "1706.03762",
@@ -67,7 +67,7 @@ func TestStartDocumentAnalysisPassesFeatureTypes(t *testing.T) {
 	if got, want := len(in.FeatureTypes), 2; got != want {
 		t.Fatalf("feature types = %d, want %d", got, want)
 	}
-	if in.FeatureTypes[0] != types.FeatureTypeLayout || in.FeatureTypes[1] != types.FeatureTypeTables {
+	if in.FeatureTypes[0] != awstextracttypes.FeatureTypeLayout || in.FeatureTypes[1] != awstextracttypes.FeatureTypeTables {
 		t.Fatalf("feature types = %v", in.FeatureTypes)
 	}
 	if in.NotificationChannel == nil || aws.ToString(in.NotificationChannel.SNSTopicArn) == "" {
@@ -84,18 +84,18 @@ func TestStartDocumentAnalysisRejectsInvalidInput(t *testing.T) {
 	tests := map[string]textract.StartAnalysisInput{
 		"異常系_バケットが未指定の場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Key: "uploads/job-1/original.pdf"},
-			FeatureTypes: []types.FeatureType{types.FeatureTypeLayout},
+			FeatureTypes: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout},
 		},
 		"異常系_FeatureTypes が未指定の場合_ErrInvalidInput が返ること": {
 			Document: textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
 		},
 		"異常系_未知の FeatureType の場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
-			FeatureTypes: []types.FeatureType{"LAYOUTS"},
+			FeatureTypes: []awstextracttypes.FeatureType{"LAYOUTS"},
 		},
 		"異常系_SNS トピックのみ指定した場合_ErrInvalidInput が返ること": {
 			Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
-			FeatureTypes: []types.FeatureType{types.FeatureTypeLayout},
+			FeatureTypes: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout},
 			SNSTopicARN:  "arn:aws:sns:ap-northeast-1:000000000000:dev-folio-textract",
 		},
 	}
@@ -119,7 +119,7 @@ func TestGetDocumentAnalysisInProgress(t *testing.T) {
 
 	api := &fakeAPI{
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
-			return &awstextract.GetDocumentAnalysisOutput{JobStatus: types.JobStatusInProgress}, nil
+			return &awstextract.GetDocumentAnalysisOutput{JobStatus: awstextracttypes.JobStatusInProgress}, nil
 		},
 	}
 
@@ -127,7 +127,7 @@ func TestGetDocumentAnalysisInProgress(t *testing.T) {
 	if !errors.Is(err, textract.ErrJobInProgress) {
 		t.Fatalf("err = %v, want ErrJobInProgress", err)
 	}
-	if res.JobStatus != types.JobStatusInProgress {
+	if res.JobStatus != awstextracttypes.JobStatusInProgress {
 		t.Fatalf("job status = %q", res.JobStatus)
 	}
 	if len(api.getInputs) != 1 {
@@ -141,7 +141,7 @@ func TestGetDocumentAnalysisFailed(t *testing.T) {
 	api := &fakeAPI{
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
 			return &awstextract.GetDocumentAnalysisOutput{
-				JobStatus:     types.JobStatusFailed,
+				JobStatus:     awstextracttypes.JobStatusFailed,
 				StatusMessage: aws.String("document is password protected"),
 			}, nil
 		},
@@ -162,7 +162,7 @@ func TestGetDocumentAnalysisDetectsRepeatedToken(t *testing.T) {
 	api := &fakeAPI{
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
 			return &awstextract.GetDocumentAnalysisOutput{
-				JobStatus: types.JobStatusSucceeded,
+				JobStatus: awstextracttypes.JobStatusSucceeded,
 				NextToken: aws.String("same"),
 			}, nil
 		},
@@ -187,7 +187,7 @@ func TestDetectDocumentTextUsesBytesWhenGiven(t *testing.T) {
 	api := &fakeAPI{
 		detect: func(*awstextract.DetectDocumentTextInput) (*awstextract.DetectDocumentTextOutput, error) {
 			return &awstextract.DetectDocumentTextOutput{
-				Blocks:                         []types.Block{{BlockType: types.BlockTypeLine, Text: aws.String("hello")}},
+				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("hello")}},
 				DetectDocumentTextModelVersion: aws.String("1.0"),
 			}, nil
 		},
@@ -227,7 +227,7 @@ func TestParseFeatureTypes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseFeatureTypes: %v", err)
 	}
-	if len(got) != 2 || got[0] != types.FeatureTypeLayout || got[1] != types.FeatureTypeTables {
+	if len(got) != 2 || got[0] != awstextracttypes.FeatureTypeLayout || got[1] != awstextracttypes.FeatureTypeTables {
 		t.Fatalf("features = %v", got)
 	}
 

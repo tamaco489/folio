@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awssfn "github.com/aws/aws-sdk-go-v2/service/sfn"
-	"github.com/aws/aws-sdk-go-v2/service/sfn/types"
+	awssfntypes "github.com/aws/aws-sdk-go-v2/service/sfn/types"
 )
 
 // fakeAPI は API のフェイク (実 API は一切呼ばない)
@@ -111,10 +111,10 @@ func TestSendTaskFoldsGoneErrors(t *testing.T) {
 		err      error
 		wantGone bool
 	}{
-		"正常系_InvalidToken の場合_ErrTaskGone に畳まれること":     {err: &types.InvalidToken{Message: aws.String("Invalid Token")}, wantGone: true},
-		"正常系_TaskTimedOut の場合_ErrTaskGone に畳まれること":     {err: &types.TaskTimedOut{}, wantGone: true},
-		"正常系_TaskDoesNotExist の場合_ErrTaskGone に畳まれること": {err: &types.TaskDoesNotExist{}, wantGone: true},
-		"正常系_その他のエラーの場合_ErrTaskGone にならないこと":           {err: &types.InvalidOutput{}, wantGone: false},
+		"正常系_InvalidToken の場合_ErrTaskGone に畳まれること":     {err: &awssfntypes.InvalidToken{Message: aws.String("Invalid Token")}, wantGone: true},
+		"正常系_TaskTimedOut の場合_ErrTaskGone に畳まれること":     {err: &awssfntypes.TaskTimedOut{}, wantGone: true},
+		"正常系_TaskDoesNotExist の場合_ErrTaskGone に畳まれること": {err: &awssfntypes.TaskDoesNotExist{}, wantGone: true},
+		"正常系_その他のエラーの場合_ErrTaskGone にならないこと":           {err: &awssfntypes.InvalidOutput{}, wantGone: false},
 	}
 
 	for name, tt := range tests {

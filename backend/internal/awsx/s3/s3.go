@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	awss3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // ContentTypeJSON は構造化データを保存するときの Content-Type
@@ -224,18 +224,15 @@ func wrapErr(op, key string, err error) error {
 //   - HeadObject はボディを持たないため NotFound を返す
 //   - SDK が型に落とせなかった場合は 404 のまま伝わってくる
 func isNotFound(err error) bool {
-	var noSuchKey *types.NoSuchKey
-	if errors.As(err, &noSuchKey) {
+	if _, ok := errors.AsType[*awss3types.NoSuchKey](err); ok {
 		return true
 	}
 
-	var notFound *types.NotFound
-	if errors.As(err, &notFound) {
+	if _, ok := errors.AsType[*awss3types.NotFound](err); ok {
 		return true
 	}
 
-	var respErr *awshttp.ResponseError
-	if errors.As(err, &respErr) && respErr.HTTPStatusCode() == http.StatusNotFound {
+	if respErr, ok := errors.AsType[*awshttp.ResponseError](err); ok && respErr.HTTPStatusCode() == http.StatusNotFound {
 		return true
 	}
 

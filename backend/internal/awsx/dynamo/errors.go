@@ -32,8 +32,7 @@ func (e *JobExistsError) Error() string {
 
 // AsJobExists は err が JobExistsError かどうかを判定する
 func AsJobExists(err error) (*JobExistsError, bool) {
-	var target *JobExistsError
-	if errors.As(err, &target) {
+	if target, ok := errors.AsType[*JobExistsError](err); ok {
 		return target, true
 	}
 	return nil, false

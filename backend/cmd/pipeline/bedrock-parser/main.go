@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
@@ -32,7 +32,7 @@ func main() {
 	// Map の並列起動で発生するスロットリングは awsx/bedrock の既定の指数バックオフで吸収する
 	handler := bedrockparser.New(
 		s3.New(awss3.NewFromConfig(awsCfg), cfg.DocumentsBucket),
-		bedrockroute.New(bedrock.New(bedrockruntime.NewFromConfig(awsCfg)), cfg.BedrockModelID),
+		bedrockroute.New(bedrock.New(awsbedrockruntime.NewFromConfig(awsCfg)), cfg.BedrockModelID),
 	)
 
 	lambda.Start(handler.Handle)

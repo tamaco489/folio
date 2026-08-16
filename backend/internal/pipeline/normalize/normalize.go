@@ -199,5 +199,5 @@ func clonePtr[T any](p *T) *T {
 	if p == nil {
 		return nil
 	}
-	return domain.Ptr(*p)
+	return new(*p)
 }

@@ -24,6 +24,22 @@ lint:
 test:
     go test ./...
 
+# go fix の提案を差分で表示する (適用しない)
+fix-diff:
+    go fix -diff ./...
+
+# go fix の提案を適用する
+fix:
+    go fix ./...
+
+# gopls の modernize 解析器 (errorsastype など go fix に無いもの) の提案を表示する (適用しない)
+modernize:
+    go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -test ./...
+
+# modernize の提案を適用する
+modernize-fix:
+    go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -fix -test ./...
+
 # ビルド対象を列挙する (cmd/ からの相対パス。例: pipeline/validator)
 cmds:
     @scripts/cmds.sh

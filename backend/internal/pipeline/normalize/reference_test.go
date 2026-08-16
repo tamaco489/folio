@@ -13,18 +13,18 @@ func TestNormalizeDOI(t *testing.T) {
 		want     *string
 		wantWarn bool
 	}{
-		"正常系_https の URL の場合_接頭辞を剥がして小文字になること":  {in: domain.Ptr("https://doi.org/10.48550/ARXIV.2309.17453"), want: domain.Ptr("10.48550/arxiv.2309.17453")},
-		"正常系_dx.doi.org の URL の場合_接頭辞を剥がすこと":    {in: domain.Ptr("http://dx.doi.org/10.1000/xyz123"), want: domain.Ptr("10.1000/xyz123")},
-		"正常系_doi: の接頭辞の場合_剥がすこと":                {in: domain.Ptr("doi:10.1000/xyz123"), want: domain.Ptr("10.1000/xyz123")},
-		"正常系_大文字の DOI: と URL が重なる場合_両方剥がすこと":    {in: domain.Ptr("DOI: HTTPS://DOI.ORG/10.1000/XYZ123"), want: domain.Ptr("10.1000/xyz123")},
-		"正常系_前後に空白がある場合_除かれること":                 {in: domain.Ptr("  10.1000/xyz123 \n"), want: domain.Ptr("10.1000/xyz123")},
-		"正常系_既に正規形の場合_変わらないこと":                  {in: domain.Ptr("10.1000/xyz123"), want: domain.Ptr("10.1000/xyz123")},
+		"正常系_https の URL の場合_接頭辞を剥がして小文字になること":  {in: new("https://doi.org/10.48550/ARXIV.2309.17453"), want: new("10.48550/arxiv.2309.17453")},
+		"正常系_dx.doi.org の URL の場合_接頭辞を剥がすこと":    {in: new("http://dx.doi.org/10.1000/xyz123"), want: new("10.1000/xyz123")},
+		"正常系_doi: の接頭辞の場合_剥がすこと":                {in: new("doi:10.1000/xyz123"), want: new("10.1000/xyz123")},
+		"正常系_大文字の DOI: と URL が重なる場合_両方剥がすこと":    {in: new("DOI: HTTPS://DOI.ORG/10.1000/XYZ123"), want: new("10.1000/xyz123")},
+		"正常系_前後に空白がある場合_除かれること":                 {in: new("  10.1000/xyz123 \n"), want: new("10.1000/xyz123")},
+		"正常系_既に正規形の場合_変わらないこと":                  {in: new("10.1000/xyz123"), want: new("10.1000/xyz123")},
 		"正常系_nil の場合_nil のままで警告しないこと":           {in: nil, want: nil},
-		"正常系_空文字の場合_未特定として nil にし警告しないこと":       {in: domain.Ptr("  "), want: nil},
-		"異常系_10. で始まらない場合_nil に戻して警告すること":       {in: domain.Ptr("arXiv:2309.17453"), want: nil, wantWarn: true},
-		"異常系_登録者番号の後にスラッシュがない場合_nil に戻して警告すること": {in: domain.Ptr("10.1000"), want: nil, wantWarn: true},
-		"異常系_接頭辞だけの場合_nil に戻して警告すること":           {in: domain.Ptr("https://doi.org/"), want: nil, wantWarn: true},
-		"異常系_接尾辞に空白を含む場合_nil に戻して警告すること":        {in: domain.Ptr("10.1000/xyz 123"), want: nil, wantWarn: true},
+		"正常系_空文字の場合_未特定として nil にし警告しないこと":       {in: new("  "), want: nil},
+		"異常系_10. で始まらない場合_nil に戻して警告すること":       {in: new("arXiv:2309.17453"), want: nil, wantWarn: true},
+		"異常系_登録者番号の後にスラッシュがない場合_nil に戻して警告すること": {in: new("10.1000"), want: nil, wantWarn: true},
+		"異常系_接頭辞だけの場合_nil に戻して警告すること":           {in: new("https://doi.org/"), want: nil, wantWarn: true},
+		"異常系_接尾辞に空白を含む場合_nil に戻して警告すること":        {in: new("10.1000/xyz 123"), want: nil, wantWarn: true},
 	}
 
 	for name, tt := range tests {

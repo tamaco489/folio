@@ -11,38 +11,38 @@ import (
 	"time"
 
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 )
 
 // Recording は 1 本の論文に対する Textract の記録済みレスポンス
 //
 // 配置は testdata/textract/{論文 ID}.json
 type Recording struct {
-	PaperID       string              `json:"paperId"`
-	JobID         string              `json:"jobId,omitempty"`
-	FeatureTypes  []types.FeatureType `json:"featureTypes,omitempty"`
-	RecordedAt    time.Time           `json:"recordedAt,omitempty"`
-	Note          string              `json:"note,omitempty"`          // Note は記録の出自を残すための備考で、手書きのサンプルであることの明示にも使う
-	AnalysisPages []AnalysisPage      `json:"analysisPages,omitempty"` // AnalysisPages は GetDocumentAnalysis のレスポンスをページングの順に並べたもの
-	Detect        *DetectPage         `json:"detect,omitempty"`        // Detect は DetectDocumentText のレスポンス
+	PaperID       string                         `json:"paperId"`
+	JobID         string                         `json:"jobId,omitempty"`
+	FeatureTypes  []awstextracttypes.FeatureType `json:"featureTypes,omitempty"`
+	RecordedAt    time.Time                      `json:"recordedAt"`
+	Note          string                         `json:"note,omitempty"`          // Note は記録の出自を残すための備考で、手書きのサンプルであることの明示にも使う
+	AnalysisPages []AnalysisPage                 `json:"analysisPages,omitempty"` // AnalysisPages は GetDocumentAnalysis のレスポンスをページングの順に並べたもの
+	Detect        *DetectPage                    `json:"detect,omitempty"`        // Detect は DetectDocumentText のレスポンス
 }
 
 // AnalysisPage は GetDocumentAnalysis のレスポンス 1 ページ分
 type AnalysisPage struct {
-	JobStatus        types.JobStatus         `json:"jobStatus"`
-	Blocks           []types.Block           `json:"blocks,omitempty"`
-	DocumentMetadata *types.DocumentMetadata `json:"documentMetadata,omitempty"`
-	NextToken        string                  `json:"nextToken,omitempty"`
-	StatusMessage    string                  `json:"statusMessage,omitempty"`
-	Warnings         []types.Warning         `json:"warnings,omitempty"`
-	ModelVersion     string                  `json:"modelVersion,omitempty"`
+	JobStatus        awstextracttypes.JobStatus         `json:"jobStatus"`
+	Blocks           []awstextracttypes.Block           `json:"blocks,omitempty"`
+	DocumentMetadata *awstextracttypes.DocumentMetadata `json:"documentMetadata,omitempty"`
+	NextToken        string                             `json:"nextToken,omitempty"`
+	StatusMessage    string                             `json:"statusMessage,omitempty"`
+	Warnings         []awstextracttypes.Warning         `json:"warnings,omitempty"`
+	ModelVersion     string                             `json:"modelVersion,omitempty"`
 }
 
 // DetectPage は DetectDocumentText のレスポンス
 type DetectPage struct {
-	Blocks           []types.Block           `json:"blocks,omitempty"`
-	DocumentMetadata *types.DocumentMetadata `json:"documentMetadata,omitempty"`
-	ModelVersion     string                  `json:"modelVersion,omitempty"`
+	Blocks           []awstextracttypes.Block           `json:"blocks,omitempty"`
+	DocumentMetadata *awstextracttypes.DocumentMetadata `json:"documentMetadata,omitempty"`
+	ModelVersion     string                             `json:"modelVersion,omitempty"`
 }
 
 // RecordingPath は論文 ID から記録ファイルのパスを組み立てる
@@ -301,7 +301,7 @@ func (r *Recorder) GetDocumentAnalysis(ctx context.Context, params *awstextract.
 		r.rec.JobID = *params.JobId
 	}
 	// 未完了のレスポンスを記録すると再生時に完了まで進めないため捨てる
-	if out.JobStatus == types.JobStatusInProgress {
+	if out.JobStatus == awstextracttypes.JobStatusInProgress {
 		return out, nil
 	}
 	if params == nil || params.NextToken == nil || *params.NextToken == "" {

@@ -258,12 +258,12 @@ func messyDocument() domain.Document {
 		Figures: []domain.Figure{{ID: " figure-1 ", Page: 1, BBox: domain.BBox{0.1, 0.2, 0.3, 0.4}}},
 		Tables:  []domain.Table{{ID: "table-1", Header: nil, Rows: [][]string{{" a ", "b"}, nil}}},
 		References: []domain.Reference{
-			{Raw: "x.\ny", Title: "T.", Authors: []string{"", "A"}, Year: 1, DOI: domain.Ptr("https://doi.org/10.1000/ABC")},
-			{Raw: "z", Title: "Ends with ellipsis...", DOI: domain.Ptr("bogus")},
+			{Raw: "x.\ny", Title: "T.", Authors: []string{"", "A"}, Year: 1, DOI: new("https://doi.org/10.1000/ABC")},
+			{Raw: "z", Title: "Ends with ellipsis...", DOI: new("bogus")},
 		},
 		Provenance: domain.Provenance{
 			Route:      domain.Route(""),
-			Confidence: domain.Confidence{Title: domain.Ptr(0.9)},
+			Confidence: domain.Confidence{Title: new(0.9)},
 			Cost:       domain.Cost{TextractFeatures: []string{"TABLES", "LAYOUT"}},
 			Warnings:   []string{"w", "w"},
 		},

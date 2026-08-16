@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
 var (
@@ -116,11 +116,11 @@ type Response struct {
 	Attempts   int    `json:"attempts,omitempty"` // Attempts は成功までに要した試行回数 (初回を 1 とする)
 }
 
-// ConverseAPI は bedrockruntime.Client のうち本パッケージが利用する範囲
+// ConverseAPI は awsbedrockruntime.Client のうち本パッケージが利用する範囲
 //
 // テストでフェイクに差し替えるためにインタフェースとして切り出す
 type ConverseAPI interface {
-	Converse(ctx context.Context, params *bedrockruntime.ConverseInput, optFns ...func(*bedrockruntime.Options)) (*bedrockruntime.ConverseOutput, error)
+	Converse(ctx context.Context, params *awsbedrockruntime.ConverseInput, optFns ...func(*awsbedrockruntime.Options)) (*awsbedrockruntime.ConverseOutput, error)
 }
 
 // Converser は経路 A と経路 B の双方が依存する呼び出し口
@@ -224,7 +224,7 @@ func (c *Client) Converse(ctx context.Context, req Request) (*Response, error) {
 	}
 }
 
-func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) {
+func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, error) {
 	modelID := req.ModelID
 	if modelID == "" {
 		modelID = c.defaultModelID
@@ -236,7 +236,7 @@ func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) 
 		return nil, ErrEmptyRequest
 	}
 
-	messages := make([]types.Message, 0, len(req.Messages))
+	messages := make([]awsbedrockruntimetypes.Message, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		blocks, err := toContentBlocks(m.Content)
 		if err != nil {
@@ -246,23 +246,23 @@ func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) 
 		if role == "" {
 			role = RoleUser
 		}
-		messages = append(messages, types.Message{
-			Role:    types.ConversationRole(role),
+		messages = append(messages, awsbedrockruntimetypes.Message{
+			Role:    awsbedrockruntimetypes.ConversationRole(role),
 			Content: blocks,
 		})
 	}
 
-	in := &bedrockruntime.ConverseInput{
+	in := &awsbedrockruntime.ConverseInput{
 		ModelId:  aws.String(modelID),
 		Messages: messages,
 	}
 	if req.System != "" {
-		in.System = []types.SystemContentBlock{
-			&types.SystemContentBlockMemberText{Value: req.System},
+		in.System = []awsbedrockruntimetypes.SystemContentBlock{
+			&awsbedrockruntimetypes.SystemContentBlockMemberText{Value: req.System},
 		}
 	}
 	if req.MaxTokens != nil || req.Temperature != nil {
-		in.InferenceConfig = &types.InferenceConfiguration{
+		in.InferenceConfig = &awsbedrockruntimetypes.InferenceConfiguration{
 			MaxTokens:   req.MaxTokens,
 			Temperature: req.Temperature,
 		}
@@ -270,18 +270,18 @@ func (c *Client) buildInput(req Request) (*bedrockruntime.ConverseInput, error) 
 	return in, nil
 }
 
-func toContentBlocks(parts []ContentPart) ([]types.ContentBlock, error) {
+func toContentBlocks(parts []ContentPart) ([]awsbedrockruntimetypes.ContentBlock, error) {
 	if len(parts) == 0 {
 		return nil, ErrEmptyContent
 	}
-	blocks := make([]types.ContentBlock, 0, len(parts))
+	blocks := make([]awsbedrockruntimetypes.ContentBlock, 0, len(parts))
 	for _, p := range parts {
 		switch v := p.(type) {
 		case TextPart:
 			if v.Text == "" {
 				return nil, fmt.Errorf("%w: text", ErrEmptyContent)
 			}
-			blocks = append(blocks, &types.ContentBlockMemberText{Value: v.Text})
+			blocks = append(blocks, &awsbedrockruntimetypes.ContentBlockMemberText{Value: v.Text})
 		case ImagePart:
 			if len(v.Bytes) == 0 {
 				return nil, fmt.Errorf("%w: image", ErrEmptyContent)
@@ -289,10 +289,10 @@ func toContentBlocks(parts []ContentPart) ([]types.ContentBlock, error) {
 			if v.Format == "" {
 				return nil, fmt.Errorf("%w: image format", ErrEmptyContent)
 			}
-			blocks = append(blocks, &types.ContentBlockMemberImage{
-				Value: types.ImageBlock{
-					Format: types.ImageFormat(v.Format),
-					Source: &types.ImageSourceMemberBytes{Value: v.Bytes},
+			blocks = append(blocks, &awsbedrockruntimetypes.ContentBlockMemberImage{
+				Value: awsbedrockruntimetypes.ImageBlock{
+					Format: awsbedrockruntimetypes.ImageFormat(v.Format),
+					Source: &awsbedrockruntimetypes.ImageSourceMemberBytes{Value: v.Bytes},
 				},
 			})
 		default:
@@ -302,15 +302,15 @@ func toContentBlocks(parts []ContentPart) ([]types.ContentBlock, error) {
 	return blocks, nil
 }
 
-func newResponse(out *bedrockruntime.ConverseOutput) (*Response, error) {
+func newResponse(out *awsbedrockruntime.ConverseOutput) (*Response, error) {
 	if out == nil {
 		return nil, ErrNoTextContent
 	}
 
 	var sb strings.Builder
-	if msg, ok := out.Output.(*types.ConverseOutputMemberMessage); ok {
+	if msg, ok := out.Output.(*awsbedrockruntimetypes.ConverseOutputMemberMessage); ok {
 		for _, block := range msg.Value.Content {
-			if t, ok := block.(*types.ContentBlockMemberText); ok {
+			if t, ok := block.(*awsbedrockruntimetypes.ContentBlockMemberText); ok {
 				sb.WriteString(t.Value)
 			}
 		}

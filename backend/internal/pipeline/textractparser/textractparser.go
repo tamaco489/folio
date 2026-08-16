@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/awsx/sfn"
@@ -96,12 +96,12 @@ type StartOutput struct {
 //
 // タスクトークンは Textract の JobTag (64 文字上限) に収まらないため、JobTag には jobId だけを入れてトークンは S3 に置く
 type Callback struct {
-	JobID         string              `json:"jobId"`
-	TaskToken     string              `json:"taskToken"`
-	TextractJobID string              `json:"textractJobId"` // TextractJobID は Retry で再起動された古いジョブの通知を見分けるために持つ
-	StartedAt     time.Time           `json:"startedAt"`
-	FeatureTypes  []types.FeatureType `json:"featureTypes"`
-	Source        domain.Source       `json:"source"`
+	JobID         string                         `json:"jobId"`
+	TaskToken     string                         `json:"taskToken"`
+	TextractJobID string                         `json:"textractJobId"` // TextractJobID は Retry で再起動された古いジョブの通知を見分けるために持つ
+	StartedAt     time.Time                      `json:"startedAt"`
+	FeatureTypes  []awstextracttypes.FeatureType `json:"featureTypes"`
+	Source        domain.Source                  `json:"source"`
 }
 
 // Result は SendTaskSuccess で Step Functions へ返す Task の出力
@@ -122,9 +122,9 @@ type FailureCause struct {
 
 // Analysis は Textract の非同期解析の起動に用いる設定
 type Analysis struct {
-	SNSTopicARN  string              // SNSTopicARN は Textract が完了通知を発行するトピック
-	RoleARN      string              // RoleARN は Textract がトピックへ発行するために引き受けるロール
-	FeatureTypes []types.FeatureType // FeatureTypes は解析に用いる機能 (provenance.cost にもそのまま記録する)
+	SNSTopicARN  string                         // SNSTopicARN は Textract が完了通知を発行するトピック
+	RoleARN      string                         // RoleARN は Textract がトピックへ発行するために引き受けるロール
+	FeatureTypes []awstextracttypes.FeatureType // FeatureTypes は解析に用いる機能 (provenance.cost にもそのまま記録する)
 }
 
 // Handler は起動と完了通知の両方を担う
@@ -369,23 +369,23 @@ func classify(err error) error {
 //
 // スロットリングと同時実行数の上限は時間を置けば解消するため Retry に委ね、文書や引数に起因する失敗は対象にしない
 func isTransient(err error) bool {
-	if _, ok := errors.AsType[*types.ProvisionedThroughputExceededException](err); ok {
+	if _, ok := errors.AsType[*awstextracttypes.ProvisionedThroughputExceededException](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[*types.LimitExceededException](err); ok {
+	if _, ok := errors.AsType[*awstextracttypes.LimitExceededException](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[*types.ThrottlingException](err); ok {
+	if _, ok := errors.AsType[*awstextracttypes.ThrottlingException](err); ok {
 		return true
 	}
-	_, ok := errors.AsType[*types.InternalServerError](err)
+	_, ok := errors.AsType[*awstextracttypes.InternalServerError](err)
 	return ok
 }
 
 // ParseFeatureTypes はカンマ区切りの設定値 (config.Config.TextractFeatureTypes) を FeatureTypes に変換する
-func ParseFeatureTypes(spec string) ([]types.FeatureType, error) {
+func ParseFeatureTypes(spec string) ([]awstextracttypes.FeatureType, error) {
 	var values []string
-	for _, v := range strings.Split(spec, ",") {
+	for v := range strings.SplitSeq(spec, ",") {
 		if v = strings.TrimSpace(v); v != "" {
 			values = append(values, v)
 		}

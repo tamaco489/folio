@@ -288,9 +288,8 @@ func TestHandlePropagatesExtractError(t *testing.T) {
 func TestOutputHasNoCollectionFields(t *testing.T) {
 	t.Parallel()
 
-	typ := reflect.TypeOf(Output{})
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	typ := reflect.TypeFor[Output]()
+	for field := range typ.Fields() {
 		switch field.Type.Kind() {
 		case reflect.Slice, reflect.Array, reflect.Map, reflect.Struct:
 			t.Errorf("Output.%s は %s であり実体を抱え込みうる", field.Name, field.Type.Kind())

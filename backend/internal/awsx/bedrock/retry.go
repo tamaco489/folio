@@ -6,7 +6,7 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
+	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
 // ErrRetryExhausted はリトライ上限に達した場合に返る
@@ -96,22 +96,18 @@ func IsRetryable(err error) bool {
 		return false
 	}
 
-	var throttling *types.ThrottlingException
-	if errors.As(err, &throttling) {
+	if _, ok := errors.AsType[*awsbedrockruntimetypes.ThrottlingException](err); ok {
 		return true
 	}
-	var unavailable *types.ServiceUnavailableException
-	if errors.As(err, &unavailable) {
+	if _, ok := errors.AsType[*awsbedrockruntimetypes.ServiceUnavailableException](err); ok {
 		return true
 	}
-	var internal *types.InternalServerException
-	if errors.As(err, &internal) {
+	if _, ok := errors.AsType[*awsbedrockruntimetypes.InternalServerException](err); ok {
 		return true
 	}
-	var timeout *types.ModelTimeoutException
-	if errors.As(err, &timeout) {
+	if _, ok := errors.AsType[*awsbedrockruntimetypes.ModelTimeoutException](err); ok {
 		return true
 	}
-	var notReady *types.ModelNotReadyException
-	return errors.As(err, &notReady)
+	_, ok := errors.AsType[*awsbedrockruntimetypes.ModelNotReadyException](err)
+	return ok
 }

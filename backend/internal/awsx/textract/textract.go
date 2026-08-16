@@ -8,7 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 )
 
 // API は本パッケージが使う Textract の操作だけを切り出したインターフェース
@@ -47,8 +47,8 @@ type S3Location struct {
 	Key    string
 }
 
-func (l S3Location) toS3Object() *types.S3Object {
-	return &types.S3Object{
+func (l S3Location) toS3Object() *awstextracttypes.S3Object {
+	return &awstextracttypes.S3Object{
 		Bucket: aws.String(l.Bucket),
 		Name:   aws.String(l.Key),
 	}
@@ -66,12 +66,12 @@ func (l S3Location) validate() error {
 // FeatureTypes は #34 の検証で組み合わせを差し替えるため、必ず呼び出し側が指定する
 type StartAnalysisInput struct {
 	Document           S3Location
-	FeatureTypes       []types.FeatureType
+	FeatureTypes       []awstextracttypes.FeatureType
 	SNSTopicARN        string
 	RoleARN            string
 	JobTag             string
 	ClientRequestToken string
-	QueriesConfig      *types.QueriesConfig
+	QueriesConfig      *awstextracttypes.QueriesConfig
 }
 
 // StartDocumentAnalysis は非同期解析を開始し、ジョブ ID を返す
@@ -87,7 +87,7 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 	}
 
 	params := &awstextract.StartDocumentAnalysisInput{
-		DocumentLocation: &types.DocumentLocation{S3Object: in.Document.toS3Object()},
+		DocumentLocation: &awstextracttypes.DocumentLocation{S3Object: in.Document.toS3Object()},
 		FeatureTypes:     in.FeatureTypes,
 		QueriesConfig:    in.QueriesConfig,
 	}
@@ -101,7 +101,7 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 		if in.SNSTopicARN == "" || in.RoleARN == "" {
 			return "", fmt.Errorf("%w: sns topic arn and role arn must be set together", ErrInvalidInput)
 		}
-		params.NotificationChannel = &types.NotificationChannel{
+		params.NotificationChannel = &awstextracttypes.NotificationChannel{
 			SNSTopicArn: aws.String(in.SNSTopicARN),
 			RoleArn:     aws.String(in.RoleARN),
 		}
@@ -120,10 +120,10 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 // AnalysisResult は GetDocumentAnalysis のページングを畳んだ結果
 type AnalysisResult struct {
 	JobID            string
-	JobStatus        types.JobStatus
-	Blocks           []types.Block
-	DocumentMetadata *types.DocumentMetadata
-	Warnings         []types.Warning
+	JobStatus        awstextracttypes.JobStatus
+	Blocks           []awstextracttypes.Block
+	DocumentMetadata *awstextracttypes.DocumentMetadata
+	Warnings         []awstextracttypes.Warning
 	StatusMessage    string
 	ModelVersion     string
 	Pages            int // Pages は取得に要したレスポンス数
@@ -168,9 +168,9 @@ func (c *Client) GetDocumentAnalysis(ctx context.Context, jobID string) (*Analys
 		if next == nil {
 			result.JobStatus = out.JobStatus
 			switch out.JobStatus {
-			case types.JobStatusInProgress:
+			case awstextracttypes.JobStatusInProgress:
 				return result, ErrJobInProgress
-			case types.JobStatusFailed:
+			case awstextracttypes.JobStatusFailed:
 				return result, fmt.Errorf("%w: %s", ErrJobFailed, result.StatusMessage)
 			}
 		}
@@ -196,8 +196,8 @@ type DetectInput struct {
 
 // DetectResult は DetectDocumentText の結果
 type DetectResult struct {
-	Blocks           []types.Block
-	DocumentMetadata *types.DocumentMetadata
+	Blocks           []awstextracttypes.Block
+	DocumentMetadata *awstextracttypes.DocumentMetadata
 	ModelVersion     string
 }
 
@@ -205,7 +205,7 @@ type DetectResult struct {
 //
 // #34 で FeatureTypes 付きの解析と比較するベースラインとして使う
 func (c *Client) DetectDocumentText(ctx context.Context, in DetectInput) (*DetectResult, error) {
-	doc := &types.Document{}
+	doc := &awstextracttypes.Document{}
 	if len(in.Bytes) > 0 {
 		doc.Bytes = in.Bytes
 	} else {
@@ -236,13 +236,13 @@ func (c *Client) DetectDocumentText(ctx context.Context, in DetectInput) (*Detec
 // ParseFeatureTypes は文字列の並びを FeatureType に変換する
 //
 // 組み合わせは未確定のため、環境変数や設定値から渡せるようにしている
-func ParseFeatureTypes(values []string) ([]types.FeatureType, error) {
+func ParseFeatureTypes(values []string) ([]awstextracttypes.FeatureType, error) {
 	if len(values) == 0 {
 		return nil, fmt.Errorf("%w: feature types are required", ErrInvalidInput)
 	}
-	features := make([]types.FeatureType, 0, len(values))
+	features := make([]awstextracttypes.FeatureType, 0, len(values))
 	for _, v := range values {
-		features = append(features, types.FeatureType(v))
+		features = append(features, awstextracttypes.FeatureType(v))
 	}
 	if err := ValidateFeatureTypes(features); err != nil {
 		return nil, err
@@ -251,12 +251,12 @@ func ParseFeatureTypes(values []string) ([]types.FeatureType, error) {
 }
 
 // ValidateFeatureTypes は SDK が定義する列挙値であるかと重複がないかを検査する
-func ValidateFeatureTypes(features []types.FeatureType) error {
-	known := map[types.FeatureType]struct{}{}
-	for _, v := range types.FeatureType("").Values() {
+func ValidateFeatureTypes(features []awstextracttypes.FeatureType) error {
+	known := map[awstextracttypes.FeatureType]struct{}{}
+	for _, v := range awstextracttypes.FeatureType("").Values() {
 		known[v] = struct{}{}
 	}
-	seen := map[types.FeatureType]struct{}{}
+	seen := map[awstextracttypes.FeatureType]struct{}{}
 	for _, f := range features {
 		if _, ok := known[f]; !ok {
 			return fmt.Errorf("%w: unknown feature type %q", ErrInvalidInput, string(f))

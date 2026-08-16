@@ -118,25 +118,25 @@ func TestMergeSectionBoundary(t *testing.T) {
 			wantText:     "intro continued",
 		},
 		"正常系_フラグが true で見出しがない場合_前ページの章に連結されること": {
-			second:       PageResult{Page: 2, ContinuesPreviousSection: domain.Ptr(true), Sections: []PageSection{{Text: "continued"}}},
+			second:       PageResult{Page: 2, ContinuesPreviousSection: new(true), Sections: []PageSection{{Text: "continued"}}},
 			wantSections: 1,
 			wantPages:    []int{1, 2},
 			wantText:     "intro continued",
 		},
 		"正常系_フラグが false で見出しがない場合_見出しなしの章が始まること": {
-			second:       PageResult{Page: 2, ContinuesPreviousSection: domain.Ptr(false), Sections: []PageSection{{Text: "standalone"}}},
+			second:       PageResult{Page: 2, ContinuesPreviousSection: new(false), Sections: []PageSection{{Text: "standalone"}}},
 			wantSections: 2,
 			wantPages:    []int{2},
 			wantText:     "standalone",
 		},
 		"正常系_フラグが true でも見出しがある場合_新しい章が始まること": {
-			second:       PageResult{Page: 2, ContinuesPreviousSection: domain.Ptr(true), Sections: []PageSection{{Level: 1, Heading: "2 Method", Text: "method"}}},
+			second:       PageResult{Page: 2, ContinuesPreviousSection: new(true), Sections: []PageSection{{Level: 1, Heading: "2 Method", Text: "method"}}},
 			wantSections: 2,
 			wantPages:    []int{2},
 			wantText:     "method",
 		},
 		"正常系_ページ途中に見出しなしブロックが続く場合_同じページ番号を重複させずに連結すること": {
-			second: PageResult{Page: 2, ContinuesPreviousSection: domain.Ptr(false), Sections: []PageSection{
+			second: PageResult{Page: 2, ContinuesPreviousSection: new(false), Sections: []PageSection{
 				{Level: 1, Heading: "2 Method", Text: "method"},
 				{Text: "more"},
 			}},
@@ -181,7 +181,7 @@ func TestMergeReferencesAcrossPages(t *testing.T) {
 		wantYear int
 	}{
 		"正常系_続きのフラグが立つ場合_前ページ末尾の 1 件へ連結されること": {
-			tail: PageResult{Page: 2, ContinuesPreviousReference: domain.Ptr(true), References: []PageReference{
+			tail: PageResult{Page: 2, ContinuesPreviousReference: new(true), References: []PageReference{
 				{Raw: "Need. NeurIPS, 2017.", Year: 2017, DOI: "10.1000/example.0001"},
 			}},
 			wantRefs: 1,
@@ -198,7 +198,7 @@ func TestMergeReferencesAcrossPages(t *testing.T) {
 			wantYear: 2019,
 		},
 		"正常系_フラグが false の場合_別の 1 件として扱われること": {
-			tail: PageResult{Page: 2, ContinuesPreviousReference: domain.Ptr(false), References: []PageReference{
+			tail: PageResult{Page: 2, ContinuesPreviousReference: new(false), References: []PageReference{
 				{Raw: "Devlin, J. et al. BERT. NAACL, 2019."},
 			}},
 			wantRefs: 2,
@@ -240,7 +240,7 @@ func TestMergeReferencesJapanese(t *testing.T) {
 		Source: domain.Source{Language: domain.LanguageJapanese, PageCount: 2},
 		Pages: []PageResult{
 			{Page: 1, References: []PageReference{{Raw: "田中 藍子. 疎な注意経路選択による"}}},
-			{Page: 2, ContinuesPreviousReference: domain.Ptr(true), References: []PageReference{{Raw: "長文脈言語モデルの高速化. 人工知能学会, 2026."}}},
+			{Page: 2, ContinuesPreviousReference: new(true), References: []PageReference{{Raw: "長文脈言語モデルの高速化. 人工知能学会, 2026."}}},
 		},
 	})
 

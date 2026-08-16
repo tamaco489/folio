@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	awssfn "github.com/aws/aws-sdk-go-v2/service/sfn"
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
@@ -48,7 +48,7 @@ func main() {
 		s3.New(awss3.NewFromConfig(awsCfg), cfg.DocumentsBucket),
 		textract.New(awstextract.NewFromConfig(awsCfg)),
 		sfn.New(awssfn.NewFromConfig(awsCfg)),
-		textractroute.New(bedrock.New(bedrockruntime.NewFromConfig(awsCfg)), cfg.BedrockModelID),
+		textractroute.New(bedrock.New(awsbedrockruntime.NewFromConfig(awsCfg)), cfg.BedrockModelID),
 		textractparser.Analysis{
 			SNSTopicARN:  cfg.TextractSNSTopicARN,
 			RoleARN:      cfg.TextractRoleARN,

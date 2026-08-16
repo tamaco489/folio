@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 )
 
 // testdataDir は justfile が定める記録の配置先
@@ -73,7 +73,7 @@ func TestReplayerErrors(t *testing.T) {
 // 記録モードが応答をファイルに残し、再生モードで読み戻せることを確かめる
 func TestRecorderRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{textOutput(`{"title":"recorded"}`)}}
+	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"recorded"}`)}}
 	live := New(api, WithDefaultModelID("m"))
 
 	recorder := NewRecorder(live, dir, RouteBedrock)

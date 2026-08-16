@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
 // fakeSleeper は待機を記録するだけで実時間を消費しない
@@ -23,7 +23,7 @@ func (s *fakeSleeper) sleep(_ context.Context, d time.Duration) error {
 }
 
 func throttling() error {
-	return &types.ThrottlingException{Message: aws.String("Too many requests")}
+	return &awsbedrockruntimetypes.ThrottlingException{Message: aws.String("Too many requests")}
 }
 
 func testRetryConfig() RetryConfig {
@@ -39,7 +39,7 @@ func testRetryConfig() RetryConfig {
 func TestConverseRetriesOnThrottling(t *testing.T) {
 	api := &fakeAPI{
 		errs: []error{throttling(), throttling(), nil},
-		outputs: []*bedrockruntime.ConverseOutput{
+		outputs: []*awsbedrockruntime.ConverseOutput{
 			nil, nil, textOutput(`{"ok":true}`),
 		},
 	}
@@ -100,8 +100,7 @@ func TestConverseBackoffCappedAtMaxDelay(t *testing.T) {
 		}
 	}
 
-	var throttled *types.ThrottlingException
-	if !errors.As(err, &throttled) {
+	if _, ok := errors.AsType[*awsbedrockruntimetypes.ThrottlingException](err); !ok {
 		t.Errorf("最後のエラーが原因として残っていない: %v", err)
 	}
 }
@@ -165,7 +164,7 @@ func TestConverseBackoffJitter(t *testing.T) {
 
 // 入力起因の失敗はリトライしない
 func TestConverseDoesNotRetryValidationError(t *testing.T) {
-	api := &fakeAPI{errs: []error{&types.ValidationException{Message: aws.String("bad input")}}}
+	api := &fakeAPI{errs: []error{&awsbedrockruntimetypes.ValidationException{Message: aws.String("bad input")}}}
 	sleeper := &fakeSleeper{}
 	c := New(api,
 		WithDefaultModelID("m"),
@@ -212,15 +211,15 @@ func TestIsRetryable(t *testing.T) {
 		err  error
 		want bool
 	}{
-		"正常系_スロットリングの場合_リトライ対象と判定されること":       {err: &types.ThrottlingException{}, want: true},
-		"正常系_サービス利用不可の場合_リトライ対象と判定されること":      {err: &types.ServiceUnavailableException{}, want: true},
-		"正常系_内部エラーの場合_リトライ対象と判定されること":         {err: &types.InternalServerException{}, want: true},
-		"正常系_モデルのタイムアウトの場合_リトライ対象と判定されること":    {err: &types.ModelTimeoutException{}, want: true},
-		"正常系_モデル未準備の場合_リトライ対象と判定されること":        {err: &types.ModelNotReadyException{}, want: true},
-		"正常系_ラップされたスロットリングの場合_リトライ対象と判定されること": {err: errors.Join(errors.New("outer"), &types.ThrottlingException{}), want: true},
-		"異常系_入力不正の場合_リトライ対象外と判定されること":         {err: &types.ValidationException{}, want: false},
-		"異常系_権限不足の場合_リトライ対象外と判定されること":         {err: &types.AccessDeniedException{}, want: false},
-		"異常系_クォータ超過の場合_リトライ対象外と判定されること":       {err: &types.ServiceQuotaExceededException{}, want: false},
+		"正常系_スロットリングの場合_リトライ対象と判定されること":       {err: &awsbedrockruntimetypes.ThrottlingException{}, want: true},
+		"正常系_サービス利用不可の場合_リトライ対象と判定されること":      {err: &awsbedrockruntimetypes.ServiceUnavailableException{}, want: true},
+		"正常系_内部エラーの場合_リトライ対象と判定されること":         {err: &awsbedrockruntimetypes.InternalServerException{}, want: true},
+		"正常系_モデルのタイムアウトの場合_リトライ対象と判定されること":    {err: &awsbedrockruntimetypes.ModelTimeoutException{}, want: true},
+		"正常系_モデル未準備の場合_リトライ対象と判定されること":        {err: &awsbedrockruntimetypes.ModelNotReadyException{}, want: true},
+		"正常系_ラップされたスロットリングの場合_リトライ対象と判定されること": {err: errors.Join(errors.New("outer"), &awsbedrockruntimetypes.ThrottlingException{}), want: true},
+		"異常系_入力不正の場合_リトライ対象外と判定されること":         {err: &awsbedrockruntimetypes.ValidationException{}, want: false},
+		"異常系_権限不足の場合_リトライ対象外と判定されること":         {err: &awsbedrockruntimetypes.AccessDeniedException{}, want: false},
+		"異常系_クォータ超過の場合_リトライ対象外と判定されること":       {err: &awsbedrockruntimetypes.ServiceQuotaExceededException{}, want: false},
 		"異常系_ctx がキャンセルされた場合_リトライ対象外と判定されること": {err: context.Canceled, want: false},
 		"境界値_エラーが nil の場合_リトライ対象外と判定されること":    {err: nil, want: false},
 	}

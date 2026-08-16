@@ -194,7 +194,7 @@ func (s signal) mean() *float64 {
 	if s.n == 0 {
 		return nil
 	}
-	return domain.Ptr(round(s.sum / float64(s.n)))
+	return new(round(s.sum / float64(s.n)))
 }
 
 // originalScores はフィールドごとの原本との一致度
@@ -310,7 +310,7 @@ func summarize(checks []ReferenceCheck) (CrossrefSummary, *float64) {
 	if s.Verified+s.Mismatch == 0 {
 		return s, nil
 	}
-	return s, domain.Ptr(round(float64(s.Verified) / float64(s.Verified+s.Mismatch)))
+	return s, new(round(float64(s.Verified) / float64(s.Verified+s.Mismatch)))
 }
 
 // combine は存在するシグナルの平均を返す (1 つも無ければ nil)
@@ -333,5 +333,5 @@ func clonePtr(p *float64) *float64 {
 	if p == nil {
 		return nil
 	}
-	return domain.Ptr(*p)
+	return new(*p)
 }

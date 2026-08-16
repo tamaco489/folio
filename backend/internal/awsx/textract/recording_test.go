@@ -8,7 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
 )
@@ -51,7 +51,7 @@ func TestReplayGetDocumentAnalysisMergesPages(t *testing.T) {
 	if len(res.Blocks) != want {
 		t.Fatalf("blocks = %d, want %d", len(res.Blocks), want)
 	}
-	if res.JobStatus != types.JobStatusSucceeded {
+	if res.JobStatus != awstextracttypes.JobStatusSucceeded {
 		t.Fatalf("job status = %q", res.JobStatus)
 	}
 	if len(res.Warnings) != 1 {
@@ -75,14 +75,14 @@ func TestReplayPreservesBlockDetails(t *testing.T) {
 		t.Fatalf("GetDocumentAnalysis: %v", err)
 	}
 
-	var title, cell *types.Block
+	var title, cell *awstextracttypes.Block
 	for i := range res.Blocks {
 		switch res.Blocks[i].BlockType {
-		case types.BlockTypeLine:
+		case awstextracttypes.BlockTypeLine:
 			if title == nil {
 				title = &res.Blocks[i]
 			}
-		case types.BlockTypeCell:
+		case awstextracttypes.BlockTypeCell:
 			if cell == nil {
 				cell = &res.Blocks[i]
 			}
@@ -101,7 +101,7 @@ func TestReplayPreservesBlockDetails(t *testing.T) {
 	if cell == nil || aws.ToInt32(cell.RowIndex) != 1 || aws.ToInt32(cell.ColumnIndex) != 1 {
 		t.Fatalf("cell block = %+v", cell)
 	}
-	if len(cell.EntityTypes) != 1 || cell.EntityTypes[0] != types.EntityTypeColumnHeader {
+	if len(cell.EntityTypes) != 1 || cell.EntityTypes[0] != awstextracttypes.EntityTypeColumnHeader {
 		t.Fatalf("entity types = %v", cell.EntityTypes)
 	}
 }
@@ -164,13 +164,13 @@ func TestRecordingValidateRejectsBrokenPaging(t *testing.T) {
 	tests := map[string]textract.Recording{
 		"異常系_最終ページにトークンが残る場合_検証エラーになること": {
 			AnalysisPages: []textract.AnalysisPage{
-				{JobStatus: types.JobStatusSucceeded, NextToken: "dangling"},
+				{JobStatus: awstextracttypes.JobStatusSucceeded, NextToken: "dangling"},
 			},
 		},
 		"異常系_中間ページにトークンがない場合_検証エラーになること": {
 			AnalysisPages: []textract.AnalysisPage{
-				{JobStatus: types.JobStatusSucceeded},
-				{JobStatus: types.JobStatusSucceeded},
+				{JobStatus: awstextracttypes.JobStatusSucceeded},
+				{JobStatus: awstextracttypes.JobStatusSucceeded},
 			},
 		},
 		"異常系_ジョブ状態がない場合_検証エラーになること": {
@@ -194,17 +194,17 @@ func TestRecorderRoundTrip(t *testing.T) {
 
 	pages := []*awstextract.GetDocumentAnalysisOutput{
 		{
-			JobStatus:                   types.JobStatusSucceeded,
+			JobStatus:                   awstextracttypes.JobStatusSucceeded,
 			AnalyzeDocumentModelVersion: aws.String("1.0"),
-			DocumentMetadata:            &types.DocumentMetadata{Pages: aws.Int32(1)},
-			Blocks:                      []types.Block{{BlockType: types.BlockTypeLine, Text: aws.String("first"), Confidence: aws.Float32(97.5)}},
+			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: aws.Int32(1)},
+			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("first"), Confidence: aws.Float32(97.5)}},
 			NextToken:                   aws.String("token-2"),
 		},
 		{
-			JobStatus:                   types.JobStatusSucceeded,
+			JobStatus:                   awstextracttypes.JobStatusSucceeded,
 			AnalyzeDocumentModelVersion: aws.String("1.0"),
-			DocumentMetadata:            &types.DocumentMetadata{Pages: aws.Int32(1)},
-			Blocks:                      []types.Block{{BlockType: types.BlockTypeLine, Text: aws.String("second")}},
+			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: aws.Int32(1)},
+			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("second")}},
 		},
 	}
 	calls := 0
@@ -219,7 +219,7 @@ func TestRecorderRoundTrip(t *testing.T) {
 		},
 		detect: func(*awstextract.DetectDocumentTextInput) (*awstextract.DetectDocumentTextOutput, error) {
 			return &awstextract.DetectDocumentTextOutput{
-				Blocks:                         []types.Block{{BlockType: types.BlockTypeLine, Text: aws.String("baseline")}},
+				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("baseline")}},
 				DetectDocumentTextModelVersion: aws.String("1.0"),
 			}, nil
 		},
@@ -230,7 +230,7 @@ func TestRecorderRoundTrip(t *testing.T) {
 
 	jobID, err := recording.StartDocumentAnalysis(context.Background(), textract.StartAnalysisInput{
 		Document:     textract.S3Location{Bucket: "folio-dev", Key: "uploads/job-1/original.pdf"},
-		FeatureTypes: []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables},
+		FeatureTypes: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables},
 	})
 	if err != nil {
 		t.Fatalf("StartDocumentAnalysis: %v", err)
@@ -290,7 +290,7 @@ func TestRecorderSkipsInProgressResponse(t *testing.T) {
 
 	inner := &fakeAPI{
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
-			return &awstextract.GetDocumentAnalysisOutput{JobStatus: types.JobStatusInProgress}, nil
+			return &awstextract.GetDocumentAnalysisOutput{JobStatus: awstextracttypes.JobStatusInProgress}, nil
 		},
 	}
 	recorder := textract.NewRecorder(inner, "9999.00002")
