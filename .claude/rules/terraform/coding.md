@@ -39,9 +39,11 @@
 - Issue の「要否を決める」に対して決めた内容は、**理由をリソースの直前にコメントで残す** (例: バージョニングを無効にする理由、`work/` の失効日数、KMS を使わない理由)
 - `description` (変数・出力) は英語 1 文で、Terraform のドキュメント慣習に合わせる。コメントは日本語、`description` は英語と使い分ける
 - 外部ツールや設計ドキュメントの所在をコメントに書かない
+- 意図した無効化 (バージョニングや PITR を持たないなど) は、理由コメントの直後・リソース (またはネストしたブロック) の直前に `#trivy:ignore:<id>` を並べて `just scan` を通す。ignore 行はブロック直前に連続して置き、間に空行や別のコメント行を挟まない
 
 ## 実行
 
 - `terraform fmt` / `validate` / `plan` は実行してよい。**`terraform apply` / `destroy` はユーザーだけが実行する**
+- `just lint` (tflint) と `just scan` (trivy config) は AWS に触れないためローカルで実行してよい。PR を出す前に `just fmt-check` `just validate` `just lint` `just scan` を通す
 - backend を変えた直後の `init` は `-reconfigure` を使う (旧 backend に state が無いことを確認したうえで)
 - justfile にシェルの処理を書かない (`.claude/rules/general/justfile.md`)
