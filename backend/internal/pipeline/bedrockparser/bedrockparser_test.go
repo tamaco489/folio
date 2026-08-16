@@ -108,9 +108,12 @@ func TestHandleReplaysRecording(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 
 	want := Output{JobID: testJobID, Page: 1, ResultKey: "work/" + testJobID + "/bedrock/page-0001.json"}
-	if got != want {
+	if *got != want {
 		t.Errorf("Handle() = %+v, want %+v", got, want)
 	}
 
@@ -191,6 +194,9 @@ func TestHandleDerivesKeysFromPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if want := s3.BedrockPageResultKey(testJobID, 3); got.ResultKey != want {
 		t.Errorf("ResultKey = %q, want %q", got.ResultKey, want)
 	}
@@ -235,9 +241,12 @@ func TestHandleInvalidInput(t *testing.T) {
 			}
 
 			// Lambda は最外の型名を errorType として報告するため、包まれていない最外の型で判定する
-			_, err := h.Handle(context.Background(), tt.in)
+			got, err := h.Handle(context.Background(), tt.in)
 			if _, ok := err.(*InvalidInputError); !ok {
 				t.Fatalf("err = %T (%v), want *InvalidInputError", err, err)
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
 			}
 			if !errors.Is(err, tt.want) {
 				t.Errorf("err = %v, want %v を包むこと", err, tt.want)
@@ -255,9 +264,12 @@ func TestHandleDecodeFailure(t *testing.T) {
 	h, fake := newTestHandler(t, &stubConverser{text: "この画像からは読み取れませんでした"})
 	fake.Seed(testBucket, s3.PageImageKey(testJobID, 1), s3test.Object{Body: samplePNG})
 
-	_, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
+	got, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
 	if _, ok := err.(*PageDecodeError); !ok {
 		t.Fatalf("err = %T (%v), want *PageDecodeError (最外の型名が errorType になる)", err, err)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	if !errors.Is(err, bedrock.ErrInvalidJSON) || !errors.Is(err, bedrockroute.ErrPageDecode) {
 		t.Errorf("err = %v, want bedrock.ErrInvalidJSON と bedrockroute.ErrPageDecode を包むこと", err)
@@ -271,9 +283,12 @@ func TestHandlePropagatesExtractError(t *testing.T) {
 	h, fake := newTestHandler(t, &stubConverser{err: want})
 	fake.Seed(testBucket, s3.PageImageKey(testJobID, 1), s3test.Object{Body: samplePNG})
 
-	_, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
+	got, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
 	if !errors.Is(err, want) {
 		t.Fatalf("err = %v, want %v", err, want)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	if _, ok := errors.AsType[*InvalidInputError](err); ok {
 		t.Errorf("err = %v, InvalidInputError であってはならない", err)

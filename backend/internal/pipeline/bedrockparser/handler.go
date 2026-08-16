@@ -71,21 +71,21 @@ func New(storage *s3.Client, extractor *bedrockroute.Extractor, opts ...Option) 
 // Handle はページ画像 1 枚を取得して構造化し、結果の所在を返す
 //
 // スロットリングのリトライは awsx/bedrock が担うため、ここでは再送しない
-func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	if in.JobID == "" {
-		return Output{}, &InvalidInputError{Err: ErrEmptyJobID}
+		return nil, &InvalidInputError{Err: ErrEmptyJobID}
 	}
 	if in.Page < 1 {
-		return Output{}, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPage, in.Page)}
+		return nil, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPage, in.Page)}
 	}
 
 	started := h.now()
 	image, err := h.storage.GetBytes(ctx, s3.PageImageKey(in.JobID, in.Page))
 	if err != nil {
 		if errors.Is(err, s3.ErrNotFound) {
-			return Output{}, &InvalidInputError{Err: err}
+			return nil, &InvalidInputError{Err: err}
 		}
-		return Output{}, err
+		return nil, err
 	}
 
 	// RecordKey は本番では使わないため空のまま渡す (再生テストは Converser の層でキーを補う)
@@ -95,7 +95,7 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 		Language: in.Language,
 	})
 	if err != nil {
-		return Output{}, classify(err)
+		return nil, classify(err)
 	}
 	finished := h.now()
 
@@ -107,8 +107,8 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 		DurationMs:  finished.Sub(started).Milliseconds(),
 		Result:      *result,
 	}); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
-	return Output{JobID: in.JobID, Page: in.Page, ResultKey: key}, nil
+	return &Output{JobID: in.JobID, Page: in.Page, ResultKey: key}, nil
 }

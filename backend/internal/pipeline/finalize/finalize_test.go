@@ -300,6 +300,9 @@ func TestHandleBothRoutesSucceed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	want := Output{
 		JobID:             jobID,
 		Status:            dynamo.StatusCompleted,
@@ -308,7 +311,7 @@ func TestHandleBothRoutesSucceed(t *testing.T) {
 		ResultBedrockKey:  s3.ResultBedrockKey(jobID),
 		ComparisonKey:     s3.ComparisonKey(jobID),
 	}
-	if out != want {
+	if *out != want {
 		t.Errorf("Handle() = %+v, want %+v", out, want)
 	}
 	assertSmall(t, "output", out)
@@ -419,6 +422,9 @@ func TestHandleReviewPendingWhenRouteNeedsReview(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if out.Status != dynamo.StatusReviewPending || !out.NeedsReview {
 		t.Errorf("Handle() = %+v, want REVIEW_PENDING / needsReview", out)
 	}
@@ -472,6 +478,9 @@ func TestHandleTextractFailed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
+			if out == nil {
+				t.Fatal("Handle() = nil, want output")
+			}
 			if out.Status != dynamo.StatusReviewPending || !out.NeedsReview || out.ResultTextractKey != "" || out.ResultBedrockKey != s3.ResultBedrockKey(jobID) {
 				t.Errorf("Handle() = %+v", out)
 			}
@@ -518,6 +527,9 @@ func TestHandleSkipTextract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if out.ResultTextractKey != "" || out.ResultBedrockKey != s3.ResultBedrockKey(jobID) || out.Status != dynamo.StatusCompleted || out.NeedsReview {
 		t.Errorf("Handle() = %+v", out)
 	}
@@ -557,6 +569,9 @@ func TestHandleBedrockPartialPages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if out.ResultBedrockKey != s3.ResultBedrockKey(jobID) {
 		t.Errorf("Handle() = %+v", out)
 	}
@@ -589,10 +604,13 @@ func TestHandleBothRoutesFailed(t *testing.T) {
 	in.Textract = json.RawMessage(`{"Error":"TextractJobFailed","Cause":"textract job ended with status FAILED"}`)
 	in.Bedrock = json.RawMessage(`{"Error":"States.TaskFailed","Cause":"every page failed"}`)
 
-	_, err := e.handler.Handle(context.Background(), in)
+	got, err := e.handler.Handle(context.Background(), in)
 	noResult, ok := errors.AsType[*NoResultError](err)
 	if !ok {
 		t.Fatalf("Handle() error = %T (%v), want *NoResultError", err, err)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	// aws-lambda-go は errorType にポインタの Elem().Name() を用いる (Retry の ErrorEquals はこの名前で照合する)
 	if got := reflect.TypeOf(err).Elem().Name(); got != "NoResultError" {
@@ -638,10 +656,13 @@ func TestHandleSkippedAndFailed(t *testing.T) {
 	in.SkipTextract = true
 	in.HasTextLayer = false
 
-	_, err := e.handler.Handle(context.Background(), in)
+	got, err := e.handler.Handle(context.Background(), in)
 	noResult, ok := errors.AsType[*NoResultError](err)
 	if !ok {
 		t.Fatalf("Handle() error = %T (%v), want *NoResultError", err, err)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	if !strings.HasPrefix(noResult.Reason, "textract: skipped; bedrock: "+ErrorResultNotFound) {
 		t.Errorf("Reason = %q", noResult.Reason)
@@ -667,6 +688,9 @@ func TestHandleWithoutTextLayer(t *testing.T) {
 	out, err := e.handler.Handle(context.Background(), in)
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
+	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
 	}
 	if out.Status != dynamo.StatusReviewPending || !out.NeedsReview {
 		t.Errorf("Handle() = %+v, want REVIEW_PENDING", out)
@@ -709,6 +733,9 @@ func TestHandleTextLayerMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if out == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if out.Status != dynamo.StatusReviewPending {
 		t.Errorf("Handle() = %+v, want REVIEW_PENDING (突合を省略したため)", out)
 	}
@@ -736,9 +763,12 @@ func TestHandleIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Handle() error = %v", err)
 		}
+		if out == nil {
+			t.Fatal("Handle() = nil, want output")
+		}
 		var a, b domain.Document
 		var cmp Comparison
-		return out, e.object(t, s3.ResultTextractKey(jobID), &a), e.object(t, s3.ResultBedrockKey(jobID), &b), e.object(t, s3.ComparisonKey(jobID), &cmp)
+		return *out, e.object(t, s3.ResultTextractKey(jobID), &a), e.object(t, s3.ResultBedrockKey(jobID), &b), e.object(t, s3.ComparisonKey(jobID), &cmp)
 	}
 
 	out1, a1, b1, cmp1 := run()
@@ -793,9 +823,12 @@ func TestHandleRejectsInvalidInput(t *testing.T) {
 			e := newEnv(t)
 			e.seedAll(t)
 
-			_, err := e.handler.Handle(context.Background(), tt.in)
+			got, err := e.handler.Handle(context.Background(), tt.in)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("Handle() error = %v, want %v", err, tt.want)
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
 			}
 			if _, ok := errors.AsType[*InvalidInputError](err); !ok {
 				t.Errorf("Handle() error = %T, want *InvalidInputError", err)
@@ -851,9 +884,12 @@ func TestHandleMarksFailedOnUnexpectedError(t *testing.T) {
 			e.seedAll(t)
 			tt.setup(e)
 
-			_, err := e.handler.Handle(context.Background(), input())
+			got, err := e.handler.Handle(context.Background(), input())
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("Handle() error = %v, want %v", err, tt.want)
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
 			}
 			if _, ok := errors.AsType[*NoResultError](err); ok {
 				t.Errorf("予期しない失敗が NoResultError になっている: %v", err)

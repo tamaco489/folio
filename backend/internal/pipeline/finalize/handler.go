@@ -77,12 +77,12 @@ func New(docs *s3.Client, jobs *dynamo.Client, verifier *verify.Verifier, opts .
 //
 // 入力不正 (InvalidInputError) は jobId が無いこともあるため DynamoDB を触らない
 // それ以外の失敗は MarkFailed を試みてから返す (MarkFailed 自体の失敗はログに残すだけで元のエラーを優先する)
-func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	if in.JobID == "" {
-		return Output{}, &InvalidInputError{Err: ErrEmptyJobID}
+		return nil, &InvalidInputError{Err: ErrEmptyJobID}
 	}
 	if in.PageCount < 1 {
-		return Output{}, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPageCount, in.PageCount)}
+		return nil, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPageCount, in.PageCount)}
 	}
 
 	out, err := h.finalize(ctx, in)
@@ -94,7 +94,7 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 		if _, merr := h.jobs.MarkFailed(ctx, in.JobID, reason); merr != nil {
 			slog.ErrorContext(ctx, "failed to mark job as failed", "jobId", in.JobID, "error", merr, "cause", err)
 		}
-		return Output{}, err
+		return nil, err
 	}
 	return out, nil
 }
@@ -102,19 +102,19 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 // finalize は経路 A → 経路 B の順に処理し、成果物を result-*.json → comparison.json → DynamoDB の順に書く
 //
 // 再実行はすべて上書きであるため冪等になる (経路 A の入力は work/ の正規化前の結果であり、自分の出力を読み戻すことはない)
-func (h *Handler) finalize(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) finalize(ctx context.Context, in Input) (*Output, error) {
 	layer, err := h.textLayer(ctx, in)
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	textract, err := h.textractRoute(ctx, in, layer)
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 	bedrock, err := h.bedrockRoute(ctx, in, layer)
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	routes := Routes{Textract: textract.result, Bedrock: bedrock.result}
@@ -155,16 +155,16 @@ func (h *Handler) finalize(ctx context.Context, in Input) (Output, error) {
 	}
 	comparisonKey := s3.ComparisonKey(in.JobID)
 	if err := h.docs.PutJSON(ctx, comparisonKey, cmp); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	if succeeded == 0 {
-		return Output{}, &NoResultError{JobID: in.JobID, Reason: failureReason(routes)}
+		return nil, &NoResultError{JobID: in.JobID, Reason: failureReason(routes)}
 	}
 	if _, err := h.jobs.UpdateStatus(ctx, in.JobID, status); err != nil {
-		return Output{}, err
+		return nil, err
 	}
-	return Output{
+	return &Output{
 		JobID:             in.JobID,
 		Status:            status,
 		NeedsReview:       needsReview,
