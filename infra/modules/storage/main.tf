@@ -3,6 +3,7 @@ locals {
 
   # バケット名は全アカウントで一意である必要があるため、末尾にアカウント ID を付ける
   documents_bucket_name = "${local.name_prefix}-documents-${var.account_id}"
+  artifacts_bucket_name = "${local.name_prefix}-artifacts-${var.account_id}"
   jobs_table_name       = "${local.name_prefix}-jobs"
 
   # S3 キーの第 1 階層 (backend/internal/awsx/s3/keys.go と対応)
@@ -22,6 +23,12 @@ locals {
   # 中断したマルチパートアップロードの残骸を消すまでの日数
   # 残骸は一覧に出ないまま課金され続けるため、プレフィックスによらずバケット全体に掛ける
   abort_incomplete_multipart_days = 7
+
+  # artifacts の非現行バージョン (上書きされた旧 zip) を消すまでの日数
+  # Lambda は関数の更新と Layer の発行の時点で zip を取り込むため、その後に S3 の旧版が消えても動作に影響しない
+  # 旧版を残す用途は s3_object_version を巻き戻す手動ロールバックだけで、検証環境では 1 週間より前の版に戻す想定はない
+  # 消さないと CI がアップロードするたびに数十 MB の Layer zip が積み上がる
+  artifacts_noncurrent_expiration_days = 7
 
   # dev は評価用の使い捨て環境として扱い、それ以外は誤削除から保護する
   # dev でも消えて困るのは outputs/ だが、jobId が SHA-256 で決まるため同じ PDF の再投入で同じ結果を作り直せる
@@ -90,6 +97,81 @@ resource "aws_s3_bucket_lifecycle_configuration" "documents" {
 
     expiration {
       days = local.work_expiration_days
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart-upload"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = local.abort_incomplete_multipart_days
+    }
+  }
+}
+
+# ------------------------------------------------------------------------------
+# S3: Lambda の zip と Layer の zip を置く配布用バケット
+# ------------------------------------------------------------------------------
+
+# キーは lambda/{関数名}.zip と layers/pdf-processor.zip の固定名で、compute モジュールが data "aws_s3_object" で参照する
+# documents と分けるのは、EventBridge 通知の対象から外し、失効ルールと権限 (Lambda ロールはこのバケットに触らない) を混ぜないため
+# アクセスログは documents と同じ判断で有効化しない
+#trivy:ignore:AVD-AWS-0089
+resource "aws_s3_bucket" "artifacts" {
+  bucket        = local.artifacts_bucket_name
+  force_destroy = local.is_disposable
+}
+
+resource "aws_s3_bucket_public_access_block" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# documents と同じく SSE-S3 にし、KMS は使わない (zip は公開リポジトリのビルド成果物で機密ではない)
+#trivy:ignore:AVD-AWS-0132
+resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# バージョニングを有効化する (documents とは逆の判断)
+# zip は固定キーへ上書きで再アップロードするため、キーだけでは Terraform が差し替えを検出できない
+# 上書きのたびに新しい version_id が振られ、compute が s3_object_version に渡すことで plan が関数と Layer の更新を検出する
+resource "aws_s3_bucket_versioning" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# 非現行バージョンのルールはバージョニングが有効になってから適用する必要があり、両リソースは属性で結ばれないため depends_on で順序を固定する
+resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  depends_on = [aws_s3_bucket_versioning.artifacts]
+
+  # 現行バージョンは消さず、上書きで非現行になった旧 zip だけを失効させる
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = local.artifacts_noncurrent_expiration_days
     }
   }
 
