@@ -67,6 +67,7 @@ uploads/{jobId}/original.pdf          受領した PDF。イベント発火点
 work/{jobId}/pages/page-NNNN.png      ラスタライズ結果
 work/{jobId}/textract/raw.json        Textract の生出力
 work/{jobId}/textract/callback.json   Textract 完了通知への応答に要する情報 (タスクトークンなど)
+work/{jobId}/textract/document.json   経路 A の正規化前の構造化結果 (finalizer が読む)
 work/{jobId}/bedrock/page-NNNN.json   経路 B のページ単位の抽出結果
 work/{jobId}/text/layer.txt           テキストレイヤー抽出結果
 outputs/{jobId}/result-textract.json  経路 A の抽出結果

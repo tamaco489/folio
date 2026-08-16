@@ -267,7 +267,7 @@ func TestHandleStartThenCallback(t *testing.T) {
 		t.Fatal("起動の時点で Step Functions に応答している")
 	}
 	e.assertAbsent(t, s3.TextractRawKey(jobID))
-	e.assertAbsent(t, s3.ResultTextractKey(jobID))
+	e.assertAbsent(t, s3.TextractDocumentKey(jobID))
 
 	// 完了通知
 	out, err = e.handler.Handle(ctx, snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusSucceeded)))
@@ -291,8 +291,10 @@ func TestHandleStartThenCallback(t *testing.T) {
 		t.Errorf("raw blocks = %d, want %d (ページングを畳んだ全 Block)", len(raw.Blocks), wantBlocks)
 	}
 
+	// 正規化前の結果は work/ に置き、outputs/ の最終成果物は finalizer だけが書く
 	var doc domain.Document
-	e.object(t, s3.ResultTextractKey(jobID), &doc)
+	e.object(t, s3.TextractDocumentKey(jobID), &doc)
+	e.assertAbsent(t, s3.ResultTextractKey(jobID))
 	if doc.JobID != jobID || doc.SchemaVersion != domain.SchemaVersion {
 		t.Errorf("document = {JobID: %q, SchemaVersion: %q}", doc.JobID, doc.SchemaVersion)
 	}
@@ -330,7 +332,7 @@ func TestHandleStartThenCallback(t *testing.T) {
 	if aws.ToString(success.TaskToken) != taskToken {
 		t.Errorf("task token = %q", aws.ToString(success.TaskToken))
 	}
-	wantOutput := `{"jobId":"` + jobID + `","resultKey":"` + s3.ResultTextractKey(jobID) + `","rawKey":"` + s3.TextractRawKey(jobID) + `"}`
+	wantOutput := `{"jobId":"` + jobID + `","resultKey":"` + s3.TextractDocumentKey(jobID) + `","rawKey":"` + s3.TextractRawKey(jobID) + `"}`
 	if got := aws.ToString(success.Output); got != wantOutput {
 		t.Errorf("task output = %s\nwant %s", got, wantOutput)
 	}
@@ -372,7 +374,7 @@ func TestHandleCallbackTextractFailed(t *testing.T) {
 
 	// 失敗したジョブの結果は取りに行かない
 	e.assertAbsent(t, s3.TextractRawKey(jobID))
-	e.assertAbsent(t, s3.ResultTextractKey(jobID))
+	e.assertAbsent(t, s3.TextractDocumentKey(jobID))
 }
 
 // PARTIAL_SUCCESS でも Block は取得できるため、成功と同じく結果を保存して SendTaskSuccess を呼ぶ
@@ -389,7 +391,7 @@ func TestHandleCallbackTreatsPartialSuccessAsSuccess(t *testing.T) {
 		t.Fatalf("successes = %d, failures = %d, want 1 and 0", len(e.states.successes), len(e.states.failures))
 	}
 	var doc domain.Document
-	e.object(t, s3.ResultTextractKey(jobID), &doc)
+	e.object(t, s3.TextractDocumentKey(jobID), &doc)
 }
 
 // Textract は成功したが後段が失敗した場合は ExtractFailed を返す
@@ -452,7 +454,7 @@ func TestHandleCallbackExtractFailed(t *testing.T) {
 			} else {
 				e.assertAbsent(t, s3.TextractRawKey(tt.id))
 			}
-			e.assertAbsent(t, s3.ResultTextractKey(tt.id))
+			e.assertAbsent(t, s3.TextractDocumentKey(tt.id))
 		})
 	}
 }
@@ -471,7 +473,7 @@ func TestHandleCallbackIgnoresStaleJob(t *testing.T) {
 		t.Error("古いジョブの通知で Step Functions に応答している")
 	}
 	e.assertAbsent(t, s3.TextractRawKey(jobID))
-	e.assertAbsent(t, s3.ResultTextractKey(jobID))
+	e.assertAbsent(t, s3.TextractDocumentKey(jobID))
 }
 
 // 退避が無い通知はエラーにして Lambda の非同期呼び出しの再試行に委ねる
@@ -524,7 +526,7 @@ func TestHandleCallbackWhenTaskIsGone(t *testing.T) {
 			}
 			if tt.status == types.JobStatusSucceeded {
 				var doc domain.Document
-				e.object(t, s3.ResultTextractKey(jobID), &doc)
+				e.object(t, s3.TextractDocumentKey(jobID), &doc)
 			}
 		})
 	}
