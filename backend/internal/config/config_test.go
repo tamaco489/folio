@@ -18,6 +18,9 @@ func setEnv(t *testing.T, values map[string]string) {
 		EnvKeyDocumentsBucket,
 		EnvKeyJobsTable,
 		EnvKeyBedrockModelID,
+		EnvKeyTextractSNSTopicARN,
+		EnvKeyTextractRoleARN,
+		EnvKeyTextractFeatureTypes,
 	} {
 		t.Setenv(key, values[key])
 	}
@@ -25,18 +28,21 @@ func setEnv(t *testing.T, values map[string]string) {
 
 func fullEnv() map[string]string {
 	return map[string]string{
-		EnvKeyEnvironment:     "dev",
-		EnvKeyRegion:          "us-east-1",
-		EnvKeyDocumentsBucket: "dev-folio-documents-000000000000",
-		EnvKeyJobsTable:       "dev-folio-jobs",
-		EnvKeyBedrockModelID:  "anthropic.claude-sonnet-4-20250514-v1:0",
+		EnvKeyEnvironment:          "dev",
+		EnvKeyRegion:               "us-east-1",
+		EnvKeyDocumentsBucket:      "dev-folio-documents-000000000000",
+		EnvKeyJobsTable:            "dev-folio-jobs",
+		EnvKeyBedrockModelID:       "anthropic.claude-sonnet-4-20250514-v1:0",
+		EnvKeyTextractSNSTopicARN:  "arn:aws:sns:us-east-1:000000000000:dev-folio-textract-completion",
+		EnvKeyTextractRoleARN:      "arn:aws:iam::000000000000:role/dev-folio-textract-publish-role",
+		EnvKeyTextractFeatureTypes: "LAYOUT,TABLES,FORMS",
 	}
 }
 
 func TestLoadAllValuesPresent(t *testing.T) {
 	setEnv(t, fullEnv())
 
-	cfg, err := Load(RequireDocumentsBucket, RequireJobsTable, RequireBedrockModelID)
+	cfg, err := Load(RequireDocumentsBucket, RequireJobsTable, RequireBedrockModelID, RequireTextractSNSTopicARN, RequireTextractRoleARN)
 	if err != nil {
 		t.Fatalf("Load() error = %v, want nil", err)
 	}
@@ -55,6 +61,30 @@ func TestLoadAllValuesPresent(t *testing.T) {
 	}
 	if cfg.BedrockModelID != "anthropic.claude-sonnet-4-20250514-v1:0" {
 		t.Errorf("BedrockModelID = %q", cfg.BedrockModelID)
+	}
+	if cfg.TextractSNSTopicARN != "arn:aws:sns:us-east-1:000000000000:dev-folio-textract-completion" {
+		t.Errorf("TextractSNSTopicARN = %q", cfg.TextractSNSTopicARN)
+	}
+	if cfg.TextractRoleARN != "arn:aws:iam::000000000000:role/dev-folio-textract-publish-role" {
+		t.Errorf("TextractRoleARN = %q", cfg.TextractRoleARN)
+	}
+	if cfg.TextractFeatureTypes != "LAYOUT,TABLES,FORMS" {
+		t.Errorf("TextractFeatureTypes = %q", cfg.TextractFeatureTypes)
+	}
+}
+
+// FeatureTypes は #34 で差し替えるまで既定値で動かすため、未設定でも Load が失敗しない
+func TestLoadTextractFeatureTypesDefaults(t *testing.T) {
+	env := fullEnv()
+	env[EnvKeyTextractFeatureTypes] = ""
+	setEnv(t, env)
+
+	cfg, err := Load(RequireTextractSNSTopicARN, RequireTextractRoleARN)
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if cfg.TextractFeatureTypes != DefaultTextractFeatureTypes {
+		t.Errorf("TextractFeatureTypes = %q, want %q", cfg.TextractFeatureTypes, DefaultTextractFeatureTypes)
 	}
 }
 
@@ -118,9 +148,11 @@ func TestLoadMissingRequiredValue(t *testing.T) {
 		missingKey  string
 		requirement Requirement
 	}{
-		"異常系_必須のバケット名が欠落した場合_ErrMissingEnv が返ること":   {missingKey: EnvKeyDocumentsBucket, requirement: RequireDocumentsBucket},
-		"異常系_必須のテーブル名が欠落した場合_ErrMissingEnv が返ること":   {missingKey: EnvKeyJobsTable, requirement: RequireJobsTable},
-		"異常系_必須のモデル ID が欠落した場合_ErrMissingEnv が返ること": {missingKey: EnvKeyBedrockModelID, requirement: RequireBedrockModelID},
+		"異常系_必須のバケット名が欠落した場合_ErrMissingEnv が返ること":              {missingKey: EnvKeyDocumentsBucket, requirement: RequireDocumentsBucket},
+		"異常系_必須のテーブル名が欠落した場合_ErrMissingEnv が返ること":              {missingKey: EnvKeyJobsTable, requirement: RequireJobsTable},
+		"異常系_必須のモデル ID が欠落した場合_ErrMissingEnv が返ること":            {missingKey: EnvKeyBedrockModelID, requirement: RequireBedrockModelID},
+		"異常系_必須の SNS トピック ARN が欠落した場合_ErrMissingEnv が返ること":     {missingKey: EnvKeyTextractSNSTopicARN, requirement: RequireTextractSNSTopicARN},
+		"異常系_必須の Textract ロール ARN が欠落した場合_ErrMissingEnv が返ること": {missingKey: EnvKeyTextractRoleARN, requirement: RequireTextractRoleARN},
 	}
 
 	for name, tt := range tests {
