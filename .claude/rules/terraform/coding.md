@@ -15,6 +15,7 @@
 | `main.tf`      | `locals` とリソース定義                                                         |
 | `outputs.tf`   | 出力値。**すべてに `description`**                                              |
 
+- リソースが多くて `main.tf` が肥大化するときは役割ごとに `<役割>.tf` へ分け (iam なら `statemachine.tf` `lambda_parser.tf` `textract_publish.tf`)、`main.tf` には `locals` と複数の役割で共有する部品 (信頼ポリシーなど) だけを残す。1 ファイル 1 つの関心にし、区切り線のコメントでセクションを作らない
 - Terraform 内のリソース識別子は役割名にする (`aws_s3_bucket.documents`、`aws_dynamodb_table.jobs`)。同種が 1 つでも `this` にしない
 - 使わない変数・出力を作らない。他モジュールが必要とする ARN は出力し、派生形 (`${arn}/*`、`${arn}/index/*`) は使う側で組み立てる
 
