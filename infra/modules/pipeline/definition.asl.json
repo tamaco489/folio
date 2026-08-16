@@ -1,0 +1,283 @@
+{
+  "Comment": "Folio pipeline. Control lives here, processing lives in Lambda. States pass only S3 keys and small decisions (256KB limit); artifacts live in S3.",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Validate",
+  "States": {
+    "Validate": {
+      "Type": "Task",
+      "Comment": "Input is the raw EventBridge S3 Object Created event. validator checks the PDF and registers the job; its decision is returned in the output, not as an error.",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${validator_arn}",
+        "Payload": {
+          "bucket": "{% $states.input.detail.bucket.name %}",
+          "key": "{% $states.input.detail.object.key %}"
+        }
+      },
+      "Output": "{% $states.result.Payload %}",
+      "TimeoutSeconds": 360,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "RouteByDecision"
+    },
+    "RouteByDecision": {
+      "Type": "Choice",
+      "Comment": "Branch on validator's decision. Any other value raises States.NoChoiceMatched.",
+      "Choices": [
+        {
+          "Condition": "{% $states.input.decision = 'PROCEED' %}",
+          "Next": "Preprocess"
+        },
+        {
+          "Condition": "{% $states.input.decision = 'SKIPPED' %}",
+          "Next": "Skipped"
+        },
+        {
+          "Condition": "{% $states.input.decision = 'REJECTED' %}",
+          "Next": "Rejected"
+        }
+      ]
+    },
+    "Skipped": {
+      "Type": "Succeed",
+      "Comment": "The same jobId is already running or finished; nothing to do."
+    },
+    "Rejected": {
+      "Type": "Fail",
+      "Comment": "validator already recorded FAILED and the reason in DynamoDB; the execution only ends as failed.",
+      "Error": "{% $states.input.reason.code %}",
+      "Cause": "{% $states.input.reason.message %}"
+    },
+    "Preprocess": {
+      "Type": "Task",
+      "Comment": "Rasterize pages and extract the text layer. The output fields are kept in variables for the branches and finalizer.",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${preprocessor_arn}",
+        "Payload": {
+          "jobId": "{% $states.input.jobId %}"
+        }
+      },
+      "Assign": {
+        "jobId": "{% $states.result.Payload.jobId %}",
+        "pageCount": "{% $states.result.Payload.pageCount %}",
+        "hasTextLayer": "{% $states.result.Payload.hasTextLayer %}",
+        "language": "{% $states.result.Payload.language %}",
+        "skipTextract": "{% $states.result.Payload.skipTextract %}"
+      },
+      "Output": "{% $states.result.Payload %}",
+      "TimeoutSeconds": 960,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Extract"
+    },
+    "Extract": {
+      "Type": "Parallel",
+      "Comment": "Route A (Textract then Bedrock) and route B (Bedrock per page) run side by side. Each branch catches its own failure so one route failing does not fail the other.",
+      "Branches": [
+        {
+          "StartAt": "TextractOrSkip",
+          "States": {
+            "TextractOrSkip": {
+              "Type": "Choice",
+              "Comment": "Textract does not support Japanese; preprocessor sets skipTextract for it.",
+              "Choices": [
+                {
+                  "Condition": "{% $skipTextract %}",
+                  "Next": "TextractSkipped"
+                }
+              ],
+              "Default": "Textract"
+            },
+            "TextractSkipped": {
+              "Type": "Pass",
+              "Output": {
+                "skipped": true
+              },
+              "End": true
+            },
+            "Textract": {
+              "Type": "Task",
+              "Comment": "textract-parser starts the Textract job and returns; the SNS completion callback in the same Lambda resumes this task with SendTaskSuccess/Failure. TimeoutSeconds bounds a lost notification.",
+              "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+              "Arguments": {
+                "FunctionName": "${textract_parser_arn}",
+                "Payload": {
+                  "jobId": "{% $jobId %}",
+                  "taskToken": "{% $states.context.Task.Token %}",
+                  "language": "{% $language %}",
+                  "pageCount": "{% $pageCount %}",
+                  "hasTextLayer": "{% $hasTextLayer %}"
+                }
+              },
+              "TimeoutSeconds": 3600,
+              "Retry": [
+                {
+                  "ErrorEquals": ["RetryableError"],
+                  "IntervalSeconds": 5,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                },
+                {
+                  "ErrorEquals": [
+                    "Lambda.ClientExecutionTimeoutException",
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "Output": "{% $states.errorOutput %}",
+                  "Next": "TextractFailed"
+                }
+              ],
+              "End": true
+            },
+            "TextractFailed": {
+              "Type": "Pass",
+              "Comment": "Branch output is the caught {Error, Cause}; finalizer records it in comparison.json.",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "BedrockPages",
+          "States": {
+            "BedrockPages": {
+              "Type": "Map",
+              "Comment": "One bedrock-parser invocation per page (1-based). ItemSelector builds {jobId, page, language} because the Context object's Map.Item must be read there, not inside ItemProcessor. Output is folded to a page count; finalizer reads results from S3.",
+              "Items": "{% [1..$pageCount] %}",
+              "ItemSelector": {
+                "jobId": "{% $jobId %}",
+                "page": "{% $states.context.Map.Item.Value %}",
+                "language": "{% $language %}"
+              },
+              "MaxConcurrency": ${bedrock_map_max_concurrency},
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
+                },
+                "StartAt": "BedrockPage",
+                "States": {
+                  "BedrockPage": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Arguments": {
+                      "FunctionName": "${bedrock_parser_arn}",
+                      "Payload": "{% $states.input %}"
+                    },
+                    "Output": "{% $states.result.Payload %}",
+                    "TimeoutSeconds": 660,
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["InvalidInputError", "PageDecodeError"],
+                        "MaxAttempts": 0
+                      },
+                      {
+                        "ErrorEquals": ["States.TaskFailed"],
+                        "IntervalSeconds": 10,
+                        "MaxAttempts": 2,
+                        "BackoffRate": 2
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              "Output": {
+                "pages": "{% $count($states.result) %}"
+              },
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "Output": "{% $states.errorOutput %}",
+                  "Next": "BedrockFailed"
+                }
+              ],
+              "End": true
+            },
+            "BedrockFailed": {
+              "Type": "Pass",
+              "Comment": "Branch output is the caught {Error, Cause}; finalizer records it in comparison.json.",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Output": {
+        "textract": "{% $states.result[0] %}",
+        "bedrock": "{% $states.result[1] %}"
+      },
+      "Next": "Finalize"
+    },
+    "Finalize": {
+      "Type": "Task",
+      "Comment": "Normalize, verify and persist both routes from S3. textract/bedrock carry each branch's Catch output ({Error, Cause}) or its success output, which finalizer ignores. NoResultError (both routes failed) and InvalidInputError are not retried.",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${finalizer_arn}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "pageCount": "{% $pageCount %}",
+          "hasTextLayer": "{% $hasTextLayer %}",
+          "language": "{% $language %}",
+          "skipTextract": "{% $skipTextract %}",
+          "textract": "{% $states.input.textract %}",
+          "bedrock": "{% $states.input.bedrock %}"
+        }
+      },
+      "Output": "{% $states.result.Payload %}",
+      "TimeoutSeconds": 960,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed",
+      "Comment": "Execution output is finalizer's result: jobId, status, needsReview and the outputs/ keys."
+    }
+  }
+}
