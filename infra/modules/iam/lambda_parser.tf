@@ -1,5 +1,6 @@
 resource "aws_iam_role" "lambda_parser" {
   name               = "${local.name_prefix}-lambda-parser-role"
+  description        = "Execution role shared by textract-parser and bedrock-parser (S3 work/, Textract, Bedrock, Step Functions task token)."
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
 

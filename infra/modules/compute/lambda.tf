@@ -5,6 +5,7 @@ resource "aws_lambda_function" "pipeline" {
   for_each = local.functions
 
   function_name = local.function_names[each.key]
+  description   = each.value.description
   role          = each.value.role_arn
 
   package_type      = "Zip"
