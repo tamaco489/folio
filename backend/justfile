@@ -1,7 +1,6 @@
 # testdata の配置規約
 #
-#   testdata/pdf/       サンプル PDF。arXiv のデフォルトライセンスは再配布不可のため
-#                       git 管理外とし、tools/fetch-corpus で取得する
+#   testdata/pdf/       サンプル PDF。arXiv のデフォルトライセンスは再配布不可のため git 管理外とし、tools/fetch-corpus で取得する
 #   testdata/textract/  記録済み Textract レスポンス。{論文 ID}.json
 #   testdata/bedrock/   記録済み Bedrock レスポンス。{論文 ID}-{経路}.json
 #
