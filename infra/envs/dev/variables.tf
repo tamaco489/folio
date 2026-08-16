@@ -28,3 +28,18 @@ variable "region" {
   type        = string
   default     = "us-east-1"
 }
+
+# 構造化に使う Bedrock のモデル ID (textract-parser と bedrock-parser の FOLIO_BEDROCK_MODEL_ID)
+# Phase 1 はモデルを差し替えて比較するため tfvars で切り替える。IAM はモデル単位に絞っていないのでポリシーの変更は要らない
+variable "bedrock_model_id" {
+  description = "Bedrock model ID (or cross-region inference profile ID) used by both parsers."
+  type        = string
+}
+
+# Crossref の polite pool 用の連絡先 (finalizer の FOLIO_CROSSREF_MAILTO)
+# メールアドレスをリポジトリに置かないよう tfvars には書かず TF_VAR_crossref_mailto で渡す。空なら環境変数を設定しない
+variable "crossref_mailto" {
+  description = "Contact address sent to Crossref for the polite pool; empty disables it."
+  type        = string
+  default     = ""
+}

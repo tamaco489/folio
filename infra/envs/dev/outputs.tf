@@ -7,3 +7,13 @@ output "jobs_table_name" {
   description = "Name of the DynamoDB jobs table."
   value       = module.storage.jobs_table_name
 }
+
+output "artifacts_bucket_name" {
+  description = "Name of the versioned S3 bucket to upload the Lambda zips (lambda/*.zip) and the Layer zip (layers/pdf-processor.zip) to."
+  value       = module.storage.artifacts_bucket_name
+}
+
+output "state_machine_arn" {
+  description = "ARN of the pipeline state machine."
+  value       = module.pipeline.state_machine_arn
+}
