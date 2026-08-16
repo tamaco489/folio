@@ -11,11 +11,25 @@
 `internal/awsx/` の各パッケージは同じ形にする。
 
 - **SDK のクライアントではなく `API` インタフェースを受け取る。** 使うメソッドだけを列挙し、`New(api API, ...)` で組み立てる。`*dynamodb.Client` などは `API` を満たすのでそのまま渡せる
-- **エラーはセンチネルで公開する** (`ErrNotFound` `ErrJobNotFound` `ErrJobInProgress` など)。呼び出し側は `errors.Is` / `errors.As` で判定でき、SDK の型に依存しない
+- **エラーはセンチネルで公開する** (`ErrNotFound` `ErrJobNotFound` `ErrJobInProgress` など)。呼び出し側は `errors.Is` / `errors.AsType[T]` で判定でき、SDK の型に依存しない
 - **バケット名・テーブル名は `New` に注入する。** パッケージ内で環境変数を読まない
 
 SDK が同じ意味を複数の型で返す場合は、ラッパ側で 1 つのセンチネルに畳む。
-S3 の NotFound は `types.NoSuchKey` / `types.NotFound` / HTTP 404 の 3 系統で来るが、呼び出し側は `errors.Is(err, s3.ErrNotFound)` だけで判定できるようにする。
+S3 の NotFound は `awss3types.NoSuchKey` / `awss3types.NotFound` / HTTP 404 の 3 系統で来るが、呼び出し側は `errors.Is(err, s3.ErrNotFound)` だけで判定できるようにする。
+
+## import エイリアス
+
+- **AWS SDK (`github.com/aws/aws-sdk-go-v2/...`) は衝突の有無によらず `aws` 接頭辞のエイリアスを付ける** — `awss3` `awsdynamodb` `awstextract` `awsbedrockruntime` `awssfn` `awsconfig` `awshttp`。`service/*/types` も同じ接頭辞で `awss3types` `awstextracttypes` のようにする。`aws-sdk-go-v2/aws` はパッケージ名が `aws` なのでそのまま
+- `aws-lambda-go` の `lambda` `events` はエイリアスを付けない (1 ファイルに 1 つで衝突しない)
+- **自プロジェクトのパッケージ (`internal/...`) はエイリアスを付けずパッケージ名のまま使う**
+
+```go
+import (
+    awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+
+    "github.com/tamaco489/folio/backend/internal/awsx/s3"
+)
+```
 
 ## 依存の注入
 
