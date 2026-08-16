@@ -26,9 +26,9 @@ locals {
 
   # artifacts の非現行バージョン (上書きされた旧 zip) を消すまでの日数
   # Lambda は関数の更新と Layer の発行の時点で zip を取り込むため、その後に S3 の旧版が消えても動作に影響しない
-  # 旧版を残す用途は s3_object_version を巻き戻す手動ロールバックだけで、30 日より前の版に戻す想定はない
+  # 旧版を残す用途は s3_object_version を巻き戻す手動ロールバックだけで、検証環境では 1 週間より前の版に戻す想定はない
   # 消さないと CI がアップロードするたびに数十 MB の Layer zip が積み上がる
-  artifacts_noncurrent_expiration_days = 30
+  artifacts_noncurrent_expiration_days = 7
 
   # dev は評価用の使い捨て環境として扱い、それ以外は誤削除から保護する
   # dev でも消えて困るのは outputs/ だが、jobId が SHA-256 で決まるため同じ PDF の再投入で同じ結果を作り直せる
