@@ -113,7 +113,7 @@ folio/
 │   ├── .golangci.yml
 │   └── go.mod
 └── infra/                  Terraform (詳細は infra/README.ja.md)
-    ├── modules/            storage (実装済み)、messaging, compute, pipeline, iam (未実装)
+    ├── modules/            storage, iam, compute, pipeline, messaging (すべて envs/dev に結線済み)
     ├── envs/dev/           dev 環境。provider・backend・変数を持ち、modules/ を呼び出す (stg, prd は Phase 1 の対象外)
     └── justfile
 ```
