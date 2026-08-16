@@ -81,3 +81,33 @@ jobs:
           # クレデンシャル取得を止める (OIDC も permissions で与えていない)
           AWS_EC2_METADATA_DISABLED: "true"
         run: just test
+
+  trivy-vuln:
+    name: trivy vuln
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read Trivy version
+        id: trivy-version
+        # trivy-action には .tool-versions を読む入力が無いため、asdf と同じ行から版を取り出して渡す (v を付ける)
+        run: |
+          version=$(awk '$1 == "trivy" { print $2 }' "$GITHUB_WORKSPACE/.tool-versions")
+          test -n "$version"
+          echo "version=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy vulnerability scan
+        # go.mod の依存関係 (直接・間接) の既知脆弱性を検査する。ローカルは trivy fs --scanners vuln backend で同じ検査ができる
+        # 修正版が無い脆弱性も隠さない (ignore-unfixed は既定の false)。受容するなら理由を書いた .trivyignore を trivyignores 入力で渡す
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ steps.trivy-version.outputs.version }}
+          scan-type: fs
+          # uses ステップには defaults.run.working-directory が効かない
+          scan-ref: backend
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
