@@ -6,6 +6,8 @@
 #   testdata/bedrock/   記録済み Bedrock レスポンス。{論文 ID}-{経路}.json
 #
 # Textract と Bedrock は課金が発生するため、テストは記録済みレスポンスの再生で行う
+#
+# レシピにシェルの処理を書かない。複数行になる処理は scripts/ に置き、ここでは呼び出すだけにする
 
 default:
     @just --list
@@ -21,67 +23,20 @@ test:
 
 # ビルド対象を列挙する (cmd/ からの相対パス。例: pipeline/validator)
 cmds:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    [ -d cmd ] || exit 0
-    find cmd -type f -name main.go | sed -e 's#^cmd/##' -e 's#/main\.go$##' | sort
+    @scripts/cmds.sh
 
 # 全 Lambda をクロスコンパイルする
 build:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    targets=$({{ just_executable() }} cmds)
-    if [ -z "$targets" ]; then
-        echo "ビルド対象なし: cmd/ 配下に main.go を持つディレクトリがありません"
-        exit 0
-    fi
-    while read -r target; do
-        {{ just_executable() }} build-one "$target"
-    done <<< "$targets"
+    @scripts/build.sh
 
 # 単一の Lambda をクロスコンパイルする (例: just build-one pipeline/validator)
 build-one cmd:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -f "cmd/{{ cmd }}/main.go" ]; then
-        echo "main.go が見つかりません: cmd/{{ cmd }}/main.go" >&2
-        exit 1
-    fi
-    # Lambda 関数名は cmd/ 以下のパスをハイフンで連結して導出する
-    name=$(echo '{{ cmd }}' | tr '/' '-')
-    mkdir -p "bin/$name"
-    # provided.al2023 は実行ファイル名が bootstrap 固定
-    # lambda.norpc は aws-lambda-go の net/rpc 依存を落とす
-    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
-        go build -tags lambda.norpc -trimpath -ldflags='-s -w' \
-        -o "bin/$name/bootstrap" "./cmd/{{ cmd }}"
-    echo "built: bin/$name/bootstrap"
+    @scripts/build.sh "{{ cmd }}"
 
 # ビルド成果物を配布用の zip に固める
 package: build
-    #!/usr/bin/env bash
-    set -euo pipefail
-    targets=$({{ just_executable() }} cmds)
-    if [ -z "$targets" ]; then
-        echo "パッケージ対象なし: ビルド成果物がありません"
-        exit 0
-    fi
-    while read -r target; do
-        name=$(echo "$target" | tr '/' '-')
-        # zip 直下に bootstrap を置く必要があるため成果物ディレクトリで固める
-        # -X はタイムスタンプ以外の追加属性を除いて差分を安定させる
-        (cd "bin/$name" && zip -q -X "../$name.zip" bootstrap)
-        echo "packaged: bin/$name.zip"
-    done <<< "$targets"
+    @scripts/package.sh
 
 # ビルド成果物を削除する
 clean:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -d bin ]; then
-        echo "削除対象なし: bin/ はありません"
-        exit 0
-    fi
-    find bin -type f \( -name bootstrap -o -name '*.zip' \) -delete
-    find bin -depth -type d -empty -delete
-    echo "cleaned: bin/"
+    @scripts/clean.sh
