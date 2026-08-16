@@ -26,11 +26,11 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 
 ## 前提
 
-| 項目           | 内容                                                                                                  |
-| -------------- | ----------------------------------------------------------------------------------------------------- |
-| Terraform      | ルートの `.tool-versions` のバージョン ([asdf](https://asdf-vm.com/) で管理)                          |
-| AWS 認証       | `AWS_PROFILE` などで対象アカウントの認証情報を用意する。リージョンは `us-east-1`                      |
-| アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない    |
+| 項目           | 内容                                                                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terraform      | ルートの `.tool-versions` のバージョン ([asdf](https://asdf-vm.com/) で管理)                                                                    |
+| AWS 認証       | `AWS_PROFILE` などで対象アカウントの認証情報を用意する。リージョンは `us-east-1`                                                                |
+| アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない                                              |
 | state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
 
 `terraform.tfvars` には `env` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。

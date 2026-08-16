@@ -58,6 +58,19 @@ Textract does not support Japanese, so Japanese PDFs only go through Route B.
 Function names are derived by joining the path under `cmd/` with hyphens.
 `cmd/pipeline/validator` becomes `dev-folio-pipeline-validator`.
 
+Environment variables read by the functions (`internal/config`). `FOLIO_ENV` and `AWS_REGION` are read by every function.
+
+| Variable                       | Read by                         | Purpose                                                    |
+| ------------------------------ | ------------------------------- | ---------------------------------------------------------- |
+| `FOLIO_ENV`                    | all                             | Environment identifier (`dev` / `stg` / `prd`)             |
+| `FOLIO_DOCUMENTS_BUCKET`       | all                             | S3 bucket name                                             |
+| `FOLIO_JOBS_TABLE`             | validator, finalizer            | DynamoDB table name                                        |
+| `FOLIO_BEDROCK_MODEL_ID`       | textract-parser, bedrock-parser | Model ID used for structuring                              |
+| `FOLIO_TEXTRACT_SNS_TOPIC_ARN` | textract-parser                 | Textract completion notification topic                     |
+| `FOLIO_TEXTRACT_ROLE_ARN`      | textract-parser                 | Role Textract assumes to publish to SNS                    |
+| `FOLIO_TEXTRACT_FEATURE_TYPES` | textract-parser (optional)      | FeatureTypes, comma-separated (default `LAYOUT,TABLES`)    |
+| `FOLIO_CROSSREF_MAILTO`        | finalizer (optional)            | Contact address for the Crossref polite pool               |
+
 ### S3 key layout
 
 Roles are separated by prefix within a single bucket.
@@ -84,31 +97,30 @@ Without this, writes to `work/` or `outputs/` retrigger the pipeline and cause a
 
 ```text
 folio/
-├── backend/                Single Go module (github.com/tamaco489/folio/backend)
-│   ├── cmd/
-│   │   ├── pipeline/       validator, preprocessor, textract-parser, bedrock-parser, finalizer
-│   │   └── api/            public, admin (out of scope for Phase 1)
+├── backend/                Single Go module (github.com/tamaco489/folio/backend; see backend/README.md)
+│   ├── cmd/pipeline/       validator, preprocessor, textract-parser, bedrock-parser, finalizer (main.go only wires dependencies)
 │   ├── internal/
 │   │   ├── config/         Shared — environment variable loading and validation
 │   │   ├── domain/         Shared — structured JSON schema
-│   │   ├── awsx/           Shared — s3, dynamo, textract, bedrock
-│   │   ├── pipeline/       pdf, extract, normalize, verify
-│   │   └── api/            router, middleware, public, admin (out of scope for Phase 1)
-│   ├── tools/              fetch-corpus, build-truth, evaluate (not deployed)
-│   ├── testdata/           Recorded responses under textract/ and bedrock/
+│   │   ├── awsx/           Shared — s3, dynamo, sfn, textract, bedrock (SDK wrappers; fakes in s3test, dynamotest)
+│   │   └── pipeline/       Lambda logic: validate, preprocess, textractparser, bedrockparser, finalize
+│   │                       Pure logic: pdf, extract (textractroute, bedrockroute), normalize, verify (crossref)
+│   ├── tools/              fetch-corpus, build-truth, evaluate (not deployed; not implemented yet)
+│   ├── testdata/           Recorded responses under textract/ and bedrock/ (Crossref recordings live in internal/pipeline/verify/testdata/)
 │   ├── layers/             Lambda Layer build definitions (Dockerfile + build.sh)
 │   ├── scripts/            Shell scripts behind the justfile recipes (cmds, build, package, clean)
 │   ├── justfile            Recipe declarations only; each recipe calls a script or a single command
 │   ├── .golangci.yml
 │   └── go.mod
-└── infra/                  Terraform
-    ├── modules/            storage, messaging, compute, pipeline, iam
-    ├── envs/               dev, stg, prd (separate directories, not workspaces)
+└── infra/                  Terraform (see infra/README.md)
+    ├── modules/            storage (implemented); messaging, compute, pipeline, iam (not yet)
+    ├── envs/dev/           dev environment: provider, backend, variables, module calls (stg and prd are out of scope for Phase 1)
     └── justfile
 ```
 
-The four packages under `internal/pipeline/` map to Step Functions states:
-`pdf` for preprocessing, `extract` for extraction, `normalize` for schema normalization, and `verify` for verification.
+Under `internal/pipeline/`, `validate` `preprocess` `textractparser` `bedrockparser` `finalize` correspond one-to-one to the Lambda functions and own the S3 / DynamoDB access.
+`pdf` `extract` `normalize` `verify` are pure logic that never touch S3: preprocessing, extraction, schema normalization, and verification.
+The API server (`cmd/api/`) is out of scope for Phase 1 and does not exist yet.
 
 ## Toolchain
 
@@ -128,48 +140,12 @@ The task runner is [just](https://github.com/casey/just), not Make.
 Justfiles live directly under `backend/` and `infra/` rather than at the root, so change into the directory first.
 
 ```sh
-cd backend
-just fmt              # go fmt ./...
-just vet              # go vet ./...
-just lint             # golangci-lint run ./... (config: .golangci.yml, same version as CI)
-just test             # go test ./...
-just fix-diff         # go fix -diff ./... (dry run)
-just fix              # go fix ./...
-just modernize        # gopls modernize analyzers, e.g. errorsastype (dry run)
-just modernize-fix    # Apply the modernize suggestions
-just cmds             # List build targets (scripts/cmds.sh)
-just build            # Cross-compile all Lambda functions (scripts/build.sh)
-just build-one <cmd>  # Build a single function (scripts/build.sh <cmd>, e.g. pipeline/validator)
-just package          # Archive into bin/{function}.zip (scripts/package.sh, runs build first)
-just clean            # Remove artifacts under bin/ (scripts/clean.sh)
+cd backend && just test      # Go tests. lint / build / package etc.: backend/README.md
+cd infra && just plan        # Terraform plan. init / validate / apply etc.: infra/README.md
 ```
 
-The justfile holds no shell logic. Recipes that need more than a single command call a script under `scripts/`, so the scripts can be checked with shellcheck and run without just (they change into `backend/` themselves, so the current directory does not matter).
-
-Build targets are discovered by searching for `main.go` under `cmd/`, so adding a Lambda function does not require editing the justfile or the scripts.
-
-Builds target `provided.al2023` on `arm64` and output to `bin/{function}/bootstrap`.
-The `provided` runtime requires the executable to be named `bootstrap`.
-
-### Lambda Layer
-
-The poppler native binaries are distributed as a Layer.
-
-```sh
-cd backend/layers/pdf-processor
-./build.sh
-```
-
-See [backend/layers/pdf-processor/README.md](../backend/layers/pdf-processor/README.md) for details.
-
-## CI
-
-`.github/workflows/ci-backend.yml` runs on `pull_request` with two jobs, `golangci-lint` and `build-test`.
-
-Actions are pinned to full-length commit SHAs, because tags can be moved.
-
-CI cannot reach real AWS APIs.
-`permissions` is limited to `contents: read` with no OIDC, and `AWS_EC2_METADATA_DISABLED=true` additionally blocks IMDS.
+Run `just --list` for the recipes; details and prerequisites are in [backend/README.md](../backend/README.md) and [infra/README.md](../infra/README.md).
+The justfiles hold no shell logic; recipes that need more than a single command call a script under `scripts/`.
 
 ## Constraints
 
