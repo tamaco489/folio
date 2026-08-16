@@ -79,6 +79,9 @@ func TestHandle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 
 	want := Output{
 		JobID:            jobID,
@@ -90,7 +93,7 @@ func TestHandle(t *testing.T) {
 		PageImagePrefix:  "work/" + jobID + "/pages/",
 		TextLayerKey:     s3.TextLayerKey(jobID),
 	}
-	if got != want {
+	if *got != want {
 		t.Errorf("Handle() = %+v, want %+v", got, want)
 	}
 
@@ -147,6 +150,9 @@ func TestHandleWithoutTextLayer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 
 	want := Output{
 		JobID:            jobID,
@@ -158,7 +164,7 @@ func TestHandleWithoutTextLayer(t *testing.T) {
 		PageImagePrefix:  "work/" + jobID + "/pages/",
 		TextLayerKey:     s3.TextLayerKey(jobID),
 	}
-	if got != want {
+	if *got != want {
 		t.Errorf("Handle() = %+v, want %+v", got, want)
 	}
 
@@ -176,8 +182,12 @@ func TestHandleEmptyJobID(t *testing.T) {
 	t.Parallel()
 
 	handler, _, _ := newTestHandler(t, pdf.NewRunner())
-	if _, err := handler.Handle(context.Background(), Input{}); !errors.Is(err, ErrEmptyJobID) {
+	got, err := handler.Handle(context.Background(), Input{})
+	if !errors.Is(err, ErrEmptyJobID) {
 		t.Errorf("Handle() error = %v, want ErrEmptyJobID", err)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 }
 
@@ -187,8 +197,12 @@ func TestHandleMissingPDF(t *testing.T) {
 	// PDF を取得できない時点で失敗するため poppler には到達しない
 	handler, _, baseDir := newTestHandler(t, pdf.NewRunner())
 
-	if _, err := handler.Handle(context.Background(), Input{JobID: "job-missing"}); !errors.Is(err, s3.ErrNotFound) {
+	got, err := handler.Handle(context.Background(), Input{JobID: "job-missing"})
+	if !errors.Is(err, s3.ErrNotFound) {
 		t.Errorf("Handle() error = %v, want s3.ErrNotFound", err)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	assertWorkDirCleaned(t, baseDir)
 }

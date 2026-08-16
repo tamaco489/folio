@@ -42,6 +42,7 @@
 
 - `main.go` は `config.Load` → `cfg.LoadAWS` → ハンドラの組み立て → `lambda.Start(handler.Handle)` の順に書き、起動の失敗は `log.Fatalf` で報告する (手本: `cmd/pipeline/validator/main.go`)
 - 入出力の JSON タグは lowerCamelCase にする (`jobId` `pageCount`)
+- ハンドラは `(*Output, error)` で返す (AWS SDK v2 の `(*XxxOutput, error)` に揃える)。エラー時は `nil, err`、出力の無い正常終了 (textract-parser の SNS 経路) だけ `nil, nil` を返す。値返し (`Output{}, err`) にしない
 - Step Functions の Retry / Catch で判別するエラーは専用のエラー型 (`RetryableError` `InvalidInputError` など) で最外に返す。Lambda はエラーの型名を `errorType` として報告するため、`ErrorEquals` はその型名で照合する
 - State 間の入出力は 256KB が上限。ハンドラの出力は S3 キーと小さな判定結果のみにし、実体は S3 に置く
 

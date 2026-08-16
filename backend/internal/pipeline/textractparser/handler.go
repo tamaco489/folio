@@ -114,6 +114,7 @@ func New(docs *s3.Client, analyzer *textract.Client, states *sfn.Client, extract
 // Handle は入力の形でイベントの種類を判別して振り分ける
 //
 // SNS からの配送は Records[].EventSource が "aws:sns" の events.SNSEvent で届き、それ以外は Step Functions からの起動として扱う
+// 完了通知の経路は Step Functions へタスクトークンで応答済みで Lambda の戻り値に載せる出力が無いため、nil, nil で正常終了する
 // 完了通知の処理で返すエラーは Step Functions には届かず、Lambda の非同期呼び出しの再試行を招くだけであるため、型で分類するのは起動のエラーだけとする
 func (h *Handler) Handle(ctx context.Context, raw json.RawMessage) (*StartOutput, error) {
 	if ev, ok := asSNSEvent(raw); ok {
