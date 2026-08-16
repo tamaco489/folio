@@ -1,0 +1,12 @@
+{
+  "url": "https://api.crossref.org/works/10.1000%2Fverify-unavailable",
+  "recordedAt": "2026-08-16T04:46:00Z",
+  "status": 503,
+  "header": {
+    "Content-Type": [
+      "text/plain"
+    ]
+  },
+  "text": "Service Unavailable",
+  "note": "合成した記録 (実レスポンスではない)。Crossref の 5xx はテストのために意図的に起こせないため、DOI 10.1000/verify-unavailable への応答として 503 を手で書いた。unavailable の経路 (リトライ後に諦めて続行する) を再生で通すために用いる"
+}
