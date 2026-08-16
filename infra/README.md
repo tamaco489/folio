@@ -15,7 +15,7 @@ infra/
 │   ├── messaging/      EventBridge rule and SNS topic (Textract completion)
 │   ├── compute/        Lambda functions and layer
 │   ├── pipeline/       Step Functions state machine
-│   └── iam/            Roles and policies for Lambda, Step Functions, and Textract
+│   └── iam/            Roles and policies for Lambda, Step Functions, and Textract; OIDC provider and role for GitHub Actions
 ├── scripts/            Shell scripts called by the justfile (validate, lint)
 ├── .tflint.hcl         TFLint configuration shared by CI and just lint
 └── justfile            Recipe declarations only
@@ -37,7 +37,7 @@ Phase 1 has a single environment, `dev`. No `stg` or `prd` directory is created.
 | Account ID   | Set the 12-digit ID in `TF_VAR_account_id` (used in the documents bucket name). Never written to a file                                            |
 | State bucket | `{env}-folio-tfstate` (`ap-northeast-1`) must exist per environment (`dev-folio-tfstate` for dev). It is outside Terraform and created by the user |
 
-`terraform.tfvars` holds only `env` and `bedrock_model_id`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
+`terraform.tfvars` holds only `env`, `bedrock_model_id`, and `github_repository`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
 `plan` fails early if `TF_VAR_account_id` does not match the account of the current credentials.
 
 ## State
@@ -72,7 +72,7 @@ In a checkout that has already run `just init` against the S3 backend, the `init
 `envs/dev/main.tf` wires the five modules and passes values through outputs.
 Some modules reference each other's outputs (iam <-> messaging, iam <-> compute, messaging <-> pipeline); the resource-level graph has no cycle, so plan succeeds. Do not add `depends_on` to `module` blocks.
 
-The environment-level variables in `terraform.tfvars` are only `env` and `bedrock_model_id` (both safe to publish). `account_id` comes from `TF_VAR_account_id`, and the Crossref contact `crossref_mailto` is an email address, so pass it with `TF_VAR_crossref_mailto` if needed (empty means the Lambda gets no such variable).
+The environment-level variables in `terraform.tfvars` are only `env`, `bedrock_model_id`, and `github_repository` (all safe to publish). `account_id` comes from `TF_VAR_account_id`, and the Crossref contact `crossref_mailto` is an email address, so pass it with `TF_VAR_crossref_mailto` if needed (empty means the Lambda gets no such variable).
 
 ### Placing the zips
 
@@ -90,7 +90,15 @@ just upload          # package -> bin/pipeline-*.zip to lambda/ (scripts/upload.
 just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first)
 ```
 
-The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). The upload is run by the user. Overwriting the same key creates a new `version_id`, and the next `just plan` detects the function (and Layer) update. Apply it with `just apply`; do not use `aws lambda update-function-code` (Terraform stays the single source of truth).
+The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). Overwriting the same key creates a new `version_id`, and the next `just plan` detects the function (and Layer) update. Apply it with `just apply`; do not use `aws lambda update-function-code` (Terraform stays the single source of truth).
+
+`just upload` can also run from CI. Running `.github/workflows/cd-backend.yml` manually from Actions (`workflow_dispatch`, input `env`; only `dev` in Phase 1) checks out `main`, runs `just upload`, and re-uploads the zips under `lambda/`. Beforehand, register the value of `terraform -chdir=envs/dev output -raw github_actions_role_arn` as the GitHub secret `AWS_ROLE_ARN` (a secret, not a variable, because the ARN contains the account ID). The Layer is not part of CI (it needs a Docker build and changes only when poppler does; run `just upload-layer` locally). CI stops at S3 as well; applying is still `just plan` -> `just apply`.
+
+### OIDC role for GitHub Actions
+
+The iam module creates the OIDC provider (`token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and the role `{env}-folio-github-actions-role` that `cd-backend.yml` assumes. The trust policy is limited to `aud = sts.amazonaws.com` and `sub = repo:{github_repository}:ref:refs/heads/main`, so no other branch or repository can assume it. Its only permissions are `s3:PutObject` (plus `s3:AbortMultipartUpload` for multipart uploads) on `lambda/*` and `layers/*` in the artifacts bucket; it cannot touch Lambda or the Terraform state.
+`github_repository` lives in `terraform.tfvars`. It is the part of the token's `sub` claim after `repo:`; this repository was created after 2026-07-15 and therefore uses the immutable subject claim format (`owner@id/repo@id`), so take the value of `gh api repos/tamaco489/folio/actions/oidc/customization/sub --jq .sub_claim_prefix` without the `repo:` prefix.
+The OIDC provider ARN is derived from the URL, so an account can hold only one. When adding stg / prd to the same account, move the provider out of the iam module (Phase 1 is dev only). `thumbprint_list` is not set (GitHub's certificate is verified against AWS's library of trusted root CAs, so the value is unused).
 
 ### First apply
 

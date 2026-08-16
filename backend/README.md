@@ -29,7 +29,7 @@ just build            # Cross-compile all Lambda functions (scripts/build.sh)
 just build-one <cmd>  # Build a single function (scripts/build.sh <cmd>, e.g. pipeline/validator)
 just package          # Archive into bin/{function}.zip (scripts/package.sh, runs build first)
 just clean            # Remove artifacts under bin/ (scripts/clean.sh)
-just upload           # package, then upload bin/*.zip to lambda/ in the artifacts bucket (scripts/upload.sh; run by the user, applied with infra's just apply)
+just upload           # package, then upload bin/*.zip to lambda/ in the artifacts bucket (scripts/upload.sh; locally or from CD, applied with infra's just apply)
 just upload-layer     # Upload layers/pdf-processor/pdf-processor.zip to layers/ (build it with build.sh first)
 ```
 
@@ -55,6 +55,11 @@ cd backend/layers/pdf-processor
 ```
 
 See [layers/pdf-processor/README.md](layers/pdf-processor/README.md) for details.
+
+## CD
+
+`.github/workflows/cd-backend.yml` is run manually from Actions (`workflow_dispatch`, input `env`; only `dev` in Phase 1). It checks out `main`, runs `just upload`, and re-uploads the Lambda zips to `lambda/` in the artifacts bucket. That is all it does: applying them to Lambda is `cd infra && just plan && just apply` (run by the user), and `aws lambda update-function-code` is never used. The Layer is not part of it either (it needs a Docker build and changes only when poppler does, so run `just upload-layer` locally).
+AWS authentication uses OIDC. The role is created by infra's iam module; register its ARN as the GitHub secret `AWS_ROLE_ARN` (see [infra/README.md](../infra/README.md)). No access keys are stored in the repository.
 
 ## Tests
 

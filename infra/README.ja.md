@@ -15,7 +15,7 @@ infra/
 │   ├── messaging/      EventBridge ルールと SNS (Textract 完了通知)
 │   ├── compute/        Lambda 関数と Layer
 │   ├── pipeline/       Step Functions ステートマシン
-│   └── iam/            Lambda・Step Functions・Textract のロールとポリシー
+│   └── iam/            Lambda・Step Functions・Textract のロールとポリシー、GitHub Actions 用の OIDC プロバイダとロール
 ├── scripts/            justfile から呼ぶシェルスクリプト (validate, lint)
 ├── .tflint.hcl         TFLint の設定 (CI と just lint で共用)
 └── justfile            レシピの宣言のみ
@@ -37,7 +37,7 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 | アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない                                              |
 | state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
 
-`terraform.tfvars` には `env` と `bedrock_model_id` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
+`terraform.tfvars` には `env` `bedrock_model_id` `github_repository` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
 plan の段階で `TF_VAR_account_id` と認証情報のアカウントが一致することを検査する。
 
 ## state
@@ -72,7 +72,7 @@ just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 `envs/dev/main.tf` は 5 つのモジュールを結線し、値は outputs で受け渡す。
 モジュール同士が互いの出力を参照する箇所 (iam ↔ messaging、iam ↔ compute、messaging ↔ pipeline) があるが、リソース単位の依存は循環しないため plan は通る。`module` ブロックに `depends_on` を書かないこと。
 
-環境側の変数は `terraform.tfvars` の `env` と `bedrock_model_id` (公開してよい値) のみで、`account_id` は `TF_VAR_account_id`、Crossref の連絡先 `crossref_mailto` はメールアドレスなので必要なら `TF_VAR_crossref_mailto` で渡す (空なら Lambda に環境変数を設定しない)。
+環境側の変数は `terraform.tfvars` の `env` `bedrock_model_id` `github_repository` (公開してよい値) のみで、`account_id` は `TF_VAR_account_id`、Crossref の連絡先 `crossref_mailto` はメールアドレスなので必要なら `TF_VAR_crossref_mailto` で渡す (空なら Lambda に環境変数を設定しない)。
 
 ### zip の配置
 
@@ -90,7 +90,15 @@ just upload          # package → bin/pipeline-*.zip を lambda/ へ (scripts/u
 just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)
 ```
 
-バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。アップロードはユーザーが実行する。同じキーへ上書きすると新しい `version_id` が付き、次の `just plan` が関数 (と Layer) の更新を検出する。反映は `just apply` で行い、`aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。
+バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。同じキーへ上書きすると新しい `version_id` が付き、次の `just plan` が関数 (と Layer) の更新を検出する。反映は `just apply` で行い、`aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。
+
+`just upload` は CI からも実行できる。`.github/workflows/cd-backend.yml` を Actions から手動実行 (`workflow_dispatch`、入力 `env`、Phase 1 は `dev` のみ) すると、`main` を checkout して `just upload` を走らせ、`lambda/` の zip を置き直す。事前に `terraform -chdir=envs/dev output -raw github_actions_role_arn` の値を GitHub の secret `AWS_ROLE_ARN` に登録する (ARN にアカウント ID が含まれるため variable ではなく secret)。Layer は CI に含めない (Docker のビルドが要り、poppler の更新時だけなので手元で `just upload-layer` を実行する)。CI が行うのも S3 に置くところまでで、反映は同じく `just plan` → `just apply`。
+
+### GitHub Actions 用の OIDC ロール
+
+iam モジュールは OIDC プロバイダ (`token.actions.githubusercontent.com`、audience `sts.amazonaws.com`) と、`cd-backend.yml` が引き受けるロール `{env}-folio-github-actions-role` を作る。信頼ポリシーは `aud = sts.amazonaws.com` と `sub = repo:{github_repository}:ref:refs/heads/main` に限り、main 以外のブランチや他のリポジトリからは引き受けられない。権限は artifacts バケットの `lambda/*` と `layers/*` への `s3:PutObject` (と multipart 用の `s3:AbortMultipartUpload`) だけで、Lambda や Terraform の state には触れない。
+`github_repository` は `terraform.tfvars` に置く。値は OIDC トークンの `sub` の `repo:` に続く部分で、2026-07-15 以降に作られたこのリポジトリは immutable subject claim (`owner@id/repo@id`) の形になるため `gh api repos/tamaco489/folio/actions/oidc/customization/sub --jq .sub_claim_prefix` の値から `repo:` を除いて書く。
+OIDC プロバイダの ARN は URL で決まるためアカウントに 1 つしか作れない。同じアカウントに stg / prd を足すときはプロバイダを iam モジュールの外へ切り出す (Phase 1 は dev のみ)。`thumbprint_list` は書かない (GitHub の証明書は AWS の信頼済みルート CA で検証され、値は使われない)。
 
 ### 初回の apply
 

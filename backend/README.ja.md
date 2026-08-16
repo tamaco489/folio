@@ -29,7 +29,7 @@ just build            # 全 Lambda をクロスコンパイルする (scripts/bu
 just build-one <cmd>  # 単一の Lambda をビルドする (scripts/build.sh <cmd>、例: pipeline/validator)
 just package          # bin/{関数名}.zip に固める (scripts/package.sh、先に build を実行する)
 just clean            # bin/ 配下の成果物を削除する (scripts/clean.sh)
-just upload           # package のうえで bin/*.zip を artifacts バケットの lambda/ へアップロードする (scripts/upload.sh、実行はユーザー。反映は infra の just apply)
+just upload           # package のうえで bin/*.zip を artifacts バケットの lambda/ へアップロードする (scripts/upload.sh、手元または CD から。反映は infra の just apply)
 just upload-layer     # layers/pdf-processor/pdf-processor.zip を layers/ へアップロードする (先に build.sh で作る)
 ```
 
@@ -55,6 +55,11 @@ cd backend/layers/pdf-processor
 ```
 
 詳細は [layers/pdf-processor/README.ja.md](layers/pdf-processor/README.ja.md) を参照。
+
+## CD
+
+`.github/workflows/cd-backend.yml` は Actions から手動実行 (`workflow_dispatch`、入力 `env`、Phase 1 は `dev` のみ) すると、`main` を checkout して `just upload` を走らせ、Lambda の zip を artifacts バケットの `lambda/` に置き直す。行うのはそこまでで、Lambda への反映は `cd infra && just plan && just apply` (ユーザー) で行い、`aws lambda update-function-code` は使わない。Layer も含めない (Docker のビルドが要り、poppler の更新時だけなので手元で `just upload-layer` を実行する)。
+AWS へは OIDC で認証する。ロールは infra の iam モジュールが作り、その ARN を GitHub の secret `AWS_ROLE_ARN` に登録しておく (手順は [infra/README.ja.md](../infra/README.ja.md) を参照)。アクセスキーはリポジトリに置かない。
 
 ## テスト
 
