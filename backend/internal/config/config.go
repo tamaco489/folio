@@ -16,17 +16,25 @@ import (
 //
 // AWS_REGION は Lambda ランタイムが予約変数として自動設定するため、独自の接頭辞を付けない
 const (
-	EnvKeyEnvironment     = "FOLIO_ENV"
-	EnvKeyRegion          = "AWS_REGION"
-	EnvKeyDocumentsBucket = "FOLIO_DOCUMENTS_BUCKET"
-	EnvKeyJobsTable       = "FOLIO_JOBS_TABLE"
-	EnvKeyBedrockModelID  = "FOLIO_BEDROCK_MODEL_ID"
+	EnvKeyEnvironment          = "FOLIO_ENV"
+	EnvKeyRegion               = "AWS_REGION"
+	EnvKeyDocumentsBucket      = "FOLIO_DOCUMENTS_BUCKET"
+	EnvKeyJobsTable            = "FOLIO_JOBS_TABLE"
+	EnvKeyBedrockModelID       = "FOLIO_BEDROCK_MODEL_ID"
+	EnvKeyTextractSNSTopicARN  = "FOLIO_TEXTRACT_SNS_TOPIC_ARN"
+	EnvKeyTextractRoleARN      = "FOLIO_TEXTRACT_ROLE_ARN"
+	EnvKeyTextractFeatureTypes = "FOLIO_TEXTRACT_FEATURE_TYPES"
 )
 
 // DefaultRegion は AWS_REGION が未設定のときに用いるリージョン
 //
 // Bedrock の上位モデルと arXiv のバルクバケットが揃う us-east-1 に固定している
 const DefaultRegion = "us-east-1"
+
+// DefaultTextractFeatureTypes は FOLIO_TEXTRACT_FEATURE_TYPES が未設定のときに用いる FeatureTypes (カンマ区切り)
+//
+// LAYOUT + TABLES は暫定であり、#34 の実測で差し替えるため環境変数で上書きできるようにしている
+const DefaultTextractFeatureTypes = "LAYOUT,TABLES"
 
 // Env は環境識別子
 type Env string
@@ -53,9 +61,11 @@ func (e Env) Valid() bool {
 type Requirement string
 
 const (
-	RequireDocumentsBucket Requirement = EnvKeyDocumentsBucket
-	RequireJobsTable       Requirement = EnvKeyJobsTable
-	RequireBedrockModelID  Requirement = EnvKeyBedrockModelID
+	RequireDocumentsBucket     Requirement = EnvKeyDocumentsBucket
+	RequireJobsTable           Requirement = EnvKeyJobsTable
+	RequireBedrockModelID      Requirement = EnvKeyBedrockModelID
+	RequireTextractSNSTopicARN Requirement = EnvKeyTextractSNSTopicARN
+	RequireTextractRoleARN     Requirement = EnvKeyTextractRoleARN
 )
 
 // エラーの判別用センチネル
@@ -74,11 +84,14 @@ var (
 //
 // S3 のキーは jobId から規則で導出できるため、プレフィックスごとの設定値は持たない
 type Config struct {
-	Env             Env    // Env は環境識別子 (リソース名の接頭辞 {環境}-folio- に対応する)
-	Region          string // Region は AWS リージョン
-	DocumentsBucket string // DocumentsBucket は PDF・中間データ・成果物を置く S3 バケット名
-	JobsTable       string // JobsTable は処理状態と冪等性を管理する DynamoDB テーブル名
-	BedrockModelID  string // BedrockModelID は構造化に用いる Bedrock のモデル ID
+	Env                  Env    // Env は環境識別子 (リソース名の接頭辞 {環境}-folio- に対応する)
+	Region               string // Region は AWS リージョン
+	DocumentsBucket      string // DocumentsBucket は PDF・中間データ・成果物を置く S3 バケット名
+	JobsTable            string // JobsTable は処理状態と冪等性を管理する DynamoDB テーブル名
+	BedrockModelID       string // BedrockModelID は構造化に用いる Bedrock のモデル ID
+	TextractSNSTopicARN  string // TextractSNSTopicARN は Textract が完了通知を発行する SNS トピックの ARN
+	TextractRoleARN      string // TextractRoleARN は Textract が SNS へ発行するために引き受ける IAM ロールの ARN
+	TextractFeatureTypes string // TextractFeatureTypes は Textract の FeatureTypes (カンマ区切り。未設定なら DefaultTextractFeatureTypes)
 }
 
 // Load は環境変数から設定を読み込み、required に挙げた項目が揃っているかを検証する
@@ -87,14 +100,20 @@ type Config struct {
 // 欠落は 1 件目で打ち切らず、すべて集約して返す
 func Load(required ...Requirement) (Config, error) {
 	cfg := Config{
-		Env:             Env(lookup(EnvKeyEnvironment)),
-		Region:          lookup(EnvKeyRegion),
-		DocumentsBucket: lookup(EnvKeyDocumentsBucket),
-		JobsTable:       lookup(EnvKeyJobsTable),
-		BedrockModelID:  lookup(EnvKeyBedrockModelID),
+		Env:                  Env(lookup(EnvKeyEnvironment)),
+		Region:               lookup(EnvKeyRegion),
+		DocumentsBucket:      lookup(EnvKeyDocumentsBucket),
+		JobsTable:            lookup(EnvKeyJobsTable),
+		BedrockModelID:       lookup(EnvKeyBedrockModelID),
+		TextractSNSTopicARN:  lookup(EnvKeyTextractSNSTopicARN),
+		TextractRoleARN:      lookup(EnvKeyTextractRoleARN),
+		TextractFeatureTypes: lookup(EnvKeyTextractFeatureTypes),
 	}
 	if cfg.Region == "" {
 		cfg.Region = DefaultRegion
+	}
+	if cfg.TextractFeatureTypes == "" {
+		cfg.TextractFeatureTypes = DefaultTextractFeatureTypes
 	}
 
 	var problems []error
@@ -108,9 +127,11 @@ func Load(required ...Requirement) (Config, error) {
 	}
 
 	values := map[Requirement]string{
-		RequireDocumentsBucket: cfg.DocumentsBucket,
-		RequireJobsTable:       cfg.JobsTable,
-		RequireBedrockModelID:  cfg.BedrockModelID,
+		RequireDocumentsBucket:     cfg.DocumentsBucket,
+		RequireJobsTable:           cfg.JobsTable,
+		RequireBedrockModelID:      cfg.BedrockModelID,
+		RequireTextractSNSTopicARN: cfg.TextractSNSTopicARN,
+		RequireTextractRoleARN:     cfg.TextractRoleARN,
 	}
 	for _, r := range required {
 		value, known := values[r]
