@@ -35,6 +35,9 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - name: Run golangci-lint
+        # just lint に寄せず Action のまま使う (バイナリと Go モジュールのキャッシュを活かすため)
+        # そのためバージョンはルートの .tool-versions (ローカル、asdf) とここの version の
+        # 2 か所で管理している。更新時は両方を揃えること
         uses: golangci/golangci-lint-action@d583c34f0599d37dbac4a198b9c83201be380893 # v9.3.0
         with:
           # 設定は backend/.golangci.yml

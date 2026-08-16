@@ -114,9 +114,12 @@ The four packages under `internal/pipeline/` map to Step Functions states:
 Managed with [asdf](https://asdf-vm.com/) and pinned in `.tool-versions` at the repository root.
 
 ```text
-golang    1.26.5
-terraform 1.15.8
+golang        1.26.5
+terraform     1.15.8
+golangci-lint 2.12.2
 ```
+
+`golangci-lint` is pinned in two places, `.tool-versions` for local runs and `version:` of the golangci-lint Action in CI. Bump both together.
 
 ## Commands
 
@@ -127,6 +130,7 @@ Justfiles live directly under `backend/` and `infra/` rather than at the root, s
 cd backend
 just fmt              # go fmt ./...
 just vet              # go vet ./...
+just lint             # golangci-lint run ./... (config: .golangci.yml, same version as CI)
 just test             # go test ./...
 just cmds             # List build targets (scripts/cmds.sh)
 just build            # Cross-compile all Lambda functions (scripts/build.sh)
