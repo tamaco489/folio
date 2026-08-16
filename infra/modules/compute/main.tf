@@ -7,8 +7,8 @@ locals {
   layer_key         = "layers/pdf-processor.zip"
 
   # dev のロググループの保持日数
-  # 評価用の環境で監査の要件がなく、失敗の調査は数日のうちに行うため短く取り、変数にはしない
-  log_retention_days = 14
+  # 評価用の環境で監査の要件がなく、失敗の調査は当日から週明けまでに行うため 3 日にし、変数にはしない
+  log_retention_days = 3
 
   # /tmp の大きさ (MB) は Lambda の既定 512 が最小で、超えた分だけ GB 秒で課金される
   # validator と preprocessor は受け付ける上限の PDF (500 * 1000 * 1000 バイト = 477 MiB) を丸ごと /tmp に落とす
@@ -25,13 +25,14 @@ locals {
   #   poppler 用の FOLIO_POPPLER_BIN_DIR と FOLIO_RASTERIZE_DPI は Layer の /opt/bin と既定 DPI で自動解決するため設定しない
   # layers は poppler を呼ぶ 2 本にだけ付ける (preprocessor は pdftoppm と pdftotext、validator はページ数と暗号化の判定に pdfinfo を使う)
   # memory_size と timeout の根拠は各関数のコメントに書く
+  # メモリは検証環境の評価対象 (8〜20 ページの論文) に合わせて小さく取る (CPU の割り当てはメモリに比例するため、CPU 依存の preprocessor だけ大きめ)
   functions = {
-    # 最大 500MB の PDF を /tmp へ落として SHA-256 と pdfinfo を取るだけで、計算より S3 からの転送が支配的なので 1024 MB
+    # 数 MB の PDF を /tmp へ落として SHA-256 と pdfinfo を取るだけで、計算も転送も軽いため 512 MB
     # 上限の PDF の転送とハッシュ計算に DynamoDB の条件付き PutItem を含めても 300 秒あれば足りる想定 (評価対象の論文は数 MB なので通常は数秒)
     validator = {
       name              = "pipeline-validator"
       role_arn          = var.lambda_validate_role_arn
-      memory_size       = 1024
+      memory_size       = 512
       timeout           = 300
       ephemeral_storage = local.pdf_ephemeral_storage_mb
       layers            = [aws_lambda_layer_version.pdf_processor.arn]
@@ -43,11 +44,11 @@ locals {
 
     # pdftoppm によるラスタライズ (最大 200 ページ、150 DPI) と pdftotext を 1 回の起動で行う
     # 外部プロセス 1 回の上限が 10 分 (pdf.DefaultTimeout) なので Lambda 側は上限の 900 秒にし、Lambda のタイムアウトが先に来ないようにする
-    # メモリはラスタライズと全文の言語判定 (テキスト全体をメモリに載せる) のため 5 本で最も大きく取り、arm64 の vCPU 割り当ても増やす
+    # pdftoppm は CPU 依存で、メモリに比例する vCPU 割り当てが実行時間を決めるため 5 本で最も大きい 1024 MB にする (20 ページなら数十秒で終わる)
     preprocessor = {
       name              = "pipeline-preprocessor"
       role_arn          = var.lambda_preprocess_role_arn
-      memory_size       = 2048
+      memory_size       = 1024
       timeout           = 900
       ephemeral_storage = local.pdf_ephemeral_storage_mb
       layers            = [aws_lambda_layer_version.pdf_processor.arn]
@@ -61,7 +62,7 @@ locals {
     textract-parser = {
       name              = "pipeline-textract-parser"
       role_arn          = var.lambda_parser_role_arn
-      memory_size       = 1024
+      memory_size       = 512
       timeout           = 600
       ephemeral_storage = local.default_ephemeral_storage_mb
       layers            = []
@@ -79,7 +80,7 @@ locals {
     bedrock-parser = {
       name              = "pipeline-bedrock-parser"
       role_arn          = var.lambda_parser_role_arn
-      memory_size       = 1024
+      memory_size       = 512
       timeout           = 300
       ephemeral_storage = local.default_ephemeral_storage_mb
       layers            = []
@@ -94,7 +95,7 @@ locals {
     finalizer = {
       name              = "pipeline-finalizer"
       role_arn          = var.lambda_finalize_role_arn
-      memory_size       = 1024
+      memory_size       = 512
       timeout           = 300
       ephemeral_storage = local.default_ephemeral_storage_mb
       layers            = []
