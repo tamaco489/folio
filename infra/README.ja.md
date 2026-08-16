@@ -11,7 +11,7 @@ infra/
 ├── envs/
 │   └── dev/            dev 環境。provider・backend・変数を持ち、modules/ を呼び出す
 ├── modules/
-│   ├── storage/        S3 (documents バケット) と DynamoDB (jobs テーブル)
+│   ├── storage/        S3 (documents / artifacts バケット) と DynamoDB (jobs テーブル)
 │   ├── messaging/      EventBridge ルールと SNS (Textract 完了通知)
 │   ├── compute/        Lambda 関数と Layer
 │   ├── pipeline/       Step Functions ステートマシン
@@ -37,7 +37,7 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 | アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない                                              |
 | state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
 
-`terraform.tfvars` には `env` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
+`terraform.tfvars` には `env` と `bedrock_model_id` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
 plan の段階で `TF_VAR_account_id` と認証情報のアカウントが一致することを検査する。
 
 ## state
@@ -56,7 +56,7 @@ just init          # terraform -chdir=envs/dev init
 just plan          # terraform -chdir=envs/dev plan
 just fmt           # terraform fmt -recursive
 just fmt-check     # terraform fmt -check -recursive
-just validate      # scripts/validate.sh: envs/dev と modules/* を init -backend=false のうえで validate する (AWS の認証情報は不要)
+just validate      # scripts/validate.sh: envs/dev と modules/* を init -backend=false のうえで validate する
 just lint          # scripts/lint.sh: tflint --init と tflint --recursive (.tflint.hcl)
 just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 ```
@@ -64,7 +64,43 @@ just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 `just apply` と `just destroy` はユーザーが実行する。`-auto-approve` は付けておらず、確認は Terraform 側の対話に任せる。
 
 初回の `just init` で生成される `envs/dev/.terraform.lock.hcl` はコミットする。
-`just validate` は各モジュールも単体で validate する (`envs/dev` に未結線のものも含む)。その際に `modules/*/` に書かれる lock ファイルは git 管理外にしている。
+`just validate` は各モジュールも単体で validate する。その際に `modules/*/` に書かれる lock ファイルは git 管理外にしている。
+一度 S3 backend で `just init` した checkout では、`just validate` の `init -backend=false` が既存 backend の確認で STS を呼ぶため、有効な認証情報が要る (CI や未 init の checkout では不要)。
+
+## モジュールの結線と apply の順序
+
+`envs/dev/main.tf` は 5 つのモジュールを結線し、値は outputs で受け渡す。
+モジュール同士が互いの出力を参照する箇所 (iam ↔ messaging、iam ↔ compute、messaging ↔ pipeline) があるが、リソース単位の依存は循環しないため plan は通る。`module` ブロックに `depends_on` を書かないこと。
+
+環境側の変数は `terraform.tfvars` の `env` と `bedrock_model_id` (公開してよい値) のみで、`account_id` は `TF_VAR_account_id`、Crossref の連絡先 `crossref_mailto` はメールアドレスなので必要なら `TF_VAR_crossref_mailto` で渡す (空なら Lambda に環境変数を設定しない)。
+
+### zip の配置
+
+compute モジュールは Lambda の zip と Layer の zip を artifacts バケット (`{env}-folio-artifacts-{account_id}`、バージョニング有効) の**固定キー**から `data "aws_s3_object"` で読み、`version_id` を `s3_object_version` に渡す。
+zip が無いと plan の段階で失敗するので、先に置く。
+
+| キー                                | 作り方                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| `lambda/pipeline-{name}.zip` (5 本) | `cd backend && just package` → `backend/bin/pipeline-{name}.zip`       |
+| `layers/pdf-processor.zip`          | `backend/layers/pdf-processor/build.sh` (Docker、poppler の更新時だけ) |
+
+```sh
+cd backend
+just upload          # package → bin/pipeline-*.zip を lambda/ へ (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)
+```
+
+バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。アップロードはユーザーが実行する。同じキーへ上書きすると新しい `version_id` が付き、次の `just plan` が関数 (と Layer) の更新を検出する。反映は `just apply` で行い、`aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。
+
+### 初回の apply
+
+artifacts バケットは storage モジュールが作るため、初回だけ 2 段階になる。
+
+1. `envs/dev/main.tf` に `module "storage"` だけがある状態で `just apply` (artifacts バケットができる)
+2. 上の手順で zip を置く
+3. 残りのモジュールを結線した状態で `just plan` → `just apply`
+
+2 回目以降は「zip を置き直す → `just plan` → `just apply`」だけでよい。
 
 ## CI
 

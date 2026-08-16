@@ -29,6 +29,8 @@ just build            # Cross-compile all Lambda functions (scripts/build.sh)
 just build-one <cmd>  # Build a single function (scripts/build.sh <cmd>, e.g. pipeline/validator)
 just package          # Archive into bin/{function}.zip (scripts/package.sh, runs build first)
 just clean            # Remove artifacts under bin/ (scripts/clean.sh)
+just upload           # package, then upload bin/*.zip to lambda/ in the artifacts bucket (scripts/upload.sh; run by the user, applied with infra's just apply)
+just upload-layer     # Upload layers/pdf-processor/pdf-processor.zip to layers/ (build it with build.sh first)
 ```
 
 Before opening a PR, run `just fmt` `just vet` `just lint` `just test`, and confirm that `just fix-diff` and `just modernize` report nothing.

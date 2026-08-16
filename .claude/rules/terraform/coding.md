@@ -24,7 +24,8 @@
 - リソース名は **モジュール内で `"${var.env}-folio-${local.name}"` として組み立てる**。環境ディレクトリは値 (`env` `account_id` `region`) を渡すだけで名前を組み立てない
 - S3 バケット名だけ末尾に `-${var.account_id}` を付ける (全アカウントで一意にするため)
 - `env` は `validation` で `dev` / `stg` / `prd` に限る。`account_id` は `validation` で 12 桁の数字を検査する
-- **アカウント ID・API キー・接続情報をファイルに書かない。** アカウント ID は `TF_VAR_account_id` で渡し、`terraform.tfvars` には `env` のような公開してよい値だけを置く
+- **アカウント ID・API キー・接続情報・メールアドレスをファイルに書かない。** アカウント ID は `TF_VAR_account_id`、Crossref の連絡先は `TF_VAR_crossref_mailto` のように環境変数で渡し、`terraform.tfvars` には `env` `bedrock_model_id` のような公開してよい値だけを置く
+- モジュール間の受け渡しは outputs 経由で行う。モジュール同士が互いの output を参照してもリソース単位の依存が循環しなければ plan は通るので、**`module` ブロックに `depends_on` を書かない** (モジュール全体の依存になり循環する)。値の参照は本当に使うリソースに閉じ、`for_each` のキーに他モジュールの output を使わない
 - タグは環境ディレクトリの provider `default_tags` (`Project` `Environment` `ManagedBy`) で一括付与し、モジュール内で `tags` を書かない
 
 ## 書き方
@@ -47,4 +48,5 @@
 - `terraform fmt` / `validate` / `plan` は実行してよい。**`terraform apply` / `destroy` はユーザーだけが実行する**
 - `just lint` (tflint) と `just scan` (trivy config) は AWS に触れないためローカルで実行してよい。PR を出す前に `just fmt-check` `just validate` `just lint` `just scan` を通す
 - backend を変えた直後の `init` は `-reconfigure` を使う (旧 backend に state が無いことを確認したうえで)
+- Lambda のコードは artifacts バケットの固定キーに置いた zip を `data "aws_s3_object"` の `version_id` (`s3_object_version`) で参照し、差し替えは `plan` / `apply` で反映する。`source_code_hash` と `aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。アップロード (`cd backend && just upload` / `just upload-layer`) はユーザーが行う
 - justfile にシェルの処理を書かない (`.claude/rules/general/justfile.md`)

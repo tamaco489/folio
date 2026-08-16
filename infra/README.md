@@ -11,7 +11,7 @@ infra/
 ├── envs/
 │   └── dev/            dev environment: provider, backend, variables, and module calls
 ├── modules/
-│   ├── storage/        S3 (documents bucket) and DynamoDB (jobs table)
+│   ├── storage/        S3 (documents / artifacts buckets) and DynamoDB (jobs table)
 │   ├── messaging/      EventBridge rule and SNS topic (Textract completion)
 │   ├── compute/        Lambda functions and layer
 │   ├── pipeline/       Step Functions state machine
@@ -37,7 +37,7 @@ Phase 1 has a single environment, `dev`. No `stg` or `prd` directory is created.
 | Account ID   | Set the 12-digit ID in `TF_VAR_account_id` (used in the documents bucket name). Never written to a file                                            |
 | State bucket | `{env}-folio-tfstate` (`ap-northeast-1`) must exist per environment (`dev-folio-tfstate` for dev). It is outside Terraform and created by the user |
 
-`terraform.tfvars` holds only `env`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
+`terraform.tfvars` holds only `env` and `bedrock_model_id`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
 `plan` fails early if `TF_VAR_account_id` does not match the account of the current credentials.
 
 ## State
@@ -56,7 +56,7 @@ just init          # terraform -chdir=envs/dev init
 just plan          # terraform -chdir=envs/dev plan
 just fmt           # terraform fmt -recursive
 just fmt-check     # terraform fmt -check -recursive
-just validate      # scripts/validate.sh: init -backend=false + validate for envs/dev and every modules/* (no AWS credentials)
+just validate      # scripts/validate.sh: init -backend=false + validate for envs/dev and every modules/*
 just lint          # scripts/lint.sh: tflint --init + tflint --recursive with .tflint.hcl
 just scan          # trivy config (severity MEDIUM and above, dev tfvars applied)
 ```
@@ -64,7 +64,43 @@ just scan          # trivy config (severity MEDIUM and above, dev tfvars applied
 `just apply` and `just destroy` are run by the user only. They do not pass `-auto-approve`; confirmation is left to Terraform's own prompt.
 
 Commit `envs/dev/.terraform.lock.hcl`, which the first `just init` generates.
-`just validate` also validates each module standalone (including ones not yet wired into `envs/dev`); the lock files it writes under `modules/*/` are ignored by git.
+`just validate` also validates each module standalone; the lock files it writes under `modules/*/` are ignored by git.
+In a checkout that has already run `just init` against the S3 backend, the `init -backend=false` inside `just validate` calls STS while checking the existing backend, so valid credentials are needed (not in CI or in a fresh checkout).
+
+## Wiring the modules and the apply order
+
+`envs/dev/main.tf` wires the five modules and passes values through outputs.
+Some modules reference each other's outputs (iam <-> messaging, iam <-> compute, messaging <-> pipeline); the resource-level graph has no cycle, so plan succeeds. Do not add `depends_on` to `module` blocks.
+
+The environment-level variables in `terraform.tfvars` are only `env` and `bedrock_model_id` (both safe to publish). `account_id` comes from `TF_VAR_account_id`, and the Crossref contact `crossref_mailto` is an email address, so pass it with `TF_VAR_crossref_mailto` if needed (empty means the Lambda gets no such variable).
+
+### Placing the zips
+
+The compute module reads the Lambda zips and the Layer zip from **fixed keys** in the artifacts bucket (`{env}-folio-artifacts-{account_id}`, versioning enabled) with `data "aws_s3_object"` and passes `version_id` to `s3_object_version`.
+Plan fails when a zip is missing, so upload first.
+
+| Key                              | How to build                                                                |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `lambda/pipeline-{name}.zip` (5) | `cd backend && just package` -> `backend/bin/pipeline-{name}.zip`           |
+| `layers/pdf-processor.zip`       | `backend/layers/pdf-processor/build.sh` (Docker; only when poppler changes) |
+
+```sh
+cd backend
+just upload          # package -> bin/pipeline-*.zip to lambda/ (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first)
+```
+
+The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). The upload is run by the user. Overwriting the same key creates a new `version_id`, and the next `just plan` detects the function (and Layer) update. Apply it with `just apply`; do not use `aws lambda update-function-code` (Terraform stays the single source of truth).
+
+### First apply
+
+The artifacts bucket is created by the storage module, so only the first run takes two steps.
+
+1. `just apply` with only `module "storage"` in `envs/dev/main.tf` (creates the artifacts bucket)
+2. Upload the zips as above
+3. `just plan` -> `just apply` with the remaining modules wired
+
+From then on it is just "re-upload the zips -> `just plan` -> `just apply`".
 
 ## CI
 
