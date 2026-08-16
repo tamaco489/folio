@@ -10,8 +10,11 @@ import (
 	"testing"
 	"time"
 
+	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/awsx/dynamo"
+	"github.com/tamaco489/folio/backend/internal/awsx/dynamo/dynamotest"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3/s3test"
 	"github.com/tamaco489/folio/backend/internal/domain"
@@ -26,6 +29,9 @@ const (
 	testTable  = "test-folio-jobs"
 	jobID      = "01JB8X7K2M9QRT4V6WZ3N5PDA0"
 	pageCount  = 2
+
+	// seededAt は dynamo が用いる固定桁のタイムスタンプ表現に合わせた既存レコードの時刻
+	seededAt = "2026-08-16T00:00:00.000000000Z"
 
 	// crossrefDir は verify の記録済み Crossref 応答 (新しい記録は取りに行かず、参照文献をこの記録に合わせる)
 	crossrefDir = "../verify/testdata/crossref"
@@ -87,13 +93,13 @@ func textractDocument() domain.Document {
 			Rows:    [][]string{{"Dense baseline", "1.0x"}, {"Ours", "6.2x"}},
 		}},
 		References: []domain.Reference{
-			{Raw: rawLeCun, Title: "Deep learning", Year: 2015, DOI: domain.Ptr("10.1038/nature14539")},
-			{Raw: rawXiao, Title: "Efficient streaming language models with attention sinks", Year: 2024, DOI: domain.Ptr("https://doi.org/10.48550/ARXIV.2309.17453")},
+			{Raw: rawLeCun, Title: "Deep learning", Year: 2015, DOI: new("10.1038/nature14539")},
+			{Raw: rawXiao, Title: "Efficient streaming language models with attention sinks", Year: 2024, DOI: new("https://doi.org/10.48550/ARXIV.2309.17453")},
 		},
 		Provenance: domain.Provenance{
 			Route:       domain.RouteTextract,
 			ExtractedAt: extractedAt,
-			Confidence:  domain.Confidence{Title: domain.Ptr(0.998), Sections: domain.Ptr(0.943), Figures: domain.Ptr(0.912), Tables: domain.Ptr(0.724)},
+			Confidence:  domain.Confidence{Title: new(0.998), Sections: new(0.943), Figures: new(0.912), Tables: new(0.724)},
 			Cost:        domain.Cost{TextractPages: pageCount, TextractFeatures: []string{"LAYOUT", "TABLES"}, BedrockModel: "model-a", BedrockInputTokens: 4000, BedrockOutputTokens: 600},
 			DurationMs:  90000,
 			Warnings:    []string{"page 2: 二段組と判定し Textract が返した読み順を左段から右段へ並べ直した"},
@@ -151,7 +157,7 @@ func input() Input {
 type env struct {
 	handler *Handler
 	docs    *spyS3
-	jobs    *fakeDynamo
+	jobs    *dynamotest.Fake
 }
 
 // newEnv はハンドラを組み立てる (Crossref は verify の記録を再生し、実時間を待たない)
@@ -168,8 +174,14 @@ func newEnv(t *testing.T) *env {
 	)
 	clock := func() time.Time { return finalizedAt }
 
-	e := &env{docs: &spyS3{Fake: s3test.NewFake()}, jobs: newFakeDynamo()}
-	e.jobs.seed(jobID, dynamo.StatusProcessing)
+	e := &env{docs: &spyS3{Fake: s3test.NewFake()}, jobs: dynamotest.NewFake()}
+	e.jobs.Seed(map[string]awsdynamodbtypes.AttributeValue{
+		"jobId":     &awsdynamodbtypes.AttributeValueMemberS{Value: jobID},
+		"status":    &awsdynamodbtypes.AttributeValueMemberS{Value: string(dynamo.StatusProcessing)},
+		"filename":  &awsdynamodbtypes.AttributeValueMemberS{Value: "seeded.pdf"},
+		"createdAt": &awsdynamodbtypes.AttributeValueMemberS{Value: seededAt},
+		"updatedAt": &awsdynamodbtypes.AttributeValueMemberS{Value: seededAt},
+	})
 	e.handler = New(
 		s3.New(e.docs, testBucket),
 		dynamo.New(e.jobs, testTable),
@@ -382,10 +394,10 @@ func TestHandleBothRoutesSucceed(t *testing.T) {
 	}
 
 	// DynamoDB: COMPLETED に更新され、errorReason は残らない
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusCompleted) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusCompleted) {
 		t.Errorf("DynamoDB の status = %q, want COMPLETED", got)
 	}
-	if e.jobs.has(jobID, "errorReason") {
+	if _, ok := e.jobs.Item(jobID)["errorReason"]; ok {
 		t.Error("成功したのに errorReason が残っている")
 	}
 }
@@ -421,7 +433,7 @@ func TestHandleReviewPendingWhenRouteNeedsReview(t *testing.T) {
 	if cmp.Diff == nil || cmp.Diff.Authors.Equal {
 		t.Errorf("diff.authors = %+v, want 一致しない", cmp.Diff)
 	}
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
 		t.Errorf("DynamoDB の status = %q, want REVIEW_PENDING", got)
 	}
 }
@@ -483,7 +495,7 @@ func TestHandleTextractFailed(t *testing.T) {
 			if !cmp.NeedsReview || cmp.Status != dynamo.StatusReviewPending {
 				t.Errorf("comparison = status %q, needsReview %v", cmp.Status, cmp.NeedsReview)
 			}
-			if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
+			if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
 				t.Errorf("DynamoDB の status = %q, want REVIEW_PENDING", got)
 			}
 		})
@@ -509,7 +521,7 @@ func TestHandleSkipTextract(t *testing.T) {
 	if out.ResultTextractKey != "" || out.ResultBedrockKey != s3.ResultBedrockKey(jobID) || out.Status != dynamo.StatusCompleted || out.NeedsReview {
 		t.Errorf("Handle() = %+v", out)
 	}
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusCompleted) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusCompleted) {
 		t.Errorf("DynamoDB の status = %q, want COMPLETED", got)
 	}
 	if e.fetched(s3.TextractDocumentKey(jobID)) {
@@ -605,14 +617,14 @@ func TestHandleBothRoutesFailed(t *testing.T) {
 		t.Errorf("routes = %+v", cmp.Routes)
 	}
 
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusFailed) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusFailed) {
 		t.Errorf("DynamoDB の status = %q, want FAILED", got)
 	}
-	if got := e.jobs.attr(jobID, "errorReason"); got != noResult.Reason {
+	if got := e.jobs.Attr(jobID, "errorReason"); got != noResult.Reason {
 		t.Errorf("DynamoDB の errorReason = %q, want %q", got, noResult.Reason)
 	}
-	if e.jobs.updates != 1 {
-		t.Errorf("DynamoDB の更新回数 = %d, want 1 (MarkFailed のみ)", e.jobs.updates)
+	if e.jobs.Updates != 1 {
+		t.Errorf("DynamoDB の更新回数 = %d, want 1 (MarkFailed のみ)", e.jobs.Updates)
 	}
 }
 
@@ -634,7 +646,7 @@ func TestHandleSkippedAndFailed(t *testing.T) {
 	if !strings.HasPrefix(noResult.Reason, "textract: skipped; bedrock: "+ErrorResultNotFound) {
 		t.Errorf("Reason = %q", noResult.Reason)
 	}
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusFailed) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusFailed) {
 		t.Errorf("DynamoDB の status = %q, want FAILED", got)
 	}
 }
@@ -679,7 +691,7 @@ func TestHandleWithoutTextLayer(t *testing.T) {
 	if !ptrEq(a.Provenance.Confidence.Title, 0.998) || b.Provenance.Confidence.Title != nil || !ptrEq(b.Provenance.Confidence.References, 1) {
 		t.Errorf("confidence = a.title %v, b.title %v, b.references %v", a.Provenance.Confidence.Title, b.Provenance.Confidence.Title, b.Provenance.Confidence.References)
 	}
-	if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
+	if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusReviewPending) {
 		t.Errorf("DynamoDB の status = %q, want REVIEW_PENDING", got)
 	}
 }
@@ -730,7 +742,7 @@ func TestHandleIsIdempotent(t *testing.T) {
 	}
 
 	out1, a1, b1, cmp1 := run()
-	status1 := e.jobs.attr(jobID, "status")
+	status1 := e.jobs.Attr(jobID, "status")
 	out2, a2, b2, cmp2 := run()
 
 	if out1 != out2 {
@@ -745,7 +757,7 @@ func TestHandleIsIdempotent(t *testing.T) {
 	if string(cmp1) != string(cmp2) {
 		t.Errorf("comparison.json が変わった:\n1: %s\n2: %s", cmp1, cmp2)
 	}
-	if got := e.jobs.attr(jobID, "status"); got != status1 {
+	if got := e.jobs.Attr(jobID, "status"); got != status1 {
 		t.Errorf("DynamoDB の status が変わった: %q → %q", status1, got)
 	}
 
@@ -788,8 +800,8 @@ func TestHandleRejectsInvalidInput(t *testing.T) {
 			if _, ok := errors.AsType[*InvalidInputError](err); !ok {
 				t.Errorf("Handle() error = %T, want *InvalidInputError", err)
 			}
-			if e.jobs.updates != 0 {
-				t.Errorf("入力不正なのに DynamoDB を %d 回更新している", e.jobs.updates)
+			if e.jobs.Updates != 0 {
+				t.Errorf("入力不正なのに DynamoDB を %d 回更新している", e.jobs.Updates)
 			}
 			if len(e.docs.gets) != 0 {
 				t.Errorf("入力不正なのに S3 を読んでいる: %q", e.docs.gets)
@@ -827,7 +839,7 @@ func TestHandleMarksFailedOnUnexpectedError(t *testing.T) {
 			wantMarked: true,
 		},
 		"正常系_DynamoDB の更新が失敗した場合_MarkFailed も失敗するが元のエラーを返すこと": {
-			setup: func(e *env) { e.jobs.err = dynamoErr },
+			setup: func(e *env) { e.jobs.Err = dynamoErr },
 			want:  dynamoErr,
 		},
 	}
@@ -849,10 +861,10 @@ func TestHandleMarksFailedOnUnexpectedError(t *testing.T) {
 			if !tt.wantMarked {
 				return
 			}
-			if got := e.jobs.attr(jobID, "status"); got != string(dynamo.StatusFailed) {
+			if got := e.jobs.Attr(jobID, "status"); got != string(dynamo.StatusFailed) {
 				t.Errorf("DynamoDB の status = %q, want FAILED", got)
 			}
-			if got := e.jobs.attr(jobID, "errorReason"); !strings.Contains(got, tt.want.Error()) {
+			if got := e.jobs.Attr(jobID, "errorReason"); !strings.Contains(got, tt.want.Error()) {
 				t.Errorf("DynamoDB の errorReason = %q, want %q を含む", got, tt.want.Error())
 			}
 		})

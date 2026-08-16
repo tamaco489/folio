@@ -11,7 +11,10 @@ import (
 	"testing"
 	"time"
 
+	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+
 	"github.com/tamaco489/folio/backend/internal/awsx/dynamo"
+	"github.com/tamaco489/folio/backend/internal/awsx/dynamo/dynamotest"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3/s3test"
 	"github.com/tamaco489/folio/backend/internal/pipeline/pdf"
@@ -20,6 +23,9 @@ import (
 const (
 	testBucket = "dev-folio-documents"
 	testTable  = "dev-folio-jobs"
+
+	// seededAt は dynamo が用いる固定桁のタイムスタンプ表現に合わせた既存レコードの時刻
+	seededAt = "2026-08-15T10:00:00.000000000Z"
 )
 
 var testNow = time.Date(2026, 8, 16, 9, 0, 0, 0, time.UTC)
@@ -27,8 +33,8 @@ var testNow = time.Date(2026, 8, 16, 9, 0, 0, 0, time.UTC)
 // errS3Unused は S3 に触れてはいけない経路で触れたことを検出するための番人
 var errS3Unused = errors.New("s3 must not be touched")
 
-func newHandler(api s3.API, info PDFInfo) (*Handler, *fakeDynamo) {
-	jobs := newFakeDynamo()
+func newHandler(api s3.API, info PDFInfo) (*Handler, *dynamotest.Fake) {
+	jobs := dynamotest.NewFake()
 	h := New(
 		s3.New(api, testBucket),
 		dynamo.New(jobs, testTable, dynamo.WithClock(func() time.Time { return testNow })),
@@ -82,7 +88,7 @@ func TestHandleProceedsForNewUpload(t *testing.T) {
 	if got.Reason != nil {
 		t.Errorf("reason = %+v, want nil", got.Reason)
 	}
-	if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
+	if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
 		t.Errorf("stored status = %q, want %q", status, dynamo.StatusProcessing)
 	}
 	assertCompact(t, got)
@@ -147,7 +153,7 @@ func TestHandleRejectsInvalidInput(t *testing.T) {
 				if got.Decision != DecisionProceed {
 					t.Fatalf("decision = %q (%+v), want %q", got.Decision, got.Reason, DecisionProceed)
 				}
-				if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
+				if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
 					t.Errorf("stored status = %q, want %q", status, dynamo.StatusProcessing)
 				}
 				return
@@ -162,10 +168,10 @@ func TestHandleRejectsInvalidInput(t *testing.T) {
 			if got.Reason.Message == "" {
 				t.Error("reason message is empty")
 			}
-			if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusFailed) {
+			if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusFailed) {
 				t.Errorf("stored status = %q, want %q", status, dynamo.StatusFailed)
 			}
-			if reason := jobs.attr(jobID, "errorReason"); !strings.HasPrefix(reason, string(tt.wantCode)) {
+			if reason := jobs.Attr(jobID, "errorReason"); !strings.HasPrefix(reason, string(tt.wantCode)) {
 				t.Errorf("errorReason = %q, want it to start with %q", reason, tt.wantCode)
 			}
 		})
@@ -189,7 +195,7 @@ func TestHandleRejectsOversizedObject(t *testing.T) {
 	if got.Reason == nil || got.Reason.Code != CodeTooLarge {
 		t.Fatalf("reason = %+v, want code %q", got.Reason, CodeTooLarge)
 	}
-	if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusFailed) {
+	if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusFailed) {
 		t.Errorf("stored status = %q, want %q", status, dynamo.StatusFailed)
 	}
 }
@@ -212,7 +218,7 @@ func TestHandleRejectsHashMismatch(t *testing.T) {
 	if got.Reason == nil || got.Reason.Code != CodeHashMismatch {
 		t.Fatalf("reason = %+v, want code %q", got.Reason, CodeHashMismatch)
 	}
-	if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusFailed) {
+	if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusFailed) {
 		t.Errorf("stored status = %q, want %q", status, dynamo.StatusFailed)
 	}
 }
@@ -247,7 +253,13 @@ func TestHandleIdempotency(t *testing.T) {
 				fake.HeadErr = errS3Unused
 			}
 			h, jobs := newHandler(fake, &fakePDF{info: pdf.Info{Pages: 2}})
-			jobs.seed(jobID, tt.existing)
+			jobs.Seed(map[string]awsdynamodbtypes.AttributeValue{
+				"jobId":     &awsdynamodbtypes.AttributeValueMemberS{Value: jobID},
+				"status":    &awsdynamodbtypes.AttributeValueMemberS{Value: string(tt.existing)},
+				"filename":  &awsdynamodbtypes.AttributeValueMemberS{Value: "seeded.pdf"},
+				"createdAt": &awsdynamodbtypes.AttributeValueMemberS{Value: seededAt},
+				"updatedAt": &awsdynamodbtypes.AttributeValueMemberS{Value: seededAt},
+			})
 
 			got, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: key})
 			if err != nil {
@@ -266,7 +278,7 @@ func TestHandleIdempotency(t *testing.T) {
 				if got.Reason != nil {
 					t.Errorf("reason = %+v, want nil", got.Reason)
 				}
-				if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
+				if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
 					t.Errorf("stored status = %q, want %q", status, dynamo.StatusProcessing)
 				}
 				return
@@ -275,10 +287,10 @@ func TestHandleIdempotency(t *testing.T) {
 			if got.Reason == nil || got.Reason.Code != tt.wantCode {
 				t.Fatalf("reason = %+v, want code %q", got.Reason, tt.wantCode)
 			}
-			if status := jobs.attr(jobID, "status"); status != string(tt.existing) {
+			if status := jobs.Attr(jobID, "status"); status != string(tt.existing) {
 				t.Errorf("stored status = %q, want the existing %q", status, tt.existing)
 			}
-			if updatedAt := jobs.attr(jobID, "updatedAt"); updatedAt != seededAt {
+			if updatedAt := jobs.Attr(jobID, "updatedAt"); updatedAt != seededAt {
 				t.Errorf("updatedAt = %q, want the existing record to be untouched", updatedAt)
 			}
 		})
@@ -301,8 +313,8 @@ func TestHandleFailsOnMisroutedEvent(t *testing.T) {
 			if _, err := h.Handle(context.Background(), in); err == nil {
 				t.Fatal("Handle() error = nil, want error")
 			}
-			if len(jobs.items) != 0 {
-				t.Errorf("job was registered for a misrouted event: %v", jobs.items)
+			if jobs.Len() != 0 {
+				t.Errorf("job was registered for a misrouted event: %d jobs", jobs.Len())
 			}
 		})
 	}
@@ -318,7 +330,7 @@ func TestHandleFailsWhenObjectIsMissing(t *testing.T) {
 	if !errors.Is(err, s3.ErrNotFound) {
 		t.Fatalf("Handle() error = %v, want %v", err, s3.ErrNotFound)
 	}
-	if !jobs.exists(jobID) {
+	if jobs.Item(jobID) == nil {
 		t.Error("job should stay registered so that the retry is gated by the same record")
 	}
 }
@@ -441,7 +453,7 @@ func TestHandleWithPoppler(t *testing.T) {
 				if got.Decision != DecisionProceed {
 					t.Fatalf("decision = %q (%+v), want %q", got.Decision, got.Reason, DecisionProceed)
 				}
-				if status := jobs.attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
+				if status := jobs.Attr(jobID, "status"); status != string(dynamo.StatusProcessing) {
 					t.Errorf("stored status = %q, want %q", status, dynamo.StatusProcessing)
 				}
 				return

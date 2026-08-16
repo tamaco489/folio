@@ -8,18 +8,32 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+
+	"github.com/tamaco489/folio/backend/internal/awsx/dynamo/dynamotest"
 )
 
 const testTable = "dev-folio-jobs"
 
 var baseTime = time.Date(2026, 8, 15, 10, 0, 0, 0, time.UTC)
 
-func newTestClient(f *fakeDynamo, now time.Time) *Client {
+var _ API = (*dynamotest.Fake)(nil)
+
+func newTestClient(f *dynamotest.Fake, now time.Time) *Client {
 	return New(f, testTable, WithClock(func() time.Time { return now }))
 }
 
+// seed は Job をレコードとして配置する
+func seed(t *testing.T, f *dynamotest.Fake, job Job) {
+	t.Helper()
+	item, err := job.item()
+	if err != nil {
+		t.Fatalf("item: %v", err)
+	}
+	f.Seed(item)
+}
+
 func TestRegisterJobNew(t *testing.T) {
-	f := newFakeDynamo()
+	f := dynamotest.NewFake()
 	c := newTestClient(f, baseTime)
 
 	job, err := c.RegisterJob(context.Background(), "hash-1", "paper.pdf")
@@ -33,7 +47,7 @@ func TestRegisterJobNew(t *testing.T) {
 		t.Errorf("timestamps = %v / %v, want %v", job.CreatedAt, job.UpdatedAt, baseTime)
 	}
 
-	stored := f.get("hash-1")
+	stored := f.Item("hash-1")
 	if stored == nil {
 		t.Fatal("item was not stored")
 	}
@@ -52,11 +66,11 @@ func TestRegisterJobNew(t *testing.T) {
 			t.Fatalf("attributes = %v, want %v", got, want)
 		}
 	}
-	if aws.ToString(f.lastPut.ConditionExpression) != "attribute_not_exists(#jobId) OR #status = :failed" {
-		t.Errorf("unexpected condition expression: %q", aws.ToString(f.lastPut.ConditionExpression))
+	if aws.ToString(f.LastPut.ConditionExpression) != "attribute_not_exists(#jobId) OR #status = :failed" {
+		t.Errorf("unexpected condition expression: %q", aws.ToString(f.LastPut.ConditionExpression))
 	}
-	if aws.ToString(f.lastPut.TableName) != testTable {
-		t.Errorf("table = %q, want %q", aws.ToString(f.lastPut.TableName), testTable)
+	if aws.ToString(f.LastPut.TableName) != testTable {
+		t.Errorf("table = %q, want %q", aws.ToString(f.LastPut.TableName), testTable)
 	}
 }
 
@@ -70,8 +84,8 @@ func TestRegisterJobConflict(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			f := newFakeDynamo()
-			f.seed(Job{
+			f := dynamotest.NewFake()
+			seed(t, f, Job{
 				JobID:     "hash-1",
 				Status:    tt.status,
 				Filename:  "paper.pdf",
@@ -94,10 +108,10 @@ func TestRegisterJobConflict(t *testing.T) {
 			if exists.Existing.Status.Reprocessable() {
 				t.Errorf("status %v must not be reprocessable", tt.status)
 			}
-			if got := attrString(f.get("hash-1"), attrStatus); got != string(tt.status) {
+			if got := f.Attr("hash-1", attrStatus); got != string(tt.status) {
 				t.Errorf("stored status = %q, want %q", got, tt.status)
 			}
-			if got := attrString(f.get("hash-1"), attrCreatedAt); got != formatTime(baseTime.Add(-time.Hour)) {
+			if got := f.Attr("hash-1", attrCreatedAt); got != formatTime(baseTime.Add(-time.Hour)) {
 				t.Errorf("createdAt was overwritten: %q", got)
 			}
 		})
@@ -105,8 +119,8 @@ func TestRegisterJobConflict(t *testing.T) {
 }
 
 func TestRegisterJobAfterFailed(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{
+	f := dynamotest.NewFake()
+	seed(t, f, Job{
 		JobID:       "hash-1",
 		Status:      StatusFailed,
 		Filename:    "paper.pdf",
@@ -123,35 +137,35 @@ func TestRegisterJobAfterFailed(t *testing.T) {
 	if job.Status != StatusProcessing {
 		t.Errorf("status = %v, want %v", job.Status, StatusProcessing)
 	}
-	stored := f.get("hash-1")
+	stored := f.Item("hash-1")
 	if _, ok := stored[attrErrorReason]; ok {
 		t.Error("errorReason should be cleared on reprocess")
 	}
-	if got := attrString(stored, attrCreatedAt); got != formatTime(baseTime) {
+	if got := f.Attr("hash-1", attrCreatedAt); got != formatTime(baseTime) {
 		t.Errorf("createdAt = %q, want the new submission time %q", got, formatTime(baseTime))
 	}
 }
 
 func TestRegisterJobIsIdempotentForRepeatedSubmission(t *testing.T) {
-	f := newFakeDynamo()
+	f := dynamotest.NewFake()
 	c := newTestClient(f, baseTime)
 
 	if _, err := c.RegisterJob(context.Background(), "hash-1", "paper.pdf"); err != nil {
 		t.Fatalf("first RegisterJob() error = %v", err)
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if _, err := c.RegisterJob(context.Background(), "hash-1", "paper.pdf"); err == nil {
 			t.Fatalf("resubmission %d succeeded, want conflict", i)
 		}
 	}
-	if got := attrString(f.get("hash-1"), attrStatus); got != string(StatusProcessing) {
+	if got := f.Attr("hash-1", attrStatus); got != string(StatusProcessing) {
 		t.Errorf("status = %q, want %q", got, StatusProcessing)
 	}
 }
 
 func TestGetJob(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{
+	f := dynamotest.NewFake()
+	seed(t, f, Job{
 		JobID:       "hash-1",
 		Status:      StatusFailed,
 		Filename:    "paper.pdf",
@@ -171,13 +185,13 @@ func TestGetJob(t *testing.T) {
 	if !job.CreatedAt.Equal(baseTime) || !job.UpdatedAt.Equal(baseTime.Add(time.Minute)) {
 		t.Errorf("timestamps = %v / %v", job.CreatedAt, job.UpdatedAt)
 	}
-	if !aws.ToBool(f.lastGet.ConsistentRead) {
+	if !aws.ToBool(f.LastGet.ConsistentRead) {
 		t.Error("GetItem should use a consistent read")
 	}
 }
 
 func TestGetJobNotFound(t *testing.T) {
-	c := newTestClient(newFakeDynamo(), baseTime)
+	c := newTestClient(dynamotest.NewFake(), baseTime)
 
 	if _, err := c.GetJob(context.Background(), "missing"); !errors.Is(err, ErrJobNotFound) {
 		t.Fatalf("error = %v, want ErrJobNotFound", err)
@@ -185,8 +199,8 @@ func TestGetJobNotFound(t *testing.T) {
 }
 
 func TestUpdateStatus(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{
+	f := dynamotest.NewFake()
+	seed(t, f, Job{
 		JobID:       "hash-1",
 		Status:      StatusProcessing,
 		Filename:    "paper.pdf",
@@ -213,14 +227,14 @@ func TestUpdateStatus(t *testing.T) {
 	if job.ErrorReason != "" {
 		t.Errorf("errorReason = %q, want empty", job.ErrorReason)
 	}
-	if _, ok := f.get("hash-1")[attrErrorReason]; ok {
+	if _, ok := f.Item("hash-1")[attrErrorReason]; ok {
 		t.Error("errorReason should be removed from the stored item")
 	}
 }
 
 func TestUpdateStatusRejectsFailed(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{JobID: "hash-1", Status: StatusProcessing, Filename: "paper.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
+	f := dynamotest.NewFake()
+	seed(t, f, Job{JobID: "hash-1", Status: StatusProcessing, Filename: "paper.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
 	c := newTestClient(f, baseTime)
 
 	if _, err := c.UpdateStatus(context.Background(), "hash-1", StatusFailed); !errors.Is(err, ErrFailedNeedsReason) {
@@ -232,7 +246,7 @@ func TestUpdateStatusRejectsFailed(t *testing.T) {
 }
 
 func TestUpdateStatusNotFound(t *testing.T) {
-	c := newTestClient(newFakeDynamo(), baseTime)
+	c := newTestClient(dynamotest.NewFake(), baseTime)
 
 	if _, err := c.UpdateStatus(context.Background(), "missing", StatusCompleted); !errors.Is(err, ErrJobNotFound) {
 		t.Fatalf("error = %v, want ErrJobNotFound", err)
@@ -240,8 +254,8 @@ func TestUpdateStatusNotFound(t *testing.T) {
 }
 
 func TestMarkFailed(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{JobID: "hash-1", Status: StatusProcessing, Filename: "paper.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
+	f := dynamotest.NewFake()
+	seed(t, f, Job{JobID: "hash-1", Status: StatusProcessing, Filename: "paper.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
 	failedAt := baseTime.Add(5 * time.Minute)
 	c := newTestClient(f, failedAt)
 
@@ -263,7 +277,7 @@ func TestMarkFailed(t *testing.T) {
 }
 
 func TestMarkFailedRequiresReason(t *testing.T) {
-	c := newTestClient(newFakeDynamo(), baseTime)
+	c := newTestClient(dynamotest.NewFake(), baseTime)
 
 	if _, err := c.MarkFailed(context.Background(), "hash-1", ""); !errors.Is(err, ErrFailedNeedsReason) {
 		t.Fatalf("error = %v, want ErrFailedNeedsReason", err)
@@ -271,10 +285,10 @@ func TestMarkFailedRequiresReason(t *testing.T) {
 }
 
 func TestListByStatusNewestFirst(t *testing.T) {
-	f := newFakeDynamo()
-	f.seed(Job{JobID: "old", Status: StatusReviewPending, Filename: "a.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
-	f.seed(Job{JobID: "new", Status: StatusReviewPending, Filename: "b.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(time.Hour)})
-	f.seed(Job{JobID: "other", Status: StatusCompleted, Filename: "c.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(2 * time.Hour)})
+	f := dynamotest.NewFake()
+	seed(t, f, Job{JobID: "old", Status: StatusReviewPending, Filename: "a.pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
+	seed(t, f, Job{JobID: "new", Status: StatusReviewPending, Filename: "b.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(time.Hour)})
+	seed(t, f, Job{JobID: "other", Status: StatusCompleted, Filename: "c.pdf", CreatedAt: baseTime, UpdatedAt: baseTime.Add(2 * time.Hour)})
 	c := newTestClient(f, baseTime)
 
 	jobs, err := c.ListByStatus(context.Background(), StatusReviewPending, 0)
@@ -287,21 +301,21 @@ func TestListByStatusNewestFirst(t *testing.T) {
 	if jobs[0].JobID != "new" || jobs[1].JobID != "old" {
 		t.Errorf("order = %s, %s, want new, old", jobs[0].JobID, jobs[1].JobID)
 	}
-	if aws.ToString(f.lastQuery.IndexName) != IndexStatusUpdatedAt {
-		t.Errorf("index = %q, want %q", aws.ToString(f.lastQuery.IndexName), IndexStatusUpdatedAt)
+	if aws.ToString(f.LastQuery.IndexName) != IndexStatusUpdatedAt {
+		t.Errorf("index = %q, want %q", aws.ToString(f.LastQuery.IndexName), IndexStatusUpdatedAt)
 	}
-	if aws.ToBool(f.lastQuery.ScanIndexForward) {
+	if aws.ToBool(f.LastQuery.ScanIndexForward) {
 		t.Error("ScanIndexForward should be false to read newest first")
 	}
-	if f.lastQuery.Limit != nil {
-		t.Errorf("Limit = %v, want unset", *f.lastQuery.Limit)
+	if f.LastQuery.Limit != nil {
+		t.Errorf("Limit = %v, want unset", *f.LastQuery.Limit)
 	}
 }
 
 func TestListByStatusLimit(t *testing.T) {
-	f := newFakeDynamo()
+	f := dynamotest.NewFake()
 	for _, id := range []string{"a", "b", "c"} {
-		f.seed(Job{JobID: id, Status: StatusReviewPending, Filename: id + ".pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
+		seed(t, f, Job{JobID: id, Status: StatusReviewPending, Filename: id + ".pdf", CreatedAt: baseTime, UpdatedAt: baseTime})
 	}
 	c := newTestClient(f, baseTime)
 
