@@ -24,16 +24,3 @@ variable "function_arns" {
     error_message = "function_arns must contain the keys validator, preprocessor, textract-parser, bedrock-parser, and finalizer."
   }
 }
-
-# Bedrock のスロットリングと bedrock-parser 内部の再試行 (最大 5 回の指数バックオフ) の兼ね合いで控えめな 5 を既定にする
-# 上げるときは Bedrock のモデル別クォータ (リクエスト数/分、トークン数/分) を確認する
-variable "bedrock_map_max_concurrency" {
-  description = "MaxConcurrency of the inline Map that runs bedrock-parser per page (route B)."
-  type        = number
-  default     = 5
-
-  validation {
-    condition     = var.bedrock_map_max_concurrency >= 1 && floor(var.bedrock_map_max_concurrency) == var.bedrock_map_max_concurrency
-    error_message = "bedrock_map_max_concurrency must be a positive integer."
-  }
-}

@@ -183,7 +183,7 @@
                 "page": "{% $states.context.Map.Item.Value %}",
                 "language": "{% $language %}"
               },
-              "MaxConcurrency": ${bedrock_map_max_concurrency},
+              "MaxConcurrency": 5,
               "ItemProcessor": {
                 "ProcessorConfig": {
                   "Mode": "INLINE"

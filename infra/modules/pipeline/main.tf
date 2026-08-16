@@ -4,8 +4,8 @@ locals {
   state_machine_name = "${local.name_prefix}-pipeline"
 
   # ロググループの保持期間 (日)
-  # dev は評価用で、実行データを含むログは 2 週間もあれば調査に足りる
-  log_retention_days = 14
+  # dev は評価用で監査の要件がなく、ログは失敗直後の調査にしか使わないため 3 日にする (compute の Lambda ロググループと同じ)
+  log_retention_days = 3
 }
 
 # ------------------------------------------------------------------------------
@@ -30,7 +30,9 @@ resource "aws_cloudwatch_log_group" "pipeline" {
 # 経路 B の Map はページ番号 1..pageCount を回す必要があり、preprocessor はページの配列を出力しない (256KB 対策で pageCount とプレフィックスだけ)
 # JSONata なら Items に範囲式 [1..$pageCount] を書けるが、JSONPath では配列を作れず別の Lambda か Distributed Map が要る
 #
-# templatefile で差し込むのは関数 ARN 5 つと Map の MaxConcurrency だけにする
+# templatefile で差し込むのは関数 ARN 5 つ (JSON 文字列の中) だけにし、ファイルは単体でも正しい JSON に保つ (エディタの ASL 検証を効かせるため)
+# 経路 B の Map の MaxConcurrency は数値で、テンプレート化すると JSON として不正になるため 5 を直書きする
+#   Bedrock のスロットリングと bedrock-parser 内部の再試行 (最大 5 回の指数バックオフ) の兼ね合いで控えめな値にし、上げるときは Bedrock のモデル別クォータ (リクエスト数/分、トークン数/分) を確認する
 # 定義中の JSONata 式 ({% ... %}) と $states は templatefile の ${ } と %{ } に当たらないため、そのまま書ける
 # ただし {% の直後は必ず空白にする ({%{ と続けると %{ がディレクティブと解釈される)
 #
@@ -50,12 +52,11 @@ resource "aws_sfn_state_machine" "pipeline" {
   role_arn = var.statemachine_role_arn
 
   definition = templatefile("${path.module}/definition.asl.json", {
-    validator_arn               = var.function_arns["validator"]
-    preprocessor_arn            = var.function_arns["preprocessor"]
-    textract_parser_arn         = var.function_arns["textract-parser"]
-    bedrock_parser_arn          = var.function_arns["bedrock-parser"]
-    finalizer_arn               = var.function_arns["finalizer"]
-    bedrock_map_max_concurrency = var.bedrock_map_max_concurrency
+    validator_arn       = var.function_arns["validator"]
+    preprocessor_arn    = var.function_arns["preprocessor"]
+    textract_parser_arn = var.function_arns["textract-parser"]
+    bedrock_parser_arn  = var.function_arns["bedrock-parser"]
+    finalizer_arn       = var.function_arns["finalizer"]
   })
 
   # dev では ALL と実行データを残す (State 間を流れるのは S3 キーと判定結果だけで機密は含まれない)
