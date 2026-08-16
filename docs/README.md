@@ -96,7 +96,8 @@ folio/
 │   ├── tools/              fetch-corpus, build-truth, evaluate (not deployed)
 │   ├── testdata/           Recorded responses under textract/ and bedrock/
 │   ├── layers/             Lambda Layer build definitions (Dockerfile + build.sh)
-│   ├── justfile
+│   ├── scripts/            Shell scripts behind the justfile recipes (cmds, build, package, clean)
+│   ├── justfile            Recipe declarations only; each recipe calls a script or a single command
 │   ├── .golangci.yml
 │   └── go.mod
 └── infra/                  Terraform
@@ -127,14 +128,16 @@ cd backend
 just fmt              # go fmt ./...
 just vet              # go vet ./...
 just test             # go test ./...
-just cmds             # List build targets
-just build            # Cross-compile all Lambda functions
-just build-one <cmd>  # Build a single function (e.g. pipeline/validator)
-just package          # Archive into bin/{function}.zip
-just clean            # Remove artifacts under bin/
+just cmds             # List build targets (scripts/cmds.sh)
+just build            # Cross-compile all Lambda functions (scripts/build.sh)
+just build-one <cmd>  # Build a single function (scripts/build.sh <cmd>, e.g. pipeline/validator)
+just package          # Archive into bin/{function}.zip (scripts/package.sh, runs build first)
+just clean            # Remove artifacts under bin/ (scripts/clean.sh)
 ```
 
-Build targets are discovered by searching for `main.go` under `cmd/`, so adding a Lambda function does not require editing the justfile.
+The justfile holds no shell logic. Recipes that need more than a single command call a script under `scripts/`, so the scripts can be checked with shellcheck and run without just (they change into `backend/` themselves, so the current directory does not matter).
+
+Build targets are discovered by searching for `main.go` under `cmd/`, so adding a Lambda function does not require editing the justfile or the scripts.
 
 Builds target `provided.al2023` on `arm64` and output to `bin/{function}/bootstrap`.
 The `provided` runtime requires the executable to be named `bootstrap`.

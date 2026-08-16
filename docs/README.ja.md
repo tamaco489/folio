@@ -96,7 +96,8 @@ folio/
 │   ├── tools/              fetch-corpus, build-truth, evaluate (デプロイ対象外)
 │   ├── testdata/           textract/ と bedrock/ に記録済みレスポンス
 │   ├── layers/             Lambda Layer のビルド定義 (Dockerfile + build.sh)
-│   ├── justfile
+│   ├── scripts/            justfile のレシピから呼ぶシェルスクリプト (cmds, build, package, clean)
+│   ├── justfile            レシピの宣言のみ。各レシピはスクリプトか単一コマンドを呼ぶ
 │   ├── .golangci.yml
 │   └── go.mod
 └── infra/                  Terraform
@@ -127,14 +128,16 @@ cd backend
 just fmt              # go fmt ./...
 just vet              # go vet ./...
 just test             # go test ./...
-just cmds             # ビルド対象を列挙する
-just build            # 全 Lambda をクロスコンパイルする
-just build-one <cmd>  # 単一の Lambda をビルドする (例: pipeline/validator)
-just package          # bin/{関数名}.zip に固める
-just clean            # bin/ 配下の成果物を削除する
+just cmds             # ビルド対象を列挙する (scripts/cmds.sh)
+just build            # 全 Lambda をクロスコンパイルする (scripts/build.sh)
+just build-one <cmd>  # 単一の Lambda をビルドする (scripts/build.sh <cmd>、例: pipeline/validator)
+just package          # bin/{関数名}.zip に固める (scripts/package.sh、先に build を実行する)
+just clean            # bin/ 配下の成果物を削除する (scripts/clean.sh)
 ```
 
-ビルド対象は `cmd/` 配下の `main.go` を探索して動的に決まるため、Lambda を追加しても justfile を変更する必要はない。
+justfile にはシェルの処理を書かない。単一コマンドで済まないレシピは `scripts/` のスクリプトを呼ぶ。スクリプトは shellcheck で検査でき、just を介さず単体でも実行できる (自身で `backend/` へ移動するためカレントディレクトリは問わない)。
+
+ビルド対象は `cmd/` 配下の `main.go` を探索して動的に決まるため、Lambda を追加しても justfile やスクリプトを変更する必要はない。
 
 ビルドは `provided.al2023` / `arm64`、出力は `bin/{関数名}/bootstrap`。
 `provided` ランタイムは実行ファイル名が `bootstrap` で固定される。
