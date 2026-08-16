@@ -1,6 +1,6 @@
 ---
 name: verify-terraform-apply
-description: "just apply の後に、Terraform の定義どおりに AWS リソースが作られたかを読み取り専用の API で確認し、項目 / 期待値 / 実体 / 判定の表で報告するスキル。「apply 後の確認をして」「リソースが定義どおりか確認して」「AWS の実体を Terraform と突き合わせて」などのリクエストでトリガーする。"
+description: "just apply の後に、Terraform の定義どおりに AWS リソースが作られたかを読み取り専用の API で確認し、項目 / 期待値 / 実体 / 判定の表で報告するスキル。結果は tmp/verify-terraform-apply-result/ に Markdown で保存する。「apply 後の確認をして」「リソースが定義どおりか確認して」「AWS の実体を Terraform と突き合わせて」などのリクエストでトリガーする。"
 ---
 
 # Verify Terraform Apply — apply 後の AWS リソース確認スキル
@@ -10,20 +10,20 @@ description: "just apply の後に、Terraform の定義どおりに AWS リソ�
 
 ## 処理ステップ概要
 
-| Step | 内容        | 概要                                                                               |
-| ---- | ----------- | ---------------------------------------------------------------------------------- |
-| 1    | 入力の確定  | `env` `account_id` `region` `AWS_PROFILE` を決め、認証情報のアカウントと一致を見る |
-| 2    | plan の確認 | `just plan` が `No changes` であることを確認する (state と定義が一致している前提)  |
-| 3    | 対象の列挙  | `terraform state list` で確認対象を列挙し、種別ごとの節に振り分ける                |
-| 4    | 突き合わせ  | 種別ごとに読み取り API を実行し、定義の値と比べる                                  |
-| 5    | 結果報告    | 「項目 / 期待値 (定義) / 実体 / 判定」の表で報告する。差異は先頭にまとめる         |
+| Step | 内容        | 概要                                                                                                                                               |
+| ---- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | 入力の確定  | `env` `account_id` `region` `AWS_PROFILE` を決め、認証情報のアカウントと一致を見る                                                                 |
+| 2    | plan の確認 | `just plan` が `No changes` であることを確認する (state と定義が一致している前提)                                                                  |
+| 3    | 対象の列挙  | `terraform state list` で確認対象を列挙し、種別ごとの節に振り分ける                                                                                |
+| 4    | 突き合わせ  | 種別ごとに読み取り API を実行し、定義の値と比べる                                                                                                  |
+| 5    | 結果報告    | 「項目 / 期待値 (定義) / 実体 / 判定」の表で報告する。差異は先頭にまとめる。同じ内容を `tmp/verify-terraform-apply-result/` に Markdown で保存する |
 
 ## 制約事項
 
 - **AWS への操作は読み取りだけにする。** 使ってよいのは `get-*` `describe-*` `list-*` (`s3api get-*` と `list-objects-v2`、`sts get-caller-identity`、`stepfunctions validate-state-machine-definition` を含む) のみ。`put-*` `create-*` `update-*` `delete-*` `tag-*` `invoke` `start-execution` は使わない
 - **差異があっても実体を手で直さない。** 修正は Terraform の定義側で行い、`terraform apply` はユーザーが実行する
 - Terraform のコマンドは `just plan` と `terraform -chdir=envs/{env} state list` / `state show` / `output` (state の読み取り) だけを使う。`apply` `destroy` `import` `state rm` `state mv` は使わない
-- 期待値は定義から読む。この手順書にも報告にも固定の期待値を書かない。アカウント ID や ARN を含む値はチャットの報告に留め、リポジトリのファイルに書かない
+- 期待値は定義から読む。この手順書にも報告にも固定の期待値を書かない。アカウント ID や ARN を含む値はチャットの報告と `tmp/verify-terraform-apply-result/` (`.gitignore` の `tmp/` で git 管理外) のレポートに留め、git 管理下のファイルに書かない
 - 実行主体は AWS CLI でも AWS MCP (`call_aws` / `run_script`) でもよく、渡すコマンド文字列は同じにする。MCP のトークンが切れたら `/mcp` で再認証する
 - Textract / Bedrock のような課金 API は呼ばない (このスキルは構成の確認だけを行い、動作確認は行わない)
 
@@ -83,8 +83,6 @@ terraform -chdir=envs/$ENV state list   # infra/ で実行する (Step 2 と同�
 出力の各行 (state のアドレス) を下の表で種別に振り分ける。`data.` で始まる行 (データソース) は実体を持たないので対象外にする。
 アドレスの `module.<name>` は `envs/{env}/main.tf` の `module "<name>"` ブロックに対応し、`.tf` の定義はそのモジュールのディレクトリで読む。
 
-<!-- TODO(#31): storage 以外のモジュール名は envs/dev/main.tf に結線したときの名前で確定する -->
-
 | state のアドレス                                                                                                                                                             | Step 4 の節                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | `module.storage.aws_s3_bucket.*` とその `aws_s3_bucket_public_access_block` `_server_side_encryption_configuration` `_versioning` `_lifecycle_configuration` `_notification` | S3 バケット                      |
@@ -104,6 +102,7 @@ ARN や Layer のバージョン番号のように定義から直接は読めな
 ### Step 4: 突き合わせ
 
 各節の表は「見る属性 / コマンドと出力の場所 / 定義側の対応」の 3 列で、期待値は右列に書いた定義を読んで決める。
+各節のコマンドと出力の形は 2026-08-16 に dev の全リソース (S3、DynamoDB、IAM、Lambda、Logs、Step Functions、EventBridge、SQS、SNS) で実測して確定したもの。
 リソース名は `modules/*/main.tf` の `local` (`"${var.env}-folio-..."`) から組み立てる。
 
 #### 共通: タグ
@@ -170,8 +169,6 @@ aws dynamodb list-tags-of-resource --resource-arn "$(aws dynamodb describe-table
 
 #### IAM ロール (iam, messaging)
 
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
-
 対象は `modules/iam/*.tf` の `aws_iam_role` 6 つ (`lambda_validate` `lambda_preprocess` `lambda_parser` `lambda_finalize` `statemachine` `textract_publish`) と `modules/messaging/eventbridge.tf` の `aws_iam_role.eventbridge_invoke`。
 名前は各リソースの `name` (`${P}-<役割>-role`)、インラインポリシーは同じファイルの `aws_iam_role_policy` の `name` (`${P}-<役割>-policy`)。
 
@@ -197,8 +194,6 @@ aws iam list-role-tags --role-name "$R"
 
 #### Lambda 関数と Layer (compute)
 
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
-
 対象は `modules/compute/lambda.tf` の `aws_lambda_function.pipeline` (`for_each = local.functions` の 5 本) と `modules/compute/layer.tf` の `aws_lambda_layer_version.pdf_processor`。
 関数名は `local.function_names` (`${P}-<functions.<key>.name>`)、Layer 名は `${P}-pdf-processor`。
 
@@ -218,7 +213,7 @@ aws lambda get-policy --function-name "$F"   # textract-parser 以外は Resourc
 | メモリ / タイムアウト       | `MemorySize` `Timeout`                                                                                               | `local.functions.<key>.memory_size` / `.timeout`                                                                                                                                                                                                                                                                                                                         |
 | /tmp                        | `EphemeralStorage.Size`                                                                                              | `local.functions.<key>.ephemeral_storage` (`local.pdf_ephemeral_storage_mb` / `local.default_ephemeral_storage_mb`)                                                                                                                                                                                                                                                      |
 | 環境変数                    | `Environment.Variables` (キーの集合と値)                                                                             | `merge({ FOLIO_ENV = var.env }, local.functions.<key>.environment)`。`FOLIO_DOCUMENTS_BUCKET` `FOLIO_JOBS_TABLE` `FOLIO_TEXTRACT_SNS_TOPIC_ARN` `FOLIO_TEXTRACT_ROLE_ARN` は他モジュールの output の実値 (S3 / DynamoDB / SNS / IAM の節で取った名前と ARN) と一致すること。finalizer の `FOLIO_CROSSREF_MAILTO` は `var.crossref_mailto` が空なら**キー自体が無い**こと |
-| Layer                       | `Layers[].Arn` (付いていない関数は `Layers` 自体が省略される)                                                        | `local.functions.<key>.layers` (validator と preprocessor だけ `aws_lambda_layer_version.pdf_processor.arn`、他は空)。ARN は `state show module.compute.aws_lambda_layer_version.pdf_processor` の `arn` と一致し、`list-layer-versions` の `LayerVersions[]` にその `LayerVersionArn` があること                                                                        |
+| Layer                       | `Layers[].Arn` (付いていない関数は `Layers` が省略され、`--query` では `null` になる)                                | `local.functions.<key>.layers` (validator と preprocessor だけ `aws_lambda_layer_version.pdf_processor.arn`、他は空)。ARN は `state show module.compute.aws_lambda_layer_version.pdf_processor` の `arn` と一致し、`list-layer-versions` の `LayerVersions[]` にその `LayerVersionArn` があること                                                                        |
 | ログ                        | `LoggingConfig.LogFormat` `LoggingConfig.LogGroup`                                                                   | `logging_config` の `log_format` と `log_group` (`aws_cloudwatch_log_group.pipeline[<key>].name` = `/aws/lambda/<関数名>`)                                                                                                                                                                                                                                               |
 | 実行ロール                  | `Role`                                                                                                               | `local.functions.<key>.role_arn` (iam モジュールの output。textract-parser と bedrock-parser は同じ `lambda_parser` ロール)                                                                                                                                                                                                                                              |
 | タグ                        | `list-tags` の `Tags`                                                                                                | `envs/{env}/providers.tf` の `default_tags`                                                                                                                                                                                                                                                                                                                              |
@@ -228,8 +223,6 @@ aws lambda get-policy --function-name "$F"   # textract-parser 以外は Resourc
 `s3_bucket` `s3_key` `s3_object_version` は API の応答に含まれない (取り込み時に使われるだけ) ため、`state show` で読むに留める。
 
 #### CloudWatch Logs ロググループ (compute, pipeline)
-
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
 
 対象は `modules/compute/logs.tf` の `aws_cloudwatch_log_group.pipeline` (5 つ、名前は `/aws/lambda/<関数名>`) と `modules/pipeline/main.tf` の `aws_cloudwatch_log_group.pipeline` (名前は `/aws/vendedlogs/states/${P}-pipeline`)。
 
@@ -249,8 +242,6 @@ aws logs list-tags-for-resource --resource-arn <logGroupArn>
 | タグ     | `list-tags-for-resource` の `tags` (`--resource-arn` には末尾 `:*` の無い `logGroupArn` を渡す) | `envs/{env}/providers.tf` の `default_tags`                                                                 |
 
 #### Step Functions ステートマシン (pipeline)
-
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
 
 対象は `modules/pipeline/main.tf` の `aws_sfn_state_machine.pipeline` で、名前は `local.state_machine_name` (`${P}-pipeline`)。
 
@@ -280,8 +271,6 @@ aws stepfunctions list-tags-for-resource --resource-arn "$SM"
 
 #### EventBridge ルールとターゲット (messaging)
 
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
-
 対象は `modules/messaging/eventbridge.tf` の `aws_cloudwatch_event_rule.upload_trigger` (名前は `${P}-upload-trigger`) と `aws_cloudwatch_event_target.upload_trigger`。
 
 ```bash
@@ -302,8 +291,6 @@ aws events list-tags-for-resource --resource-arn "$(aws events describe-rule --n
 
 #### SQS (messaging)
 
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
-
 対象は `modules/messaging/eventbridge.tf` の `aws_sqs_queue.upload_trigger_dlq` (名前は `${P}-upload-trigger-dlq`) と `aws_sqs_queue_policy.upload_trigger_dlq`。
 
 ```bash
@@ -321,8 +308,6 @@ aws sqs list-queue-tags --queue-url "$Q"
 | タグ           | `list-queue-tags` の `Tags`                                                                                             | `envs/{env}/providers.tf` の `default_tags`                                                                                                                              |
 
 #### SNS トピックと Lambda permission (messaging)
-
-<!-- TODO(#31): apply 後に実測して出力の形を確定する -->
 
 対象は `modules/messaging/sns.tf` の `aws_sns_topic.textract_completion` (名前は `${P}-textract-completion`)、`aws_sns_topic_policy.textract_completion`、`aws_sns_topic_subscription.textract_completion`、`aws_lambda_permission.textract_completion`。
 
@@ -370,4 +355,8 @@ aws lambda get-policy --function-name ${P}-pipeline-textract-parser --query Poli
 
 - 「期待値 (定義)」には値と一緒に読んだ場所 (`modules/storage/main.tf` の `local.work_expiration_days` など) を書く
 - 差異があっても実体を直さない。定義側の修正案 (どのファイルのどの引数か) を添えて、apply の判断はユーザーに委ねる
-- 報告はチャットに返す。アカウント ID や ARN を含む表をリポジトリのファイルに書かない
+- 報告はチャットに返し、**同じ内容を Markdown でリポジトリ直下の `tmp/verify-terraform-apply-result/{env}-{YYYYMMDD}-{HHMM}.md` に保存する** (例: `tmp/verify-terraform-apply-result/dev-20260816-2030.md`)。ユーザーに毎回指示させない
+  - `tmp/` は `.gitignore` で git 管理外なので、アカウント ID や ARN をそのまま書いてよい。ファイル冒頭に「`tmp/` に置く理由 (git 管理外)、コミットしない」を 1 行書く
+  - 先頭に入力 (`ENV` `REGION` `AWS_PROFILE` `ACCOUNT_ID`) と Step 2 の plan 結果、Step 3 の対象件数を置き、そのあとに上の「差異 / 確認済み / 懸念」を続ける。「確認済み」は Step 4 の節ごと (S3、DynamoDB、IAM、Lambda、Logs、Step Functions、EventBridge、SQS、SNS) に表を分ける
+  - ディレクトリが無ければ作る。過去のレポートは消さない (時刻付きのファイル名で並べる)
+- アカウント ID や ARN を含む表を git 管理下のファイルに書かない
