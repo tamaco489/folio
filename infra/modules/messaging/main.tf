@@ -5,7 +5,7 @@ locals {
   # uploads/{jobId}/original.pdf だけを起点にし、work/ や outputs/ への書き込みでパイプラインが再起動する無限ループを防ぐ
   upload_key_wildcard = "uploads/*/original.pdf"
 
-  # DLQ の保持日数
-  # 起動失敗の取りこぼしを後から調べられるよう SQS の上限 (14 日) まで残す
-  dlq_message_retention_seconds = 1209600
+  # DLQ の保持期間 (秒)
+  # dev は評価用で、起動失敗の調査は直後にしか行わないため 3 日にする (ロググループの保持と同じ)
+  dlq_message_retention_seconds = 259200
 }
