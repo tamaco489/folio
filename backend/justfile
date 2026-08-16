@@ -56,6 +56,15 @@ build-one cmd:
 package: build
     @scripts/package.sh
 
+# 反映は infra の just plan / just apply で行い、update-function-code は使わない
+# 配布用の zip を artifacts バケット ({env}-folio-artifacts-{アカウント ID}) へアップロードする (実行はユーザー)
+upload env="dev": package
+    @scripts/upload.sh functions "{{ env }}"
+
+# Layer の zip をアップロードする (先に layers/pdf-processor/build.sh で作る)
+upload-layer env="dev":
+    @scripts/upload.sh layer "{{ env }}"
+
 # ビルド成果物を削除する
 clean:
     @scripts/clean.sh

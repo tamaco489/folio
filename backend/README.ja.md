@@ -29,6 +29,8 @@ just build            # 全 Lambda をクロスコンパイルする (scripts/bu
 just build-one <cmd>  # 単一の Lambda をビルドする (scripts/build.sh <cmd>、例: pipeline/validator)
 just package          # bin/{関数名}.zip に固める (scripts/package.sh、先に build を実行する)
 just clean            # bin/ 配下の成果物を削除する (scripts/clean.sh)
+just upload           # package のうえで bin/*.zip を artifacts バケットの lambda/ へアップロードする (scripts/upload.sh、実行はユーザー。反映は infra の just apply)
+just upload-layer     # layers/pdf-processor/pdf-processor.zip を layers/ へアップロードする (先に build.sh で作る)
 ```
 
 PR を出す前に `just fmt` `just vet` `just lint` `just test` に加え、`just fix-diff` と `just modernize` の提案が 0 件であることを確認する。
