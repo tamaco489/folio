@@ -114,9 +114,12 @@ folio/
 [asdf](https://asdf-vm.com/) で管理し、ルートの `.tool-versions` で固定している。
 
 ```text
-golang    1.26.5
-terraform 1.15.8
+golang        1.26.5
+terraform     1.15.8
+golangci-lint 2.12.2
 ```
+
+`golangci-lint` のバージョンはローカル用の `.tool-versions` と CI の golangci-lint Action の `version:` の 2 か所で固定している。更新時は両方を揃える。
 
 ## コマンド
 
@@ -127,6 +130,7 @@ justfile はルートに置かず `backend/` と `infra/` の直下に置くた�
 cd backend
 just fmt              # go fmt ./...
 just vet              # go vet ./...
+just lint             # golangci-lint run ./... (設定は .golangci.yml、CI と同じバージョン)
 just test             # go test ./...
 just cmds             # ビルド対象を列挙する (scripts/cmds.sh)
 just build            # 全 Lambda をクロスコンパイルする (scripts/build.sh)

@@ -17,6 +17,10 @@ fmt:
 vet:
     go vet ./...
 
+# 設定は .golangci.yml。バージョンはルートの .tool-versions (asdf) と CI の Action で揃える
+lint:
+    golangci-lint run ./...
+
 test:
     go test ./...
 
