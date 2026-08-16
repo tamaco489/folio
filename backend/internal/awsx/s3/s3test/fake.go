@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	awss3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 )
@@ -64,7 +64,7 @@ func (f *Fake) GetObject(_ context.Context, params *awss3.GetObjectInput, _ ...f
 
 	obj, ok := f.Object(aws.ToString(params.Bucket), aws.ToString(params.Key))
 	if !ok {
-		return nil, &types.NoSuchKey{}
+		return nil, &awss3types.NoSuchKey{}
 	}
 
 	return &awss3.GetObjectOutput{
@@ -105,7 +105,7 @@ func (f *Fake) HeadObject(_ context.Context, params *awss3.HeadObjectInput, _ ..
 
 	obj, ok := f.Object(aws.ToString(params.Bucket), aws.ToString(params.Key))
 	if !ok {
-		return nil, &types.NotFound{}
+		return nil, &awss3types.NotFound{}
 	}
 
 	return &awss3.HeadObjectOutput{

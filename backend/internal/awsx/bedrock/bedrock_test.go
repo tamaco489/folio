@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
+	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
 // fakeAPI は ConverseAPI のフェイク (実 API は一切呼ばない)
 type fakeAPI struct {
-	inputs  []*bedrockruntime.ConverseInput
-	outputs []*bedrockruntime.ConverseOutput
+	inputs  []*awsbedrockruntime.ConverseInput
+	outputs []*awsbedrockruntime.ConverseOutput
 	errs    []error
 }
 
-func (f *fakeAPI) Converse(_ context.Context, params *bedrockruntime.ConverseInput, _ ...func(*bedrockruntime.Options)) (*bedrockruntime.ConverseOutput, error) {
+func (f *fakeAPI) Converse(_ context.Context, params *awsbedrockruntime.ConverseInput, _ ...func(*awsbedrockruntime.Options)) (*awsbedrockruntime.ConverseOutput, error) {
 	i := len(f.inputs)
 	f.inputs = append(f.inputs, params)
 	if i < len(f.errs) && f.errs[i] != nil {
@@ -31,26 +31,26 @@ func (f *fakeAPI) Converse(_ context.Context, params *bedrockruntime.ConverseInp
 
 func (f *fakeAPI) calls() int { return len(f.inputs) }
 
-func textOutput(text string) *bedrockruntime.ConverseOutput {
-	return &bedrockruntime.ConverseOutput{
-		Output: &types.ConverseOutputMemberMessage{
-			Value: types.Message{
-				Role:    types.ConversationRoleAssistant,
-				Content: []types.ContentBlock{&types.ContentBlockMemberText{Value: text}},
+func textOutput(text string) *awsbedrockruntime.ConverseOutput {
+	return &awsbedrockruntime.ConverseOutput{
+		Output: &awsbedrockruntimetypes.ConverseOutputMemberMessage{
+			Value: awsbedrockruntimetypes.Message{
+				Role:    awsbedrockruntimetypes.ConversationRoleAssistant,
+				Content: []awsbedrockruntimetypes.ContentBlock{&awsbedrockruntimetypes.ContentBlockMemberText{Value: text}},
 			},
 		},
-		StopReason: types.StopReasonEndTurn,
-		Usage: &types.TokenUsage{
+		StopReason: awsbedrockruntimetypes.StopReasonEndTurn,
+		Usage: &awsbedrockruntimetypes.TokenUsage{
 			InputTokens:  aws.Int32(1200),
 			OutputTokens: aws.Int32(340),
 			TotalTokens:  aws.Int32(1540),
 		},
-		Metrics: &types.ConverseMetrics{LatencyMs: aws.Int64(4321)},
+		Metrics: &awsbedrockruntimetypes.ConverseMetrics{LatencyMs: aws.Int64(4321)},
 	}
 }
 
 func TestConverseTextInput(t *testing.T) {
-	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
+	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"ok"}`)}}
 	c := New(api, WithDefaultModelID("model-from-config"))
 
 	resp, err := c.Converse(context.Background(), Request{
@@ -77,7 +77,7 @@ func TestConverseTextInput(t *testing.T) {
 	if len(content) != 1 {
 		t.Fatalf("content blocks = %d, want 1", len(content))
 	}
-	text, ok := content[0].(*types.ContentBlockMemberText)
+	text, ok := content[0].(*awsbedrockruntimetypes.ContentBlockMemberText)
 	if !ok {
 		t.Fatalf("content[0] = %T, want text block", content[0])
 	}
@@ -119,21 +119,21 @@ func TestConverseMultimodalInput(t *testing.T) {
 	if len(content) != 2 {
 		t.Fatalf("content blocks = %d, want 2", len(content))
 	}
-	img, ok := content[0].(*types.ContentBlockMemberImage)
+	img, ok := content[0].(*awsbedrockruntimetypes.ContentBlockMemberImage)
 	if !ok {
 		t.Fatalf("content[0] = %T, want image block", content[0])
 	}
-	if img.Value.Format != types.ImageFormatPng {
+	if img.Value.Format != awsbedrockruntimetypes.ImageFormatPng {
 		t.Errorf("format = %q, want png", img.Value.Format)
 	}
-	src, ok := img.Value.Source.(*types.ImageSourceMemberBytes)
+	src, ok := img.Value.Source.(*awsbedrockruntimetypes.ImageSourceMemberBytes)
 	if !ok {
 		t.Fatalf("source = %T, want bytes", img.Value.Source)
 	}
 	if string(src.Value) != string(png) {
 		t.Errorf("image bytes = %v", src.Value)
 	}
-	if _, ok := content[1].(*types.ContentBlockMemberText); !ok {
+	if _, ok := content[1].(*awsbedrockruntimetypes.ContentBlockMemberText); !ok {
 		t.Fatalf("content[1] = %T, want text block", content[1])
 	}
 }
@@ -181,9 +181,9 @@ func TestConverseValidation(t *testing.T) {
 }
 
 func TestConverseNoTextContent(t *testing.T) {
-	api := &fakeAPI{outputs: []*bedrockruntime.ConverseOutput{{
-		Output:     &types.ConverseOutputMemberMessage{Value: types.Message{}},
-		StopReason: types.StopReasonEndTurn,
+	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{{
+		Output:     &awsbedrockruntimetypes.ConverseOutputMemberMessage{Value: awsbedrockruntimetypes.Message{}},
+		StopReason: awsbedrockruntimetypes.StopReasonEndTurn,
 	}}}
 	c := New(api, WithDefaultModelID("m"))
 

@@ -11,8 +11,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	sfntypes "github.com/aws/aws-sdk-go-v2/service/sfn/types"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awssfntypes "github.com/aws/aws-sdk-go-v2/service/sfn/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
@@ -44,7 +44,7 @@ var (
 	startedAt  = time.Date(2026, 8, 16, 1, 0, 0, 0, time.UTC)
 	finishedAt = startedAt.Add(90 * time.Second)
 
-	featureTypes = []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables}
+	featureTypes = []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables}
 )
 
 // env はフェイクと再生だけで組み立てたハンドラ一式
@@ -181,7 +181,7 @@ func snsEvent(t *testing.T, n textract.CompletionNotification) json.RawMessage {
 	return raw
 }
 
-func completion(id, textractJobID string, status types.JobStatus) textract.CompletionNotification {
+func completion(id, textractJobID string, status awstextracttypes.JobStatus) textract.CompletionNotification {
 	return textract.CompletionNotification{
 		JobID:            textractJobID,
 		Status:           status,
@@ -270,7 +270,7 @@ func TestHandleStartThenCallback(t *testing.T) {
 	e.assertAbsent(t, s3.TextractDocumentKey(jobID))
 
 	// 完了通知
-	out, err = e.handler.Handle(ctx, snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusSucceeded)))
+	out, err = e.handler.Handle(ctx, snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusSucceeded)))
 	if err != nil {
 		t.Fatalf("Handle(callback) error = %v", err)
 	}
@@ -280,7 +280,7 @@ func TestHandleStartThenCallback(t *testing.T) {
 
 	var raw textract.AnalysisResult
 	e.object(t, s3.TextractRawKey(jobID), &raw)
-	if raw.JobID != e.rec.JobID || raw.JobStatus != types.JobStatusSucceeded {
+	if raw.JobID != e.rec.JobID || raw.JobStatus != awstextracttypes.JobStatusSucceeded {
 		t.Errorf("raw = {JobID: %q, JobStatus: %q}", raw.JobID, raw.JobStatus)
 	}
 	var wantBlocks int
@@ -347,7 +347,7 @@ func TestHandleCallbackTextractFailed(t *testing.T) {
 	e := newEnv(t)
 	cb := e.seedCallback(t, jobID, e.rec.JobID)
 
-	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusFailed))); err != nil {
+	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusFailed))); err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
 
@@ -384,7 +384,7 @@ func TestHandleCallbackTreatsPartialSuccessAsSuccess(t *testing.T) {
 	e := newEnv(t)
 	e.seedCallback(t, jobID, e.rec.JobID)
 
-	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusPartialSuccess))); err != nil {
+	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusPartialSuccess))); err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
 	if len(e.states.failures) != 0 || len(e.states.successes) != 1 {
@@ -398,7 +398,7 @@ func TestHandleCallbackTreatsPartialSuccessAsSuccess(t *testing.T) {
 func TestHandleCallbackExtractFailed(t *testing.T) {
 	t.Parallel()
 
-	getErr := &types.InternalServerError{Message: aws.String("textract is unavailable")}
+	getErr := &awstextracttypes.InternalServerError{Message: aws.String("textract is unavailable")}
 
 	tests := map[string]struct {
 		id          string
@@ -426,7 +426,7 @@ func TestHandleCallbackExtractFailed(t *testing.T) {
 			e.seedCallback(t, tt.id, e.rec.JobID)
 			e.textract.getErr = tt.getErr
 
-			if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(tt.id, e.rec.JobID, types.JobStatusSucceeded))); err != nil {
+			if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(tt.id, e.rec.JobID, awstextracttypes.JobStatusSucceeded))); err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
 
@@ -466,7 +466,7 @@ func TestHandleCallbackIgnoresStaleJob(t *testing.T) {
 	e := newEnv(t)
 	e.seedCallback(t, jobID, "newer-textract-job")
 
-	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusSucceeded))); err != nil {
+	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusSucceeded))); err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
 	if len(e.states.successes)+len(e.states.failures) != 0 {
@@ -482,7 +482,7 @@ func TestHandleCallbackWithoutCallbackObject(t *testing.T) {
 
 	e := newEnv(t)
 
-	_, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusSucceeded)))
+	_, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusSucceeded)))
 	if !errors.Is(err, s3.ErrNotFound) {
 		t.Fatalf("Handle() error = %v, want s3.ErrNotFound", err)
 	}
@@ -495,7 +495,7 @@ func TestHandleCallbackRejectsNotificationWithoutJobTag(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	n := completion(jobID, e.rec.JobID, types.JobStatusSucceeded)
+	n := completion(jobID, e.rec.JobID, awstextracttypes.JobStatusSucceeded)
 	n.JobTag = ""
 
 	if _, err := e.handler.Handle(context.Background(), snsEvent(t, n)); !errors.Is(err, ErrEmptyJobTag) {
@@ -508,10 +508,10 @@ func TestHandleCallbackWhenTaskIsGone(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		status types.JobStatus
+		status awstextracttypes.JobStatus
 	}{
-		"正常系_成功の応答が届かない場合_エラーにせず結果は残すこと": {status: types.JobStatusSucceeded},
-		"正常系_失敗の応答が届かない場合_エラーにしないこと":     {status: types.JobStatusFailed},
+		"正常系_成功の応答が届かない場合_エラーにせず結果は残すこと": {status: awstextracttypes.JobStatusSucceeded},
+		"正常系_失敗の応答が届かない場合_エラーにしないこと":     {status: awstextracttypes.JobStatusFailed},
 	}
 
 	for name, tt := range tests {
@@ -519,12 +519,12 @@ func TestHandleCallbackWhenTaskIsGone(t *testing.T) {
 			t.Parallel()
 			e := newEnv(t)
 			e.seedCallback(t, jobID, e.rec.JobID)
-			e.states.err = &sfntypes.TaskTimedOut{}
+			e.states.err = &awssfntypes.TaskTimedOut{}
 
 			if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, tt.status))); err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
-			if tt.status == types.JobStatusSucceeded {
+			if tt.status == awstextracttypes.JobStatusSucceeded {
 				var doc domain.Document
 				e.object(t, s3.TextractDocumentKey(jobID), &doc)
 			}
@@ -541,7 +541,7 @@ func TestHandleCallbackReturnsResponseError(t *testing.T) {
 	respondErr := errors.New("sfn unavailable")
 	e.states.err = respondErr
 
-	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, types.JobStatusFailed))); !errors.Is(err, respondErr) {
+	if _, err := e.handler.Handle(context.Background(), snsEvent(t, completion(jobID, e.rec.JobID, awstextracttypes.JobStatusFailed))); !errors.Is(err, respondErr) {
 		t.Fatalf("Handle() error = %v, want %v", err, respondErr)
 	}
 }
@@ -554,13 +554,13 @@ func TestHandleStartClassifiesTextractErrors(t *testing.T) {
 		err           error
 		wantRetryable bool
 	}{
-		"正常系_ProvisionedThroughputExceededException の場合_RetryableError になること": {err: &types.ProvisionedThroughputExceededException{}, wantRetryable: true},
-		"正常系_LimitExceededException の場合_RetryableError になること":                 {err: &types.LimitExceededException{}, wantRetryable: true},
-		"正常系_ThrottlingException の場合_RetryableError になること":                    {err: &types.ThrottlingException{}, wantRetryable: true},
-		"正常系_InternalServerError の場合_RetryableError になること":                    {err: &types.InternalServerError{}, wantRetryable: true},
-		"正常系_InvalidS3ObjectException の場合_PermanentError になること":               {err: &types.InvalidS3ObjectException{}, wantRetryable: false},
-		"正常系_UnsupportedDocumentException の場合_PermanentError になること":           {err: &types.UnsupportedDocumentException{}, wantRetryable: false},
-		"正常系_AccessDeniedException の場合_PermanentError になること":                  {err: &types.AccessDeniedException{}, wantRetryable: false},
+		"正常系_ProvisionedThroughputExceededException の場合_RetryableError になること": {err: &awstextracttypes.ProvisionedThroughputExceededException{}, wantRetryable: true},
+		"正常系_LimitExceededException の場合_RetryableError になること":                 {err: &awstextracttypes.LimitExceededException{}, wantRetryable: true},
+		"正常系_ThrottlingException の場合_RetryableError になること":                    {err: &awstextracttypes.ThrottlingException{}, wantRetryable: true},
+		"正常系_InternalServerError の場合_RetryableError になること":                    {err: &awstextracttypes.InternalServerError{}, wantRetryable: true},
+		"正常系_InvalidS3ObjectException の場合_PermanentError になること":               {err: &awstextracttypes.InvalidS3ObjectException{}, wantRetryable: false},
+		"正常系_UnsupportedDocumentException の場合_PermanentError になること":           {err: &awstextracttypes.UnsupportedDocumentException{}, wantRetryable: false},
+		"正常系_AccessDeniedException の場合_PermanentError になること":                  {err: &awstextracttypes.AccessDeniedException{}, wantRetryable: false},
 	}
 
 	for name, tt := range tests {
@@ -586,9 +586,8 @@ func TestHandleStartClassifiesTextractErrors(t *testing.T) {
 			if got := reflect.TypeOf(err).Elem().Name(); got != wantType {
 				t.Errorf("errorType = %q, want %q", got, wantType)
 			}
-			var retryable *RetryableError
-			if got := errors.As(err, &retryable); got != tt.wantRetryable {
-				t.Errorf("errors.As(RetryableError) = %v, want %v", got, tt.wantRetryable)
+			if _, got := errors.AsType[*RetryableError](err); got != tt.wantRetryable {
+				t.Errorf("errors.AsType[*RetryableError] = %v, want %v", got, tt.wantRetryable)
 			}
 
 			// 開始できていないので退避もしない
@@ -622,8 +621,7 @@ func TestHandleStartRejectsInvalidInput(t *testing.T) {
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("Handle() error = %v, want %v", err, tt.want)
 			}
-			var permanent *PermanentError
-			if !errors.As(err, &permanent) {
+			if _, ok := errors.AsType[*PermanentError](err); !ok {
 				t.Errorf("Handle() error = %T, want *PermanentError", err)
 			}
 			if len(e.textract.startInputs) != 0 {
@@ -633,8 +631,8 @@ func TestHandleStartRejectsInvalidInput(t *testing.T) {
 	}
 
 	// JSON として読めない入力も PermanentError にする
-	var permanent *PermanentError
-	if _, err := newEnv(t).handler.Handle(context.Background(), json.RawMessage(`not json`)); !errors.As(err, &permanent) {
+	_, err := newEnv(t).handler.Handle(context.Background(), json.RawMessage(`not json`))
+	if _, ok := errors.AsType[*PermanentError](err); !ok {
 		t.Errorf("Handle() error = %T (%v), want *PermanentError", err, err)
 	}
 }
@@ -652,8 +650,7 @@ func TestHandleStartFailsWhenCallbackCannotBeSaved(t *testing.T) {
 	if !errors.Is(err, putErr) {
 		t.Fatalf("Handle() error = %v, want %v", err, putErr)
 	}
-	var permanent *PermanentError
-	if !errors.As(err, &permanent) {
+	if _, ok := errors.AsType[*PermanentError](err); !ok {
 		t.Errorf("Handle() error = %T, want *PermanentError", err)
 	}
 	// Textract は開始済みであり、Retry では別のジョブが立ち上がる
@@ -699,12 +696,12 @@ func TestParseFeatureTypes(t *testing.T) {
 
 	tests := map[string]struct {
 		spec    string
-		want    []types.FeatureType
+		want    []awstextracttypes.FeatureType
 		wantErr error
 	}{
-		"正常系_カンマ区切りの場合_順に変換されること":             {spec: "LAYOUT,TABLES", want: []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables}},
-		"正常系_空白と末尾のカンマを含む場合_無視されること":          {spec: " LAYOUT , TABLES ,", want: []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables}},
-		"正常系_1 件の場合_その 1 件になること":              {spec: "FORMS", want: []types.FeatureType{types.FeatureTypeForms}},
+		"正常系_カンマ区切りの場合_順に変換されること":             {spec: "LAYOUT,TABLES", want: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables}},
+		"正常系_空白と末尾のカンマを含む場合_無視されること":          {spec: " LAYOUT , TABLES ,", want: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables}},
+		"正常系_1 件の場合_その 1 件になること":              {spec: "FORMS", want: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeForms}},
 		"異常系_空文字の場合_ErrInvalidInput になること":    {spec: "", wantErr: textract.ErrInvalidInput},
 		"異常系_未知の値を含む場合_ErrInvalidInput になること": {spec: "LAYOUT,NOPE", wantErr: textract.ErrInvalidInput},
 		"異常系_重複がある場合_ErrInvalidInput になること":   {spec: "LAYOUT,LAYOUT", wantErr: textract.ErrInvalidInput},

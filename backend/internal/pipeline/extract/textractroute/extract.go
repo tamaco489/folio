@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
@@ -29,7 +29,7 @@ type Input struct {
 	// FeatureTypes は Textract の呼び出しに用いた値
 	//
 	// 暫定は LAYOUT + TABLES だが #34 の検証で変わるため、provenance.cost には呼び出し側から渡された値をそのまま書く
-	FeatureTypes []types.FeatureType
+	FeatureTypes []awstextracttypes.FeatureType
 }
 
 // Extractor は Read の結果を Bedrock で構造化する
@@ -63,8 +63,8 @@ func (e *Extractor) Extract(ctx context.Context, in Input) (*domain.Document, er
 		ModelID:     e.modelID,
 		System:      systemPrompt,
 		Messages:    []bedrock.Message{bedrock.UserText(userPrompt(reading))},
-		MaxTokens:   domain.Ptr(maxTokens),
-		Temperature: domain.Ptr(temperature),
+		MaxTokens:   new(maxTokens),
+		Temperature: new(temperature),
 		RecordKey:   bedrock.RecordKey(in.PaperID, bedrock.RouteTextract),
 	})
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *Reading) tables() []domain.Table {
 	return out
 }
 
-func featureNames(features []types.FeatureType) []string {
+func featureNames(features []awstextracttypes.FeatureType) []string {
 	if len(features) == 0 {
 		return nil
 	}

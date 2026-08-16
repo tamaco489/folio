@@ -76,8 +76,8 @@ func (n *normalizer) doi(p *string, i int) *string {
 	for stripped := true; stripped; {
 		stripped = false
 		for _, prefix := range doiPrefixes {
-			if strings.HasPrefix(s, prefix) {
-				s = strings.TrimSpace(strings.TrimPrefix(s, prefix))
+			if after, ok := strings.CutPrefix(s, prefix); ok {
+				s = strings.TrimSpace(after)
 				stripped = true
 			}
 		}

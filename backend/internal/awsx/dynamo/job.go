@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // Status はジョブの現在状態
@@ -59,27 +59,27 @@ func formatTime(t time.Time) string { return t.UTC().Format(timeFormat) }
 
 func parseTime(s string) (time.Time, error) { return time.Parse(timeFormat, s) }
 
-func (j Job) item() (map[string]types.AttributeValue, error) {
+func (j Job) item() (map[string]awsdynamodbtypes.AttributeValue, error) {
 	if j.JobID == "" {
 		return nil, fmt.Errorf("dynamo: jobId is empty")
 	}
 	if !j.Status.Valid() {
 		return nil, fmt.Errorf("dynamo: unknown status %q", j.Status)
 	}
-	item := map[string]types.AttributeValue{
-		attrJobID:     &types.AttributeValueMemberS{Value: j.JobID},
-		attrStatus:    &types.AttributeValueMemberS{Value: string(j.Status)},
-		attrFilename:  &types.AttributeValueMemberS{Value: j.Filename},
-		attrCreatedAt: &types.AttributeValueMemberS{Value: formatTime(j.CreatedAt)},
-		attrUpdatedAt: &types.AttributeValueMemberS{Value: formatTime(j.UpdatedAt)},
+	item := map[string]awsdynamodbtypes.AttributeValue{
+		attrJobID:     &awsdynamodbtypes.AttributeValueMemberS{Value: j.JobID},
+		attrStatus:    &awsdynamodbtypes.AttributeValueMemberS{Value: string(j.Status)},
+		attrFilename:  &awsdynamodbtypes.AttributeValueMemberS{Value: j.Filename},
+		attrCreatedAt: &awsdynamodbtypes.AttributeValueMemberS{Value: formatTime(j.CreatedAt)},
+		attrUpdatedAt: &awsdynamodbtypes.AttributeValueMemberS{Value: formatTime(j.UpdatedAt)},
 	}
 	if j.ErrorReason != "" {
-		item[attrErrorReason] = &types.AttributeValueMemberS{Value: j.ErrorReason}
+		item[attrErrorReason] = &awsdynamodbtypes.AttributeValueMemberS{Value: j.ErrorReason}
 	}
 	return item, nil
 }
 
-func jobFromItem(item map[string]types.AttributeValue) (Job, error) {
+func jobFromItem(item map[string]awsdynamodbtypes.AttributeValue) (Job, error) {
 	if len(item) == 0 {
 		return Job{}, fmt.Errorf("dynamo: empty item")
 	}
@@ -125,7 +125,7 @@ func jobFromItem(item map[string]types.AttributeValue) (Job, error) {
 	}, nil
 }
 
-func stringAttr(item map[string]types.AttributeValue, name string, required bool) (string, error) {
+func stringAttr(item map[string]awsdynamodbtypes.AttributeValue, name string, required bool) (string, error) {
 	av, ok := item[name]
 	if !ok {
 		if required {
@@ -133,7 +133,7 @@ func stringAttr(item map[string]types.AttributeValue, name string, required bool
 		}
 		return "", nil
 	}
-	s, ok := av.(*types.AttributeValueMemberS)
+	s, ok := av.(*awsdynamodbtypes.AttributeValueMemberS)
 	if !ok {
 		return "", fmt.Errorf("dynamo: attribute %s is not a string", name)
 	}

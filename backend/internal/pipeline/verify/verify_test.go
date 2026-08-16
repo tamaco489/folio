@@ -71,12 +71,12 @@ func sampleDocument(route domain.Route) domain.Document {
 			Rows:    [][]string{{"Dense baseline", "100.0", "94.2", "48.7", "1.0x"}, {"Ours", "100.0", "92.6", "47.8", "6.2x"}},
 		}},
 		References: []domain.Reference{
-			{Raw: rawLeCun, Title: "Deep learning", DOI: domain.Ptr("10.1038/nature14539")},
-			{Raw: rawXiao, Title: "Efficient Streaming Language Models with Attention Sinks", DOI: domain.Ptr("10.48550/arxiv.2309.17453")},
-			{Raw: "Vaswani, A., Shazeer, N., Parmar, N., et al. Attention Is All You Need. NeurIPS, 2017.", Title: "Attention Is All You Need", DOI: domain.Ptr("10.1038/nature14539")},
+			{Raw: rawLeCun, Title: "Deep learning", DOI: new("10.1038/nature14539")},
+			{Raw: rawXiao, Title: "Efficient Streaming Language Models with Attention Sinks", DOI: new("10.48550/arxiv.2309.17453")},
+			{Raw: "Vaswani, A., Shazeer, N., Parmar, N., et al. Attention Is All You Need. NeurIPS, 2017.", Title: "Attention Is All You Need", DOI: new("10.1038/nature14539")},
 			{Raw: rawLeCun},
 			{Title: "Sparse Attention Routing for Long-Context Language Models"},
-			{Raw: "Doe, J. Unavailable work. 2020.", DOI: domain.Ptr("10.1000/verify-unavailable")},
+			{Raw: "Doe, J. Unavailable work. 2020.", DOI: new("10.1000/verify-unavailable")},
 		},
 		Provenance: domain.Provenance{
 			Route:       route,
@@ -86,10 +86,10 @@ func sampleDocument(route domain.Route) domain.Document {
 	}
 	if route == domain.RouteTextract {
 		doc.Provenance.Confidence = domain.Confidence{
-			Title:    domain.Ptr(0.998),
-			Sections: domain.Ptr(0.943),
-			Figures:  domain.Ptr(0.912),
-			Tables:   domain.Ptr(0.724),
+			Title:    new(0.998),
+			Sections: new(0.943),
+			Figures:  new(0.912),
+			Tables:   new(0.724),
 		}
 	}
 	return doc
@@ -379,7 +379,7 @@ func TestVerifyUnavailableStreakResets(t *testing.T) {
 	}
 	refs := make([]domain.Reference, 0, 9)
 	for i := range 9 {
-		refs = append(refs, domain.Reference{Raw: "Deep learning", DOI: domain.Ptr(fmt.Sprintf("10.1000/%d", i))})
+		refs = append(refs, domain.Reference{Raw: "Deep learning", DOI: new(fmt.Sprintf("10.1000/%d", i))})
 	}
 	v := New(fr)
 	_, report := v.Verify(context.Background(), domain.Document{References: refs}, sampleOriginal())
@@ -409,7 +409,7 @@ func TestVerifyLookupCap(t *testing.T) {
 	fr := &fakeResolver{lookup: func(doi string) (crossref.Work, error) { return crossref.Work{DOI: doi, Title: "x"}, nil }}
 	refs := make([]domain.Reference, 0, MaxLookups+2)
 	for i := range MaxLookups + 2 {
-		refs = append(refs, domain.Reference{Raw: "x", DOI: domain.Ptr(fmt.Sprintf("10.1000/%d", i))})
+		refs = append(refs, domain.Reference{Raw: "x", DOI: new(fmt.Sprintf("10.1000/%d", i))})
 	}
 	v := New(fr)
 	out, report := v.Verify(context.Background(), domain.Document{References: refs}, Original{})

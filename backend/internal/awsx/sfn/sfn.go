@@ -11,7 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awssfn "github.com/aws/aws-sdk-go-v2/service/sfn"
-	"github.com/aws/aws-sdk-go-v2/service/sfn/types"
+	awssfntypes "github.com/aws/aws-sdk-go-v2/service/sfn/types"
 )
 
 // API は本パッケージが使う Step Functions の操作だけを切り出したインタフェース
@@ -92,12 +92,12 @@ func wrapErr(op string, err error) error {
 //   - TaskTimedOut は Task の TimeoutSeconds / HeartbeatSeconds を過ぎたか既に閉じている
 //   - TaskDoesNotExist は Task が存在しない
 func isTaskGone(err error) bool {
-	if _, ok := errors.AsType[*types.InvalidToken](err); ok {
+	if _, ok := errors.AsType[*awssfntypes.InvalidToken](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[*types.TaskTimedOut](err); ok {
+	if _, ok := errors.AsType[*awssfntypes.TaskTimedOut](err); ok {
 		return true
 	}
-	_, ok := errors.AsType[*types.TaskDoesNotExist](err)
+	_, ok := errors.AsType[*awssfntypes.TaskDoesNotExist](err)
 	return ok
 }

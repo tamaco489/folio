@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/dynamo"
@@ -31,7 +31,7 @@ func main() {
 
 	handler := validate.New(
 		s3.New(awss3.NewFromConfig(awsCfg), cfg.DocumentsBucket),
-		dynamo.New(dynamodb.NewFromConfig(awsCfg), cfg.JobsTable),
+		dynamo.New(awsdynamodb.NewFromConfig(awsCfg), cfg.JobsTable),
 		pdf.NewRunner(),
 	)
 

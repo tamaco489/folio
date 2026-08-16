@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // IndexStatusUpdatedAt は status ごとのジョブを更新時刻順に引く GSI
@@ -17,13 +17,13 @@ const IndexStatusUpdatedAt = "gsi-status-updatedAt"
 
 // API は Client が利用する DynamoDB の操作 (テストではフェイクに差し替える)
 type API interface {
-	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
-	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
-	UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
-	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
+	PutItem(ctx context.Context, params *awsdynamodb.PutItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.PutItemOutput, error)
+	GetItem(ctx context.Context, params *awsdynamodb.GetItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.GetItemOutput, error)
+	UpdateItem(ctx context.Context, params *awsdynamodb.UpdateItemInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.UpdateItemOutput, error)
+	Query(ctx context.Context, params *awsdynamodb.QueryInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.QueryOutput, error)
 }
 
-var _ API = (*dynamodb.Client)(nil)
+var _ API = (*awsdynamodb.Client)(nil)
 
 // Client は awsx 層が公開する DynamoDB クライアント
 type Client struct {
@@ -75,7 +75,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 		return Job{}, err
 	}
 
-	_, err = c.api.PutItem(ctx, &dynamodb.PutItemInput{
+	_, err = c.api.PutItem(ctx, &awsdynamodb.PutItemInput{
 		TableName:           aws.String(c.tableName),
 		Item:                item,
 		ConditionExpression: aws.String("attribute_not_exists(#jobId) OR #status = :failed"),
@@ -83,14 +83,13 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 			"#jobId":  attrJobID,
 			"#status": attrStatus,
 		},
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":failed": &types.AttributeValueMemberS{Value: string(StatusFailed)},
+		ExpressionAttributeValues: map[string]awsdynamodbtypes.AttributeValue{
+			":failed": &awsdynamodbtypes.AttributeValueMemberS{Value: string(StatusFailed)},
 		},
-		ReturnValuesOnConditionCheckFailure: types.ReturnValuesOnConditionCheckFailureAllOld,
+		ReturnValuesOnConditionCheckFailure: awsdynamodbtypes.ReturnValuesOnConditionCheckFailureAllOld,
 	})
 	if err != nil {
-		var condErr *types.ConditionalCheckFailedException
-		if errors.As(err, &condErr) {
+		if condErr, ok := errors.AsType[*awsdynamodbtypes.ConditionalCheckFailedException](err); ok {
 			existing, parseErr := jobFromItem(condErr.Item)
 			return Job{}, &JobExistsError{JobID: jobID, Existing: existing, ExistingErr: parseErr}
 		}
@@ -101,7 +100,7 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 
 // GetJob は jobId でジョブを取得する (存在しない場合は ErrJobNotFound を返す)
 func (c *Client) GetJob(ctx context.Context, jobID string) (Job, error) {
-	out, err := c.api.GetItem(ctx, &dynamodb.GetItemInput{
+	out, err := c.api.GetItem(ctx, &awsdynamodb.GetItemInput{
 		TableName: aws.String(c.tableName),
 		Key:       jobKey(jobID),
 		// 冪等性の判定に使うため結果整合性の読み取りでは不十分
@@ -134,9 +133,9 @@ func (c *Client) UpdateStatus(ctx context.Context, jobID string, status Status) 
 			"#updatedAt":   attrUpdatedAt,
 			"#errorReason": attrErrorReason,
 		},
-		map[string]types.AttributeValue{
-			":status":    &types.AttributeValueMemberS{Value: string(status)},
-			":updatedAt": &types.AttributeValueMemberS{Value: formatTime(c.now())},
+		map[string]awsdynamodbtypes.AttributeValue{
+			":status":    &awsdynamodbtypes.AttributeValueMemberS{Value: string(status)},
+			":updatedAt": &awsdynamodbtypes.AttributeValueMemberS{Value: formatTime(c.now())},
 		},
 	)
 }
@@ -154,27 +153,26 @@ func (c *Client) MarkFailed(ctx context.Context, jobID, reason string) (Job, err
 			"#updatedAt":   attrUpdatedAt,
 			"#errorReason": attrErrorReason,
 		},
-		map[string]types.AttributeValue{
-			":status":      &types.AttributeValueMemberS{Value: string(StatusFailed)},
-			":updatedAt":   &types.AttributeValueMemberS{Value: formatTime(c.now())},
-			":errorReason": &types.AttributeValueMemberS{Value: reason},
+		map[string]awsdynamodbtypes.AttributeValue{
+			":status":      &awsdynamodbtypes.AttributeValueMemberS{Value: string(StatusFailed)},
+			":updatedAt":   &awsdynamodbtypes.AttributeValueMemberS{Value: formatTime(c.now())},
+			":errorReason": &awsdynamodbtypes.AttributeValueMemberS{Value: reason},
 		},
 	)
 }
 
-func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[string]string, values map[string]types.AttributeValue) (Job, error) {
-	out, err := c.api.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[string]string, values map[string]awsdynamodbtypes.AttributeValue) (Job, error) {
+	out, err := c.api.UpdateItem(ctx, &awsdynamodb.UpdateItemInput{
 		TableName:                 aws.String(c.tableName),
 		Key:                       jobKey(jobID),
 		UpdateExpression:          aws.String(expr),
 		ConditionExpression:       aws.String("attribute_exists(#jobId)"),
 		ExpressionAttributeNames:  names,
 		ExpressionAttributeValues: values,
-		ReturnValues:              types.ReturnValueAllNew,
+		ReturnValues:              awsdynamodbtypes.ReturnValueAllNew,
 	})
 	if err != nil {
-		var condErr *types.ConditionalCheckFailedException
-		if errors.As(err, &condErr) {
+		if _, ok := errors.AsType[*awsdynamodbtypes.ConditionalCheckFailedException](err); ok {
 			return Job{}, fmt.Errorf("dynamo: update job %s: %w", jobID, ErrJobNotFound)
 		}
 		return Job{}, fmt.Errorf("dynamo: update job %s: %w", jobID, err)
@@ -189,15 +187,15 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 	if !status.Valid() {
 		return nil, fmt.Errorf("dynamo: unknown status %q", status)
 	}
-	in := &dynamodb.QueryInput{
+	in := &awsdynamodb.QueryInput{
 		TableName:              aws.String(c.tableName),
 		IndexName:              aws.String(IndexStatusUpdatedAt),
 		KeyConditionExpression: aws.String("#status = :status"),
 		ExpressionAttributeNames: map[string]string{
 			"#status": attrStatus,
 		},
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":status": &types.AttributeValueMemberS{Value: string(status)},
+		ExpressionAttributeValues: map[string]awsdynamodbtypes.AttributeValue{
+			":status": &awsdynamodbtypes.AttributeValueMemberS{Value: string(status)},
 		},
 		ScanIndexForward: aws.Bool(false),
 	}
@@ -219,8 +217,8 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 	return jobs, nil
 }
 
-func jobKey(jobID string) map[string]types.AttributeValue {
-	return map[string]types.AttributeValue{
-		attrJobID: &types.AttributeValueMemberS{Value: jobID},
+func jobKey(jobID string) map[string]awsdynamodbtypes.AttributeValue {
+	return map[string]awsdynamodbtypes.AttributeValue{
+		attrJobID: &awsdynamodbtypes.AttributeValueMemberS{Value: jobID},
 	}
 }

@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 )
 
 // CompletionNotification は Textract が SNS に発行する完了通知の本文
 type CompletionNotification struct {
-	JobID            string          `json:"JobId"`
-	Status           types.JobStatus `json:"Status"`
-	API              string          `json:"API"`
-	JobTag           string          `json:"JobTag,omitempty"`
-	Timestamp        int64           `json:"Timestamp,omitempty"`
-	DocumentLocation NotifiedS3      `json:"DocumentLocation"`
+	JobID            string                     `json:"JobId"`
+	Status           awstextracttypes.JobStatus `json:"Status"`
+	API              string                     `json:"API"`
+	JobTag           string                     `json:"JobTag,omitempty"`
+	Timestamp        int64                      `json:"Timestamp,omitempty"`
+	DocumentLocation NotifiedS3                 `json:"DocumentLocation"`
 }
 
 // NotifiedS3 は完了通知に含まれる入力ドキュメントの位置
@@ -28,7 +28,7 @@ type NotifiedS3 struct {
 //
 // PARTIAL_SUCCESS でも Block は取得できるため成功として扱う
 func (n CompletionNotification) Succeeded() bool {
-	return n.Status == types.JobStatusSucceeded || n.Status == types.JobStatusPartialSuccess
+	return n.Status == awstextracttypes.JobStatusSucceeded || n.Status == awstextracttypes.JobStatusPartialSuccess
 }
 
 // Time は通知のタイムスタンプを時刻に変換する

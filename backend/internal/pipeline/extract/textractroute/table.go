@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/domain"
 )
@@ -21,7 +21,7 @@ type cell struct {
 	confidence float64
 }
 
-func newCell(index map[string]*types.Block, b *types.Block) cell {
+func newCell(index map[string]*awstextracttypes.Block, b *awstextracttypes.Block) cell {
 	c := cell{
 		row:        int(aws.ToInt32(b.RowIndex)),
 		col:        int(aws.ToInt32(b.ColumnIndex)),
@@ -31,7 +31,7 @@ func newCell(index map[string]*types.Block, b *types.Block) cell {
 		confidence: confidenceOf(b),
 	}
 	for _, e := range b.EntityTypes {
-		if e == types.EntityTypeColumnHeader {
+		if e == awstextracttypes.EntityTypeColumnHeader {
 			c.header = true
 		}
 	}
@@ -42,7 +42,7 @@ func newCell(index map[string]*types.Block, b *types.Block) cell {
 //
 // CELL は結合の有無によらず 1 マスずつ返るため、範囲を持つのは MERGED_CELL だけになる
 // 結合セルは domain.Table の規約に従い、復元した値を範囲内の全マスへ複製する
-func buildTable(index map[string]*types.Block, tbl *types.Block, id string) (Table, []string) {
+func buildTable(index map[string]*awstextracttypes.Block, tbl *awstextracttypes.Block, id string) (Table, []string) {
 	var (
 		warns    []string
 		cells    []cell
@@ -65,13 +65,13 @@ func buildTable(index map[string]*types.Block, tbl *types.Block, id string) (Tab
 				continue
 			}
 			switch b.BlockType {
-			case types.BlockTypeCell:
+			case awstextracttypes.BlockTypeCell:
 				cells = append(cells, newCell(index, b))
-			case types.BlockTypeMergedCell:
+			case awstextracttypes.BlockTypeMergedCell:
 				merged = append(merged, newCell(index, b))
-			case types.BlockTypeTableTitle:
+			case awstextracttypes.BlockTypeTableTitle:
 				title = joinNonEmpty(title, blockText(index, b, map[string]bool{}))
-			case types.BlockTypeTableFooter:
+			case awstextracttypes.BlockTypeTableFooter:
 				footer = joinNonEmpty(footer, blockText(index, b, map[string]bool{}))
 			}
 		}

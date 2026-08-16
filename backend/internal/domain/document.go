@@ -52,8 +52,3 @@ type Source struct {
 	HasTextLayer bool      `json:"hasTextLayer"`
 	UploadedAt   time.Time `json:"uploadedAt"`
 }
-
-// Ptr は値をポインタに変換する
-//
-// 欠落と型のゼロ値を区別するフィールドへ値を設定するために用いる
-func Ptr[T any](v T) *T { return &v }

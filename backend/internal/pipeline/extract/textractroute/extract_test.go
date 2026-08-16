@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/domain"
@@ -51,7 +51,7 @@ func sampleInput(t *testing.T) textractroute.Input {
 			UploadedAt: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC),
 		},
 		Analysis:     analyze(t, filepath.Join(fixtureDir, "two-column.json")),
-		FeatureTypes: []types.FeatureType{types.FeatureTypeLayout, types.FeatureTypeTables},
+		FeatureTypes: []awstextracttypes.FeatureType{awstextracttypes.FeatureTypeLayout, awstextracttypes.FeatureTypeTables},
 	}
 }
 

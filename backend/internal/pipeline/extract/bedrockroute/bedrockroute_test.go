@@ -232,8 +232,8 @@ func TestPageResultRoundTrip(t *testing.T) {
 		Figures:                    []PageFigure{{Label: "図 1", Caption: "全体像"}},
 		Tables:                     []PageTable{{Label: "表 1", Caption: "比較", Header: [][]string{{"手法", "精度"}}, Rows: [][]string{{"提案", "0.9"}}}},
 		References:                 []PageReference{{Raw: "Vaswani, A. ほか. Attention Is All You Need. NeurIPS, 2017.", Year: 2017}},
-		ContinuesPreviousSection:   domain.Ptr(false),
-		ContinuesPreviousReference: domain.Ptr(true),
+		ContinuesPreviousSection:   new(false),
+		ContinuesPreviousReference: new(true),
 		ModelID:                    sampleModelID,
 		Usage:                      bedrock.Usage{InputTokens: 10, OutputTokens: 20, TotalTokens: 30},
 	}

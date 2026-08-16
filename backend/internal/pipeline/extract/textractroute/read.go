@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
 	"github.com/tamaco489/folio/backend/internal/domain"
@@ -27,28 +27,28 @@ var ErrEmptyAnalysis = errors.New("textractroute: analysis has no blocks")
 // layoutTypes は読み順の復元に用いる LAYOUT ブロック
 //
 // FeatureTypes に LAYOUT を含めずに取得した出力でも落ちないよう、該当が 1 件も無いページは LINE で代替する
-var layoutTypes = map[types.BlockType]struct{}{
-	types.BlockTypeLayoutTitle:         {},
-	types.BlockTypeLayoutHeader:        {},
-	types.BlockTypeLayoutFooter:        {},
-	types.BlockTypeLayoutSectionHeader: {},
-	types.BlockTypeLayoutPageNumber:    {},
-	types.BlockTypeLayoutList:          {},
-	types.BlockTypeLayoutFigure:        {},
-	types.BlockTypeLayoutTable:         {},
-	types.BlockTypeLayoutKeyValue:      {},
-	types.BlockTypeLayoutText:          {},
+var layoutTypes = map[awstextracttypes.BlockType]struct{}{
+	awstextracttypes.BlockTypeLayoutTitle:         {},
+	awstextracttypes.BlockTypeLayoutHeader:        {},
+	awstextracttypes.BlockTypeLayoutFooter:        {},
+	awstextracttypes.BlockTypeLayoutSectionHeader: {},
+	awstextracttypes.BlockTypeLayoutPageNumber:    {},
+	awstextracttypes.BlockTypeLayoutList:          {},
+	awstextracttypes.BlockTypeLayoutFigure:        {},
+	awstextracttypes.BlockTypeLayoutTable:         {},
+	awstextracttypes.BlockTypeLayoutKeyValue:      {},
+	awstextracttypes.BlockTypeLayoutText:          {},
 }
 
 // Element は読み順に並べたレイアウト要素 1 件
 type Element struct {
-	Type       types.BlockType // Type は由来の BlockType (LAYOUT_* か、代替に用いた LINE)
-	Text       string          // Text は子孫の LINE と WORD を連結したもの
-	Page       int             // Page は 1 始まりのページ番号
-	Column     int             // Column は段番号 (1 が左段、2 が右段、0 は段を跨ぐ全幅要素)
-	BBox       domain.BBox     // BBox は正規化座標の [x0, y0, x1, y1]
-	Confidence float64         // Confidence は Textract の確信度を 0.0 - 1.0 に正規化した値
-	TableID    string          // TableID は LAYOUT_TABLE に対応づけた表の ID
+	Type       awstextracttypes.BlockType // Type は由来の BlockType (LAYOUT_* か、代替に用いた LINE)
+	Text       string                     // Text は子孫の LINE と WORD を連結したもの
+	Page       int                        // Page は 1 始まりのページ番号
+	Column     int                        // Column は段番号 (1 が左段、2 が右段、0 は段を跨ぐ全幅要素)
+	BBox       domain.BBox                // BBox は正規化座標の [x0, y0, x1, y1]
+	Confidence float64                    // Confidence は Textract の確信度を 0.0 - 1.0 に正規化した値
+	TableID    string                     // TableID は LAYOUT_TABLE に対応づけた表の ID
 }
 
 // Table は復元した表と Textract の確信度
@@ -80,7 +80,7 @@ func Read(res *textract.AnalysisResult) (*Reading, error) {
 		return nil, ErrEmptyAnalysis
 	}
 
-	index := make(map[string]*types.Block, len(res.Blocks))
+	index := make(map[string]*awstextracttypes.Block, len(res.Blocks))
 	for i := range res.Blocks {
 		if id := aws.ToString(res.Blocks[i].Id); id != "" {
 			index[id] = &res.Blocks[i]
@@ -91,7 +91,7 @@ func Read(res *textract.AnalysisResult) (*Reading, error) {
 
 	// 表は LAYOUT_TABLE との対応づけに使うため、レイアウト要素より先に組み立てる
 	for i := range res.Blocks {
-		if res.Blocks[i].BlockType != types.BlockTypeTable {
+		if res.Blocks[i].BlockType != awstextracttypes.BlockTypeTable {
 			continue
 		}
 		tbl, warns := buildTable(index, &res.Blocks[i], fmt.Sprintf("table-%d", len(r.Tables)+1))
@@ -121,7 +121,7 @@ func Read(res *textract.AnalysisResult) (*Reading, error) {
 	}
 	for i := range res.Blocks {
 		b := &res.Blocks[i]
-		if b.BlockType != types.BlockTypeLine || hasLayout[blockPage(b)] {
+		if b.BlockType != awstextracttypes.BlockTypeLine || hasLayout[blockPage(b)] {
 			continue
 		}
 		p := blockPage(b)
@@ -153,7 +153,7 @@ func (r *Reading) link() {
 	for i := range r.Elements {
 		e := &r.Elements[i]
 		switch e.Type {
-		case types.BlockTypeLayoutTable:
+		case awstextracttypes.BlockTypeLayoutTable:
 			t := r.matchTable(e, used)
 			if t < 0 {
 				continue
@@ -163,7 +163,7 @@ func (r *Reading) link() {
 			if r.Tables[t].Data.Caption == "" {
 				r.Tables[t].Data.Caption = r.captionNear(i, "table")
 			}
-		case types.BlockTypeLayoutFigure:
+		case awstextracttypes.BlockTypeLayoutFigure:
 			fig := domain.Figure{
 				ID:      fmt.Sprintf("figure-%d", len(r.Figures)+1),
 				Caption: r.captionNear(i, "figure", "fig."),
@@ -268,9 +268,9 @@ func (r *Reading) Confidence() domain.Confidence {
 	var title, sections, tables, figures []float64
 	for _, e := range r.Elements {
 		switch e.Type {
-		case types.BlockTypeLayoutTitle:
+		case awstextracttypes.BlockTypeLayoutTitle:
 			title = append(title, e.Confidence)
-		case types.BlockTypeLayoutSectionHeader:
+		case awstextracttypes.BlockTypeLayoutSectionHeader:
 			sections = append(sections, e.Confidence)
 		}
 	}
@@ -290,7 +290,7 @@ func (r *Reading) Confidence() domain.Confidence {
 		{figures, &c.Figures},
 	} {
 		if len(s.values) > 0 {
-			*s.dst = domain.Ptr(round(mean(s.values)))
+			*s.dst = new(round(mean(s.values)))
 		}
 	}
 	return c
@@ -300,7 +300,7 @@ func (e Element) tag() string {
 	return strings.TrimPrefix(string(e.Type), "LAYOUT_")
 }
 
-func newElement(index map[string]*types.Block, b *types.Block) Element {
+func newElement(index map[string]*awstextracttypes.Block, b *awstextracttypes.Block) Element {
 	return Element{
 		Type:       b.BlockType,
 		Text:       blockText(index, b, map[string]bool{}),
@@ -313,7 +313,7 @@ func newElement(index map[string]*types.Block, b *types.Block) Element {
 // blockText は子孫の LINE と WORD を読み順に連結する
 //
 // seen は Relationships に循環がある壊れた出力で無限再帰に陥らないために持ち回る
-func blockText(index map[string]*types.Block, b *types.Block, seen map[string]bool) string {
+func blockText(index map[string]*awstextracttypes.Block, b *awstextracttypes.Block, seen map[string]bool) string {
 	if b == nil {
 		return ""
 	}
@@ -326,13 +326,13 @@ func blockText(index map[string]*types.Block, b *types.Block, seen map[string]bo
 	if t := aws.ToString(b.Text); t != "" {
 		return t
 	}
-	if b.BlockType == types.BlockTypeSelectionElement {
+	if b.BlockType == awstextracttypes.BlockTypeSelectionElement {
 		return string(b.SelectionStatus)
 	}
 
 	var parts []string
 	for _, rel := range b.Relationships {
-		if rel.Type != types.RelationshipTypeChild {
+		if rel.Type != awstextracttypes.RelationshipTypeChild {
 			continue
 		}
 		for _, cid := range rel.Ids {
@@ -351,7 +351,7 @@ func blockText(index map[string]*types.Block, b *types.Block, seen map[string]bo
 // toBBox は Textract の矩形 (左上原点、幅と高さ) を domain.BBox の [x0, y0, x1, y1] へ変換する
 //
 // float32 から float64 へ広げると 0.12 が 0.11999999731779099 になり出力の差分が読めなくなるため、float32 の有効桁に丸める
-func toBBox(g *types.Geometry) domain.BBox {
+func toBBox(g *awstextracttypes.Geometry) domain.BBox {
 	if g == nil || g.BoundingBox == nil {
 		return nil
 	}
@@ -369,7 +369,7 @@ func round(v float64) float64 {
 	return math.Round(v*1e6) / 1e6
 }
 
-func blockPage(b *types.Block) int {
+func blockPage(b *awstextracttypes.Block) int {
 	if p := int(aws.ToInt32(b.Page)); p > 0 {
 		return p
 	}
@@ -377,7 +377,7 @@ func blockPage(b *types.Block) int {
 }
 
 // confidenceOf は Textract の 0 - 100 の確信度を 0.0 - 1.0 へ直す
-func confidenceOf(b *types.Block) float64 {
+func confidenceOf(b *awstextracttypes.Block) float64 {
 	return round(float64(aws.ToFloat32(b.Confidence)) / 100)
 }
 

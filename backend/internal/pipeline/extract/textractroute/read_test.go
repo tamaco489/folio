@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/service/textract/types"
+	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
 	"github.com/tamaco489/folio/backend/internal/domain"
@@ -72,7 +72,7 @@ func TestReadRecordedSample(t *testing.T) {
 	if got := texts(r.Elements); !slices.Equal(got, []string{"Attention Is All You Need", ""}) {
 		t.Errorf("elements = %q", got)
 	}
-	if r.Elements[0].Type != types.BlockTypeLayoutTitle {
+	if r.Elements[0].Type != awstextracttypes.BlockTypeLayoutTitle {
 		t.Errorf("先頭要素の型 = %q, want LAYOUT_TITLE", r.Elements[0].Type)
 	}
 	if got, want := r.Elements[0].BBox, (domain.BBox{0.19, 0.08, 0.81, 0.12}); !bboxNear(got, want) {
@@ -274,7 +274,7 @@ func TestReadFallsBackToLinesWithoutLayout(t *testing.T) {
 	if got := texts(r.Elements); !slices.Equal(got, []string{"Results are summarised below."}) {
 		t.Fatalf("elements = %q", got)
 	}
-	if r.Elements[0].Type != types.BlockTypeLine {
+	if r.Elements[0].Type != awstextracttypes.BlockTypeLine {
 		t.Errorf("型 = %q, want LINE", r.Elements[0].Type)
 	}
 	if len(r.Figures) != 0 {

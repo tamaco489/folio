@@ -211,7 +211,7 @@ func TestMarshalOmitsOptionalFields(t *testing.T) {
 		References:    []domain.Reference{{Raw: "参照文献"}},
 		Provenance: domain.Provenance{
 			Route:      domain.RouteBedrock,
-			Confidence: domain.Confidence{Title: domain.Ptr(0.0)},
+			Confidence: domain.Confidence{Title: new(0.0)},
 		},
 	}
 

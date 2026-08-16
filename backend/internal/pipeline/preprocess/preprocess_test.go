@@ -197,9 +197,8 @@ func TestOutputHasNoCollectionFields(t *testing.T) {
 	t.Parallel()
 
 	// ページ画像のキーを列挙すると 200 ページで出力が肥大するため、件数に比例して伸びるフィールドを持たせない
-	typ := reflect.TypeOf(Output{})
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	typ := reflect.TypeFor[Output]()
+	for field := range typ.Fields() {
 		switch field.Type.Kind() {
 		case reflect.Slice, reflect.Array, reflect.Map:
 			t.Errorf("Output.%s は %s であり件数に比例して伸びる", field.Name, field.Type.Kind())
