@@ -17,5 +17,9 @@ backend/testdata/pdf/
 infra/**/.terraform/
 infra/**/*.tfstate*
 
+# Lock files written by infra/scripts/validate.sh when validating modules standalone
+# (only envs/*/.terraform.lock.hcl is committed; Terraform ignores lock files in child modules)
+infra/modules/**/.terraform.lock.hcl
+
 # Environment variables
 .env

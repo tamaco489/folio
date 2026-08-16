@@ -9,6 +9,9 @@
 # apply と destroy はユーザーが実行する
 # 確認は terraform 側の対話に任せ -auto-approve は付けない
 #
+# validate / lint / scan は CI (.github/workflows/ci-infra.yml) と同じ検査で、AWS の認証情報を使わない
+# tflint と trivy の版はルートの .tool-versions で固定する (asdf)
+#
 # レシピにシェルの処理を書かない
 # 複数行になる処理は scripts/ に置き、ここでは呼び出すだけにする
 
@@ -26,8 +29,17 @@ fmt-check:
 init:
     terraform -chdir=envs/{{ env }} init
 
+# envs/{env} と modules/* を init -backend=false のうえで validate する (未結線のモジュールも対象)
 validate:
-    terraform -chdir=envs/{{ env }} validate
+    @scripts/validate.sh {{ env }}
+
+# tflint --init のうえで envs/* と modules/* を検査する (設定は .tflint.hcl)
+lint:
+    @scripts/lint.sh
+
+# Terraform の設定ミスを検査する。意図した無効化は #trivy:ignore:<id> をリソース直前の理由コメントと並べて抑止する
+scan:
+    trivy config --tf-vars envs/{{ env }}/terraform.tfvars --severity MEDIUM,HIGH,CRITICAL --exit-code 1 .
 
 plan:
     terraform -chdir=envs/{{ env }} plan
