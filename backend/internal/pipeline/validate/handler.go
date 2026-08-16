@@ -1,11 +1,6 @@
-// Package validate は Step Functions の入口で入力の妥当性と冪等性を判定する
-//
-// 判定結果は Choice が分岐に使えるよう Output.Decision に載せ、Lambda のエラーとしては返さない
-// エラーとして返すのはイベント通知の設定ミスと AWS 呼び出しの失敗だけで、これらは Catch とリトライの対象になる
 package validate
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -18,67 +13,6 @@ import (
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/pipeline/pdf"
 )
-
-const (
-	// MaxBytes は受け付ける PDF のサイズ上限
-	//
-	// Textract の非同期処理が 500MB を上限とする
-	// AWS は単位を MB としか示さないため、2 進・10 進のどちらの解釈でも上限内に収まる 10 進の値を採る
-	MaxBytes = 500 * 1000 * 1000
-
-	// MaxPages は受け付ける PDF のページ数上限
-	//
-	// Textract の上限は 3,000 ページだが、評価対象の論文は 8 〜 20 ページであり 3,000 ページ相当の入力は想定しない
-	// 前処理 (#17) のラスタライズが Lambda の実行時間 15 分に収まる範囲へ揃えるため、意図的に小さく取る
-	MaxPages = 200
-
-	// headerWindow はマジックバイトを探す先頭バイト数
-	headerWindow = 1024
-)
-
-// pdfMagic は PDF ファイルの先頭に現れる署名
-var pdfMagic = []byte("%PDF-")
-
-// Decision は Step Functions の Choice が分岐に使う判定結果
-type Decision string
-
-const (
-	// DecisionProceed は検証を通過し、新規のジョブとして後続に進めることを表す
-	DecisionProceed Decision = "PROCEED"
-
-	// DecisionSkipped は同じ jobId の処理が既にあるため何もしないことを表す
-	DecisionSkipped Decision = "SKIPPED"
-
-	// DecisionRejected は入力が要件を満たさず処理を打ち切ることを表す
-	DecisionRejected Decision = "REJECTED"
-)
-
-// Code は処理を進めなかった理由の種別
-type Code string
-
-const (
-	CodeNotPDF           Code = "NOT_PDF"
-	CodeTooLarge         Code = "TOO_LARGE"
-	CodeDamaged          Code = "DAMAGED"
-	CodeEncrypted        Code = "ENCRYPTED"
-	CodeTooManyPages     Code = "TOO_MANY_PAGES"
-	CodeHashMismatch     Code = "HASH_MISMATCH"
-	CodeInProgress       Code = "IN_PROGRESS"
-	CodeAlreadyProcessed Code = "ALREADY_PROCESSED"
-)
-
-// Reason は処理を進めなかった理由
-//
-// State 間の 256KB 上限に収めるため、実体ではなく種別と短い説明だけを載せる
-type Reason struct {
-	Code    Code   `json:"code"`
-	Message string `json:"message"`
-}
-
-// errorReason は DynamoDB に記録する失敗理由を組み立てる
-func (r Reason) errorReason() string {
-	return fmt.Sprintf("%s: %s", r.Code, r.Message)
-}
 
 // Input は検証対象の PDF が置かれた位置
 //
@@ -252,54 +186,6 @@ func (h *Handler) download(ctx context.Context, key string) (string, string, err
 		return "", "", fmt.Errorf("validate: download %q: %w", key, err)
 	}
 	return f.Name(), hex.EncodeToString(sum.Sum(nil)), nil
-}
-
-// readHead はマジックバイトの判定に使う先頭バイトを読む
-func readHead(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("validate: open %q: %w", path, err)
-	}
-	defer f.Close()
-
-	buf := make([]byte, headerWindow)
-	n, err := io.ReadFull(f, buf)
-	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return nil, fmt.Errorf("validate: read %q: %w", path, err)
-	}
-	return buf[:n], nil
-}
-
-// looksLikePDF は先頭バイトに PDF の署名が含まれるかを返す
-//
-// 位置を offset 0 に限定しないのは、署名の前に余分なバイトを持つ PDF を poppler が受け付けるためで、限定すると後段の pdfinfo と判定が食い違う
-func looksLikePDF(head []byte) bool {
-	return bytes.Contains(head, pdfMagic)
-}
-
-// checkSize はサイズ上限を超える場合に理由を返す
-func checkSize(size int64) *Reason {
-	if size <= MaxBytes {
-		return nil
-	}
-	return &Reason{
-		Code:    CodeTooLarge,
-		Message: fmt.Sprintf("size %d bytes exceeds the limit of %d bytes", size, MaxBytes),
-	}
-}
-
-// checkPages はページ数が扱える範囲にない場合に理由を返す
-func checkPages(pages int) *Reason {
-	if pages < 1 {
-		return &Reason{Code: CodeDamaged, Message: "document has no pages"}
-	}
-	if pages <= MaxPages {
-		return nil
-	}
-	return &Reason{
-		Code:    CodeTooManyPages,
-		Message: fmt.Sprintf("page count %d exceeds the limit of %d", pages, MaxPages),
-	}
 }
 
 func newOutput(in Input, jobID string, decision Decision, reason *Reason) Output {

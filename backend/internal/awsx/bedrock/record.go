@@ -1,7 +1,6 @@
 package bedrock
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,14 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-)
-
-var (
-	// ErrRecordingNotFound は再生対象の記録が見つからない場合に返る
-	ErrRecordingNotFound = errors.New("bedrock: recording not found")
-
-	// ErrRecordKeyRequired は記録・再生時にキーが指定されていない場合に返る
-	ErrRecordKeyRequired = errors.New("bedrock: record key is required")
 )
 
 // Route は抽出経路 (記録ファイル名の一部となる)
@@ -95,75 +86,4 @@ func (s *Store) Load(key string) (*Recording, error) {
 		return nil, fmt.Errorf("bedrock: unmarshal recording: %w", err)
 	}
 	return &rec, nil
-}
-
-// Recorder は Converser をラップし、応答をファイルへ記録するモード
-//
-// 実 API を呼ぶため課金が発生する (記録の取得はユーザーの承認を得てから行う)
-type Recorder struct {
-	next  Converser
-	store *Store
-	route Route
-	now   func() time.Time
-}
-
-var _ Converser = (*Recorder)(nil)
-
-// NewRecorder は記録モードのクライアントを組み立てる
-func NewRecorder(next Converser, dir string, route Route) *Recorder {
-	return &Recorder{
-		next:  next,
-		store: NewStore(dir),
-		route: route,
-		now:   time.Now,
-	}
-}
-
-// Converse は実クライアントを呼び出し、その応答を記録してから返す
-func (r *Recorder) Converse(ctx context.Context, req Request) (*Response, error) {
-	if req.RecordKey == "" {
-		return nil, ErrRecordKeyRequired
-	}
-	resp, err := r.next.Converse(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	rec := &Recording{
-		ModelID:    req.ModelID,
-		Route:      r.route,
-		RecordedAt: r.now().UTC(),
-		Response:   *resp,
-	}
-	if err := r.store.Save(req.RecordKey, rec); err != nil {
-		return nil, err
-	}
-	return resp, nil
-}
-
-// Replayer は記録済みレスポンスを返す再生モード
-//
-// 実 API を一切呼ばないため、テストと開発時の反復に用いる
-type Replayer struct {
-	store *Store
-}
-
-var _ Converser = (*Replayer)(nil)
-
-// NewReplayer は再生モードのクライアントを組み立てる
-func NewReplayer(dir string) *Replayer {
-	return &Replayer{store: NewStore(dir)}
-}
-
-// Converse は RecordKey に対応する記録を返す
-func (r *Replayer) Converse(_ context.Context, req Request) (*Response, error) {
-	if req.RecordKey == "" {
-		return nil, ErrRecordKeyRequired
-	}
-	rec, err := r.store.Load(req.RecordKey)
-	if err != nil {
-		return nil, err
-	}
-	resp := rec.Response
-	resp.Attempts = 1
-	return &resp, nil
 }

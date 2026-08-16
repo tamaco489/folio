@@ -8,7 +8,6 @@
 package textractroute
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -20,9 +19,6 @@ import (
 	"github.com/tamaco489/folio/backend/internal/awsx/textract"
 	"github.com/tamaco489/folio/backend/internal/domain"
 )
-
-// ErrEmptyAnalysis は解釈できる Block が 1 件も無いことを示す
-var ErrEmptyAnalysis = errors.New("textractroute: analysis has no blocks")
 
 // layoutTypes は読み順の復元に用いる LAYOUT ブロック
 //

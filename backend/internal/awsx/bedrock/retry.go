@@ -9,9 +9,6 @@ import (
 	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
-// ErrRetryExhausted はリトライ上限に達した場合に返る
-var ErrRetryExhausted = errors.New("bedrock: retry attempts exhausted")
-
 // Sleeper はバックオフの待機を担う (テストで実時間を待たないよう差し替えられるようにしている)
 type Sleeper func(ctx context.Context, d time.Duration) error
 
