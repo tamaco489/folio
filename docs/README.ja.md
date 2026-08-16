@@ -58,6 +58,19 @@ Textract は日本語に対応しないため、日本語 PDF は経路 B のみ
 関数名は `cmd/` 以下のパスをハイフンで連結して導出する。
 `cmd/pipeline/validator` から `dev-folio-pipeline-validator` となる。
 
+Lambda が読む環境変数 (`internal/config`)。`FOLIO_ENV` と `AWS_REGION` は全 Lambda が読む。
+
+| 環境変数                       | 読む Lambda                     | 内容                                                |
+| ------------------------------ | ------------------------------- | --------------------------------------------------- |
+| `FOLIO_ENV`                    | 全部                            | 環境識別子 (`dev` / `stg` / `prd`)                  |
+| `FOLIO_DOCUMENTS_BUCKET`       | 全部                            | S3 バケット名                                       |
+| `FOLIO_JOBS_TABLE`             | validator, finalizer            | DynamoDB テーブル名                                 |
+| `FOLIO_BEDROCK_MODEL_ID`       | textract-parser, bedrock-parser | 構造化に用いるモデル ID                             |
+| `FOLIO_TEXTRACT_SNS_TOPIC_ARN` | textract-parser                 | Textract の完了通知トピック                         |
+| `FOLIO_TEXTRACT_ROLE_ARN`      | textract-parser                 | Textract が SNS へ発行するために引き受けるロール    |
+| `FOLIO_TEXTRACT_FEATURE_TYPES` | textract-parser (任意)          | FeatureTypes (カンマ区切り。既定は `LAYOUT,TABLES`) |
+| `FOLIO_CROSSREF_MAILTO`        | finalizer (任意)                | Crossref の polite pool に入るための連絡先          |
+
 ### S3 のキー設計
 
 同一バケット内でプレフィックスにより役割を分ける。
@@ -84,31 +97,30 @@ outputs/{jobId}/comparison.json       両経路の差分と評価
 
 ```text
 folio/
-├── backend/                Go 単一モジュール (github.com/tamaco489/folio/backend)
-│   ├── cmd/
-│   │   ├── pipeline/       validator, preprocessor, textract-parser, bedrock-parser, finalizer
-│   │   └── api/            public, admin (Phase 1 の対象外)
+├── backend/                Go 単一モジュール (github.com/tamaco489/folio/backend。詳細は backend/README.ja.md)
+│   ├── cmd/pipeline/       validator, preprocessor, textract-parser, bedrock-parser, finalizer (main.go は組み立てのみ)
 │   ├── internal/
 │   │   ├── config/         共有層 — 環境変数の読み込みと検証
 │   │   ├── domain/         共有層 — 構造化 JSON のスキーマ
-│   │   ├── awsx/           共有層 — s3, dynamo, textract, bedrock
-│   │   ├── pipeline/       pdf, extract, normalize, verify
-│   │   └── api/            router, middleware, public, admin (Phase 1 の対象外)
-│   ├── tools/              fetch-corpus, build-truth, evaluate (デプロイ対象外)
-│   ├── testdata/           textract/ と bedrock/ に記録済みレスポンス
+│   │   ├── awsx/           共有層 — s3, dynamo, sfn, textract, bedrock (SDK のラッパ。フェイクは s3test, dynamotest)
+│   │   └── pipeline/       Lambda のロジック: validate, preprocess, textractparser, bedrockparser, finalize
+│   │                       純ロジック: pdf, extract (textractroute, bedrockroute), normalize, verify (crossref)
+│   ├── tools/              fetch-corpus, build-truth, evaluate (デプロイ対象外。未実装)
+│   ├── testdata/           textract/ と bedrock/ に記録済みレスポンス (Crossref の記録は internal/pipeline/verify/testdata/)
 │   ├── layers/             Lambda Layer のビルド定義 (Dockerfile + build.sh)
 │   ├── scripts/            justfile のレシピから呼ぶシェルスクリプト (cmds, build, package, clean)
 │   ├── justfile            レシピの宣言のみ。各レシピはスクリプトか単一コマンドを呼ぶ
 │   ├── .golangci.yml
 │   └── go.mod
-└── infra/                  Terraform
-    ├── modules/            storage, messaging, compute, pipeline, iam
-    ├── envs/               dev, stg, prd (workspace ではなくディレクトリ分離)
+└── infra/                  Terraform (詳細は infra/README.ja.md)
+    ├── modules/            storage (実装済み)、messaging, compute, pipeline, iam (未実装)
+    ├── envs/dev/           dev 環境。provider・backend・変数を持ち、modules/ を呼び出す (stg, prd は Phase 1 の対象外)
     └── justfile
 ```
 
-`internal/pipeline/` の 4 つは Step Functions の State に対応する。
-`pdf` が前処理、`extract` が抽出、`normalize` がスキーマ正規化、`verify` が検証。
+`internal/pipeline/` のうち `validate` `preprocess` `textractparser` `bedrockparser` `finalize` は Lambda 1 つずつに対応し、S3 と DynamoDB の読み書きを担う。
+`pdf` `extract` `normalize` `verify` は S3 を触らない純ロジックで、前処理・抽出・スキーマ正規化・検証を担う。
+API サーバ (`cmd/api/`) は Phase 1 の対象外で、まだ存在しない。
 
 ## ツールチェーン
 
@@ -128,55 +140,12 @@ golangci-lint 2.12.2
 justfile はルートに置かず `backend/` と `infra/` の直下に置くため、実行は各ディレクトリに移動してから行う。
 
 ```sh
-cd backend
-just fmt              # go fmt ./...
-just vet              # go vet ./...
-just lint             # golangci-lint run ./... (設定は .golangci.yml、CI と同じバージョン)
-just test             # go test ./...
-just fix-diff         # go fix -diff ./... (ドライラン)
-just fix              # go fix ./...
-just modernize        # gopls の modernize 解析器 (errorsastype など) の提案を表示する (ドライラン)
-just modernize-fix    # modernize の提案を適用する
-just cmds             # ビルド対象を列挙する (scripts/cmds.sh)
-just build            # 全 Lambda をクロスコンパイルする (scripts/build.sh)
-just build-one <cmd>  # 単一の Lambda をビルドする (scripts/build.sh <cmd>、例: pipeline/validator)
-just package          # bin/{関数名}.zip に固める (scripts/package.sh、先に build を実行する)
-just clean            # bin/ 配下の成果物を削除する (scripts/clean.sh)
+cd backend && just test      # Go のテスト。lint / build / package などは backend/README.ja.md
+cd infra && just plan        # Terraform の計画。init / validate / apply などは infra/README.ja.md
 ```
 
-justfile にはシェルの処理を書かない。単一コマンドで済まないレシピは `scripts/` のスクリプトを呼ぶ。スクリプトは shellcheck で検査でき、just を介さず単体でも実行できる (自身で `backend/` へ移動するためカレントディレクトリは問わない)。
-
-ビルド対象は `cmd/` 配下の `main.go` を探索して動的に決まるため、Lambda を追加しても justfile やスクリプトを変更する必要はない。
-
-ビルドは `provided.al2023` / `arm64`、出力は `bin/{関数名}/bootstrap`。
-`provided` ランタイムは実行ファイル名が `bootstrap` で固定される。
-
-### Lambda Layer
-
-poppler のネイティブバイナリを Layer として配布する。
-
-```sh
-cd backend/layers/pdf-processor
-./build.sh
-```
-
-詳細は [backend/layers/pdf-processor/README.ja.md](../backend/layers/pdf-processor/README.ja.md) を参照。
-
-## CI
-
-`.github/workflows/ci-backend.yml` が `pull_request` で動く。
-`golangci-lint` と `build-test` の 2 ジョブ構成。
-
-actions は full commit SHA でピン留めしている。タグは付け替えられるため。
-
-CI から AWS の実 API に到達できないようにしてある。
-`permissions` は `contents: read` のみで OIDC を与えず、加えて `AWS_EC2_METADATA_DISABLED=true` で IMDS も塞ぐ。
-
-## 設計ドキュメント
-
-命名規則、アーキテクチャの詳細、DynamoDB 設計、リージョン選定、Lambda の配布方式、Textract の FeatureTypes 選定、対象論文の選定条件は Notion の Develop データベース (親ページ: AWS AIP-C01) にある。
-
-新しい設計判断は ADR 形式 (ステータス → 背景 → 選択肢 → 比較 → 決定 → 理由 → 結果 → 再検討の条件) で追記する。
+各レシピの一覧は `just --list`、詳細と前提は [backend/README.ja.md](../backend/README.ja.md) と [infra/README.ja.md](../infra/README.ja.md) を参照。
+justfile にはシェルの処理を書かず、単一コマンドで済まないレシピは `scripts/` のスクリプトを呼ぶ。
 
 ## 制約
 
