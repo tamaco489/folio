@@ -21,7 +21,7 @@ variable "account_id" {
   }
 }
 
-# Phase 1 は us-east-1 のみ (ADR: Bedrock のモデル可用性と arXiv バルクデータの所在)
+# Phase 1 は us-east-1 のみ (理由: Bedrock のモデル可用性と arXiv バルクデータの所在)
 # S3 はリージョンを後から変えられないため、変更は作り直しを伴う
 variable "region" {
   description = "AWS region for all resources in this environment."

@@ -1,12 +1,16 @@
 # 環境は envs/{env} でディレクトリ分離する (workspace は使わない)
-# env の既定は dev。別環境は just env=stg plan のように上書きする
+# env の既定は dev
+# 別環境は just env=stg plan のように上書きする
 #
-# state バケットは環境ごとに {env}-folio-tfstate を用意する (Terraform の管理外。README.ja.md)。backend の設定は envs/{env}/backend.tf にある
+# state バケットは環境ごとに {env}-folio-tfstate を用意する (Terraform の管理外、README.ja.md を参照)
+# backend の設定は envs/{env}/backend.tf にある
 # アカウント ID は TF_VAR_account_id で渡す (tfvars には書かない)
 #
-# apply と destroy はユーザーが実行する。確認は terraform 側の対話に任せ -auto-approve は付けない
+# apply と destroy はユーザーが実行する
+# 確認は terraform 側の対話に任せ -auto-approve は付けない
 #
-# レシピにシェルの処理を書かない。複数行になる処理は scripts/ に置き、ここでは呼び出すだけにする
+# レシピにシェルの処理を書かない
+# 複数行になる処理は scripts/ に置き、ここでは呼び出すだけにする
 
 env := "dev"
 

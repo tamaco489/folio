@@ -1,5 +1,5 @@
-# 環境ディレクトリは値 (env, account_id, region) を渡すだけで、リソース名はモジュール内で
-# "${var.env}-folio-${local.name}" として組み立てる。ここに name_prefix のような local は置かない
+# 環境ディレクトリは値 (env, account_id, region) を渡すだけで、リソース名はモジュール内で "${var.env}-folio-${local.name}" として組み立てる
+# ここに name_prefix のような local は置かない
 #
 # モジュール間の受け渡しは outputs 経由で行う (messaging, compute, pipeline, iam は各 Issue のマージ後に足す)
 

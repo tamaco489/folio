@@ -47,8 +47,8 @@ resource "aws_s3_bucket_public_access_block" "documents" {
 }
 
 # SSE-S3 (AES256) を既定にし、KMS は使わない
-# 評価段階では鍵の分離や監査の要件がなく、SSE-KMS にすると Lambda と Textract のロールに kms:Decrypt を配る必要が生じるうえ、
-# ページ画像のような小さなオブジェクトの大量書き込みで KMS API の課金も乗るため
+# 評価段階では鍵の分離や監査の要件がなく、SSE-KMS にすると Lambda と Textract のロールに kms:Decrypt を配る必要が生じる
+# ページ画像のような小さなオブジェクトの大量書き込みで KMS API の課金も乗る
 resource "aws_s3_bucket_server_side_encryption_configuration" "documents" {
   bucket = aws_s3_bucket.documents.id
 
