@@ -21,9 +21,11 @@ module "iam" {
   account_id                    = var.account_id
   documents_bucket_arn          = module.storage.documents_bucket_arn
   jobs_table_arn                = module.storage.jobs_table_arn
+  artifacts_bucket_arn          = module.storage.artifacts_bucket_arn
   textract_completion_topic_arn = module.messaging.textract_completion_topic_arn
   lambda_function_arns          = module.compute.function_arns
   lambda_log_group_arns         = module.compute.log_group_arns
+  github_repository             = var.github_repository
 }
 
 module "compute" {

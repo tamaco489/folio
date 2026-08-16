@@ -17,3 +17,8 @@ output "state_machine_arn" {
   description = "ARN of the pipeline state machine."
   value       = module.pipeline.state_machine_arn
 }
+
+output "github_actions_role_arn" {
+  description = "ARN of the role that cd-backend.yml assumes via OIDC; register it as the GitHub secret AWS_ROLE_ARN."
+  value       = module.iam.github_actions_role_arn
+}

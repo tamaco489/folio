@@ -27,3 +27,8 @@ output "textract_publish_role_arn" {
   description = "ARN of the role that Textract assumes to publish completion notifications to SNS (passed to Lambda as FOLIO_TEXTRACT_ROLE_ARN)."
   value       = aws_iam_role.textract_publish.arn
 }
+
+output "github_actions_role_arn" {
+  description = "ARN of the role that GitHub Actions (cd-backend.yml) assumes via OIDC to upload zips to the artifacts bucket; register it as the AWS_ROLE_ARN secret."
+  value       = aws_iam_role.github_actions.arn
+}
