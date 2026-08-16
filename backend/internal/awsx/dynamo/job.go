@@ -32,7 +32,7 @@ func (s Status) Reprocessable() bool {
 	return s == StatusFailed
 }
 
-// 属性名は Notion「Folio — DynamoDB 設計」で確定した 6 つに限定する
+// 属性名は設計で確定した 6 つに限定する
 const (
 	attrJobID       = "jobId"
 	attrStatus      = "status"

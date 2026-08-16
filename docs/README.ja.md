@@ -172,12 +172,6 @@ actions は full commit SHA でピン留めしている。タグは付け替え�
 CI から AWS の実 API に到達できないようにしてある。
 `permissions` は `contents: read` のみで OIDC を与えず、加えて `AWS_EC2_METADATA_DISABLED=true` で IMDS も塞ぐ。
 
-## 設計ドキュメント
-
-命名規則、アーキテクチャの詳細、DynamoDB 設計、リージョン選定、Lambda の配布方式、Textract の FeatureTypes 選定、対象論文の選定条件は Notion の Develop データベース (親ページ: AWS AIP-C01) にある。
-
-新しい設計判断は ADR 形式 (ステータス → 背景 → 選択肢 → 比較 → 決定 → 理由 → 結果 → 再検討の条件) で追記する。
-
 ## 制約
 
 | 制約                | 内容                               | 対処                                 |

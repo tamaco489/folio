@@ -171,12 +171,6 @@ Actions are pinned to full-length commit SHAs, because tags can be moved.
 CI cannot reach real AWS APIs.
 `permissions` is limited to `contents: read` with no OIDC, and `AWS_EC2_METADATA_DISABLED=true` additionally blocks IMDS.
 
-## Design documents
-
-Naming conventions, architecture details, DynamoDB design, region selection, Lambda packaging strategy, Textract FeatureTypes selection, and corpus selection criteria live in the Develop database in Notion (parent page: AWS AIP-C01).
-
-New design decisions are appended in ADR form: status, context, options, comparison, decision, rationale, consequences, and conditions for revisiting.
-
 ## Constraints
 
 | Constraint             | Detail                                  | Mitigation                               |

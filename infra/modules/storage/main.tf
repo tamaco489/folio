@@ -105,7 +105,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "documents" {
 # DynamoDB: 処理状態と冪等性を管理するジョブテーブル
 # ------------------------------------------------------------------------------
 
-# 属性は Notion「DynamoDB 設計」の 6 つ (jobId, status, filename, createdAt, updatedAt, errorReason) に限る
+# 属性は設計で確定した 6 つ (jobId, status, filename, createdAt, updatedAt, errorReason) に限る
 # attribute ブロックに書くのはキーに使う 3 つだけ (DynamoDB はキー以外のスキーマを持たず、キーに使わない属性を書くと plan が収束しない)
 resource "aws_dynamodb_table" "jobs" {
   name         = local.jobs_table_name
@@ -131,7 +131,7 @@ resource "aws_dynamodb_table" "jobs" {
 
   # status ごとのジョブを updatedAt の新しい順に引く
   # 一覧表示で filename と errorReason まで要るため ALL にする (KEYS_ONLY だと 1 件ごとにテーブルを読み戻すことになる)
-  # status は値が 4 種類しかなくパーティションが偏るが、件数が増えるまでは複合キーにしない (Notion「DynamoDB 設計」の再検討条件)
+  # status は値が 4 種類しかなくパーティションが偏るが、件数が増えるまでは複合キーにしない
   # GSI 内の hash_key / range_key は provider v6 で非推奨のため key_schema で書く (HASH を RANGE より先に置く必要がある)
   global_secondary_index {
     name            = "gsi-status-updatedAt"
