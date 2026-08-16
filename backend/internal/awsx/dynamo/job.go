@@ -59,6 +59,12 @@ func formatTime(t time.Time) string { return t.UTC().Format(timeFormat) }
 
 func parseTime(s string) (time.Time, error) { return time.Parse(timeFormat, s) }
 
+func jobKey(jobID string) map[string]awsdynamodbtypes.AttributeValue {
+	return map[string]awsdynamodbtypes.AttributeValue{
+		attrJobID: &awsdynamodbtypes.AttributeValueMemberS{Value: jobID},
+	}
+}
+
 func (j Job) item() (map[string]awsdynamodbtypes.AttributeValue, error) {
 	if j.JobID == "" {
 		return nil, fmt.Errorf("dynamo: jobId is empty")
