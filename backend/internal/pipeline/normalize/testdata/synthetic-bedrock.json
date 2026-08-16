@@ -1,0 +1,81 @@
+{
+  "jobId": "01JB9Q4T7C2E8HXM5KRV0YWN3B",
+  "schemaVersion": "1.0",
+  "source": {
+    "bucket": "paper-idp-dev",
+    "key": "uploads/01JB9Q4T7C2E8HXM5KRV0YWN3B/original.pdf",
+    "filename": "jsai2026-0412.pdf",
+    "sha256": "3d81f5c60ba24e97cc1f0b7de54a9138f2b6e0cd4471a9835ee2c0d6b7a41f59",
+    "language": "ja",
+    "pageCount": 8,
+    "hasTextLayer": false,
+    "uploadedAt": "2026-08-15T03:41:02Z"
+  },
+  "metadata": {
+    "title": "疎な注意経路選択による\n長文脈言語モデルの高速化",
+    "authors": null,
+    "abstract": "長文脈を扱う言語モデルでは注意機構の計算量が系列長の二乗に比例する。本稿ではクエリヘッドごとに疎な鍵値対を選択する経路選択機構を提案する。"
+  },
+  "sections": [
+    {
+      "level": 0,
+      "heading": "",
+      "text": "本稿の構成は次のとおりである。",
+      "pages": [1]
+    },
+    {
+      "level": 1,
+      "heading": "1 はじめに",
+      "text": "近年の言語モデルは文脈長を 2K トークンから 100 万トークン超へと拡大してきた。",
+      "pages": [1, 2]
+    },
+    {
+      "level": 3,
+      "heading": "2.1 経路選択関数",
+      "text": "クエリベクトル q と鍵ベクトル集合 K が与えられたとき、経路選択器は関連度スコアを計算する。",
+      "pages": [3]
+    }
+  ],
+  "figures": [
+    {
+      "id": "図 1",
+      "caption": "提案する疎な経路選択機構の全体像",
+      "page": 2
+    }
+  ],
+  "tables": [
+    {
+      "id": "表 1",
+      "caption": "評価結果",
+      "page": 5,
+      "header": [["手法", "精度"]],
+      "rows": [["提案手法", "92.6"], ["ベースライン"]]
+    }
+  ],
+  "references": [
+    {
+      "raw": "Vaswani, A. ほか. Attention Is All You Need. NeurIPS, 2017.",
+      "doi": null
+    },
+    {
+      "raw": "Xiao, G. ほか. Efficient Streaming Language Models with Attention Sinks. ICLR, 2024.",
+      "title": "Efficient Streaming Language Models with Attention Sinks",
+      "year": 2024,
+      "doi": "10.48550/arXiv.2309.17453"
+    }
+  ],
+  "provenance": {
+    "route": "bedrock",
+    "extractedAt": "2026-08-15T03:43:19Z",
+    "confidence": {},
+    "cost": {
+      "bedrockModel": "claude-sonnet-4-6",
+      "bedrockInputTokens": 118460,
+      "bedrockOutputTokens": 9120
+    },
+    "durationMs": 132870,
+    "warnings": [
+      "ページの抽出結果が欠落したまま結合した: page=7"
+    ]
+  }
+}

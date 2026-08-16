@@ -1,0 +1,118 @@
+{
+  "jobId": "01JB8X7K2M9QRT4V6WZ3N5PDA0",
+  "schemaVersion": "1.0",
+  "source": {
+    "bucket": "paper-idp-dev",
+    "key": "uploads/01JB8X7K2M9QRT4V6WZ3N5PDA0/original.pdf",
+    "filename": "2601.04872v1.pdf",
+    "sha256": "9f2c1ab7e04d5c83b6119ae7d2f0c48a5e73b91d0c6af2e85b34dd7719c0ea62",
+    "language": "en",
+    "pageCount": 11,
+    "hasTextLayer": true,
+    "uploadedAt": "2026-08-15T02:14:33Z"
+  },
+  "metadata": {
+    "title": "Sparse Attention Routing for\nLong-Context Language Models",
+    "authors": [
+      {
+        "name": "Aiko  Tanaka",
+        "affiliation": "Graduate School of Information Science, Tohoku University",
+        "email": "tanaka@example.ac.jp"
+      },
+      {
+        "name": "Marcus Feldman",
+        "affiliation": "Department of Computer Science, ETH Zurich",
+        "email": "feldman@example.ch"
+      }
+    ],
+    "abstract": "Long-context language models suffer from quadratic attention cost. We propose a routing mechanism that selects a sparse subset of key-value pairs per query head.",
+    "keywords": ["sparse attention", "long context", "efficient inference"],
+    "venue": "arXiv preprint",
+    "year": 2026,
+    "primaryCategory": "cs.CL"
+  },
+  "sections": [
+    {
+      "level": 1,
+      "heading": "1 Introduction",
+      "text": "Transformer-based language models have scaled context windows from 2K to over 1M tokens.  \n\nThe attention mechanism remains quadratic in sequence length.",
+      "pages": [2, 1]
+    },
+    {
+      "level": 1,
+      "heading": "3.1 Routing Function",
+      "text": "Given a query vector q and a set of key vectors K, the router computes a relevance score.",
+      "pages": [4, 4]
+    },
+    {
+      "level": 1,
+      "heading": "References",
+      "text": "",
+      "pages": [10, 11]
+    }
+  ],
+  "figures": [
+    {
+      "id": "figure-1",
+      "caption": "Figure 1: Overview of the sparse routing architecture.",
+      "page": 3,
+      "bbox": [0.118, 0.094, 0.882, 0.371]
+    }
+  ],
+  "tables": [
+    {
+      "id": "table-1",
+      "caption": "Table 2: Results on long-context retrieval benchmarks.",
+      "page": 7,
+      "bbox": [0.104, 0.152, 0.896, 0.437],
+      "header": [
+        ["Model", "NIAH", "NIAH", "LongBench", "Speedup"],
+        ["", "1K", "128K", "Avg", ""]
+      ],
+      "rows": [
+        ["Dense baseline", "100.0", "94.2", "48.7", "1.0x"],
+        ["Ours ", "100.0", "92.6", "47.8", "6.2x"]
+      ]
+    }
+  ],
+  "references": [
+    {
+      "raw": "Vaswani, A., Shazeer, N., Parmar, N., et al. Attention Is All You Need. NeurIPS, 2017.",
+      "title": "Attention Is All You Need.",
+      "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar"],
+      "year": 2017,
+      "venue": "NeurIPS",
+      "doi": null
+    },
+    {
+      "raw": "Xiao, G., Tian, Y., Chen, B., et al. Efficient Streaming Language Models with Attention Sinks. ICLR, 2024.",
+      "title": "Efficient Streaming Language Models with Attention Sinks",
+      "authors": ["Guangxuan Xiao", "Yuandong Tian", "Beidi Chen"],
+      "year": 2024,
+      "venue": "ICLR",
+      "doi": "https://doi.org/10.48550/ARXIV.2309.17453"
+    }
+  ],
+  "provenance": {
+    "route": "textract",
+    "extractedAt": "2026-08-15T02:15:47Z",
+    "confidence": {
+      "title": 0.998,
+      "sections": 0.943,
+      "figures": 0.912,
+      "tables": 0.724
+    },
+    "cost": {
+      "textractPages": 11,
+      "textractFeatures": ["TABLES", "LAYOUT"],
+      "bedrockModel": "claude-sonnet-4-6",
+      "bedrockInputTokens": 42180,
+      "bedrockOutputTokens": 6340
+    },
+    "durationMs": 74210,
+    "warnings": [
+      "page 3: 二段組と判定し Textract が返した読み順を左段から右段へ並べ直した",
+      "page 3: 二段組と判定し Textract が返した読み順を左段から右段へ並べ直した"
+    ]
+  }
+}
