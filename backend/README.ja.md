@@ -58,3 +58,5 @@ cd backend/layers/pdf-processor
 
 実 AWS を呼ばない。S3 と DynamoDB はフェイク (`internal/awsx/s3/s3test`、`internal/awsx/dynamo/dynamotest`)、Textract と Bedrock は `testdata/` の記録済みレスポンスの再生、Crossref は `internal/pipeline/verify/testdata/` の記録の再生で検証する。
 規約は `.claude/rules/go/testing.md` を参照。
+
+CI (`.github/workflows/ci-backend.yml`) では `go.mod` の依存関係に対して `trivy fs --scanners vuln` も実行し、HIGH 以上の脆弱性があれば失敗する。ローカルでは `backend/` で `trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .` を実行すると同じ検査ができる (Trivy の版はルートの `.tool-versions` で固定)。

@@ -58,3 +58,5 @@ See [layers/pdf-processor/README.md](layers/pdf-processor/README.md) for details
 
 Tests never call real AWS. S3 and DynamoDB use fakes (`internal/awsx/s3/s3test`, `internal/awsx/dynamo/dynamotest`); Textract and Bedrock replay recorded responses under `testdata/`; Crossref replays recordings under `internal/pipeline/verify/testdata/`.
 See `.claude/rules/go/testing.md` for the conventions.
+
+CI (`.github/workflows/ci-backend.yml`) also runs `trivy fs --scanners vuln` against `go.mod` and fails on HIGH or CRITICAL vulnerabilities in dependencies; run `trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .` in `backend/` for the same check locally (Trivy is pinned in the root `.tool-versions`).
