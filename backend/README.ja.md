@@ -50,4 +50,12 @@ just submit <pdf>    # PDF を投入してパイプラインを起動する (Tex
 just fetch-corpus    # 評価用論文を arXiv から取得する
 ```
 
+`fetch-corpus` の既定はカテゴリ (`cs.CL` または `cs.LG`) だけで絞る。テーマで絞るときは arXiv の検索構文を `-query` に、論文を指名するときは `-ids` に渡す。
+
+```sh
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"'   # 題名に LLM を含む cs.CL
+just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'                 # 要旨に benchmark を含む cs.LG
+just fetch-corpus -ids 2608.20318,2301.07041                           # ID を指名 (検索しない)
+```
+
 ほかのレシピは `just --list`。

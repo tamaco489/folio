@@ -50,4 +50,12 @@ just submit <pdf>    # Submit a PDF to start the pipeline (Textract / Bedrock ch
 just fetch-corpus    # Fetch evaluation papers from arXiv
 ```
 
+By default `fetch-corpus` filters only by category (`cs.CL` or `cs.LG`). Pass arXiv search syntax to `-query` to narrow by topic, or `-ids` to pick papers directly.
+
+```sh
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"'   # cs.CL papers with LLM in the title
+just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'                 # cs.LG papers with benchmark in the abstract
+just fetch-corpus -ids 2608.20318,2301.07041                           # Pick papers by ID (no search)
+```
+
 See `just --list` for the other recipes.
