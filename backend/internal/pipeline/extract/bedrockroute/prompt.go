@@ -11,24 +11,10 @@ import (
 // 指示を英語で書くのは、日本語で書くと出力言語が日本語へ引きずられ英語論文の本文が訳出される事故が起きうるため
 // 転記は原本の言語に従い翻訳しないことを明示しており、日本語のページでも指示が英語であることは出力に影響しない
 //
-// キー名は PageResult の json タグと一致させる — 揃えられない箇所 (figures の label など) は Merge で domain の型へ写す
+// 出力の形は pageTool のスキーマで渡すため、ここには各キーの意味とルールだけを書く
 const systemPrompt = `You extract structured data from a single page image of an academic paper.
 
-Return one JSON object and nothing else. No prose, no code fence.
-
-Schema:
-{
-  "title": string,
-  "authors": [{"name": string, "affiliation": string, "email": string}],
-  "abstract": string,
-  "keywords": [string],
-  "sections": [{"level": int, "heading": string, "text": string}],
-  "figures": [{"label": string, "caption": string}],
-  "tables": [{"label": string, "caption": string, "header": [[string]], "rows": [[string]]}],
-  "references": [{"raw": string, "title": string, "authors": [string], "year": int, "venue": string, "doi": string}],
-  "continuesPreviousSection": bool,
-  "continuesPreviousReference": bool
-}
+Record the result by calling the extract_page tool. Its input schema defines the keys.
 
 Rules:
 - Transcribe text in the language of the document. Never translate.
@@ -45,7 +31,7 @@ Rules:
 
 // pagePrompt はページ画像に添える指示を組み立てる
 func pagePrompt(page int, lang domain.Language) string {
-	s := fmt.Sprintf("This image is page %d of the document. Extract it as the schema describes.", page)
+	s := fmt.Sprintf("This image is page %d of the document. Extract it with the extract_page tool.", page)
 	if lang != "" {
 		s += fmt.Sprintf(" The document is written in %q (ISO 639-1), so transcribe it in that language.", string(lang))
 	}

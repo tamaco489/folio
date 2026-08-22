@@ -56,6 +56,7 @@ func (e *Extractor) ExtractPage(ctx context.Context, in PageInput) (*PageResult,
 		Messages:    []bedrock.Message{bedrock.UserImage(bedrock.ImageFormatPNG, in.Image, pagePrompt(in.Page, in.Language))},
 		MaxTokens:   new(maxTokens),
 		Temperature: new(temperature),
+		Tool:        pageTool,
 		RecordKey:   in.RecordKey,
 	})
 	if err != nil {

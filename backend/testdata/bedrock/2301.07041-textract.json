@@ -3,8 +3,48 @@
   "route": "textract",
   "recordedAt": "2026-08-15T00:00:00Z",
   "response": {
-    "text": "{\"title\":\"Learning to Structure Scientific Documents\",\"authors\":[{\"name\":\"Jane Doe\",\"affiliation\":\"Example University\"},{\"name\":\"John Roe\",\"affiliation\":\"Example Institute\"}],\"abstract\":\"We present a pipeline that converts scientific PDFs into structured JSON by combining layout-aware OCR with a large language model.\",\"sections\":[{\"level\":1,\"heading\":\"1 Introduction\",\"from\":1,\"to\":2},{\"level\":1,\"heading\":\"2 Related Work\",\"from\":3,\"to\":4},{\"level\":1,\"heading\":\"3 Method\",\"from\":-1,\"to\":-1}],\"references\":[{\"raw\":\"J. Doe. A Survey of Document Understanding. 2020.\",\"title\":\"A Survey of Document Understanding\",\"doi\":\"10.1000/example.0001\"}]}",
-    "stopReason": "end_turn",
+    "toolInput": {
+      "title": "Learning to Structure Scientific Documents",
+      "authors": [
+        {
+          "name": "Jane Doe",
+          "affiliation": "Example University"
+        },
+        {
+          "name": "John Roe",
+          "affiliation": "Example Institute"
+        }
+      ],
+      "abstract": "We present a pipeline that converts scientific PDFs into structured JSON by combining layout-aware OCR with a large language model.",
+      "sections": [
+        {
+          "level": 1,
+          "heading": "1 Introduction",
+          "from": 1,
+          "to": 2
+        },
+        {
+          "level": 1,
+          "heading": "2 Related Work",
+          "from": 3,
+          "to": 4
+        },
+        {
+          "level": 1,
+          "heading": "3 Method",
+          "from": -1,
+          "to": -1
+        }
+      ],
+      "references": [
+        {
+          "raw": "J. Doe. A Survey of Document Understanding. 2020.",
+          "title": "A Survey of Document Understanding",
+          "doi": "10.1000/example.0001"
+        }
+      ]
+    },
+    "stopReason": "tool_use",
     "usage": {
       "inputTokens": 4821,
       "outputTokens": 318,
@@ -12,5 +52,5 @@
     },
     "latencyMs": 6142
   },
-  "note": "synthetic placeholder fixture; replace with a real recording captured via Recorder once a billed run is approved. sections point at elements of textractroute/testdata/two-column.json by index"
+  "note": "synthetic placeholder fixture in the tool use format (toolInput); replace with a real recording captured via Recorder once a billed run is approved. sections point at elements of textractroute/testdata/two-column.json by index"
 }
