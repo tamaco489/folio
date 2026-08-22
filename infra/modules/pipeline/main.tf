@@ -43,7 +43,10 @@ resource "aws_cloudwatch_log_group" "pipeline" {
 # 各 Task の TimeoutSeconds は Lambda 側の timeout より大きく取り、Lambda 自身のタイムアウトが Step Functions のタイムアウトより先に観測されるようにする
 #   Validate 360 (Lambda 300 想定) / Preprocess 960 と Finalize 960 (Lambda の上限 900) / BedrockPage 660 (Lambda 600 想定)
 #
-# 経路 B の Map の Retry は bedrock-parser が内部で最大 5 回の指数バックオフを持つため控えめにし (10 秒 / 2 回 / 倍率 2)、再試行しても直らない InvalidInputError と PageDecodeError は MaxAttempts 0 で除外する
+# 経路 B の Map の Retry は bedrock-parser が内部で最大 5 回の指数バックオフを持つため控えめにし (10 秒 / 2 回 / 倍率 2)、再試行しても直らない InvalidInputError は MaxAttempts 0 で除外する
+# PageDecodeError (モデルの応答が JSON として読めない) は出力のゆれでも起きるため 5 秒後に 1 回だけ再試行する (1 ページ分の課金で経路 B 全体を救える見込みがあるとき)
+#   応答の整形そのものは bedrock-parser 側が tool use で保証する前提で、ここは出力のゆれに対する保険にとどめる
+# Map に ToleratedFailurePercentage は置かない (1 ページでも失敗した経路は finalizer が needsReview にして再投入が要るため、残りのページにトークンを使っても無駄になる)
 # 経路 A の Retry は起動時の RetryableError (Textract のスロットリング等) だけを対象にし、PermanentError と SendTaskFailure の TextractJobFailed / ExtractFailed、States.Timeout は Catch でブランチの出力に落とす
 # 片方の経路だけが失敗しても他方の結果で finalizer に進み、両方失敗したときは finalizer が NoResultError を返して実行を失敗させる
 resource "aws_sfn_state_machine" "pipeline" {
