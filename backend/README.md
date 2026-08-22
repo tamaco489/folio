@@ -31,7 +31,12 @@ just package          # Archive into bin/{function}.zip (scripts/package.sh, run
 just clean            # Remove artifacts under bin/ (scripts/clean.sh)
 just upload           # package, then upload bin/*.zip to lambda/ in the artifacts bucket (scripts/upload.sh; run by the user, applied with infra's just apply)
 just upload-layer     # Upload layers/pdf-processor/pdf-processor.zip to layers/ (build it with build.sh first)
+just submit <pdf>     # Put a PDF at uploads/<sha256>/original.pdf in the documents bucket to start the pipeline (scripts/submit.sh; incurs Textract / Bedrock charges, run by the user)
+just status [jobId]   # List recent executions; with a jobId, show that execution's status, failure causes, DynamoDB item and S3 intermediates (scripts/status.sh; read-only)
+just cleanup <jobId>  # Remove the DynamoDB item and uploads/ work/ outputs/ under the jobId so the PDF can be resubmitted (scripts/cleanup.sh; asks for confirmation, run by the user)
 ```
+
+`submit`, `status` and `cleanup` take `env` as the second argument (default `dev`). `status` and `cleanup` use `AWS_REGION` (default `us-east-1`) rather than the profile's default region.
 
 Before opening a PR, run `just fmt` `just vet` `just lint` `just test`, and confirm that `just fix-diff` and `just modernize` report nothing.
 
