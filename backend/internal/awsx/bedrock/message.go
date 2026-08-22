@@ -70,6 +70,9 @@ type Usage struct {
 	TotalTokens  int32 `json:"totalTokens"`
 }
 
+// StopReasonMaxTokens は生成が Request.MaxTokens に達して打ち切られたことを示す StopReason の値
+const StopReasonMaxTokens = "max_tokens"
+
 // Response は Converse API の応答を呼び出し側に必要な形へ落としたもの
 type Response struct {
 	Text       string `json:"text"`               // Text は応答に含まれるテキスト content block の連結

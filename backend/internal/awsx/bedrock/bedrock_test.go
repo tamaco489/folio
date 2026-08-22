@@ -194,16 +194,19 @@ func TestConverseNoTextContent(t *testing.T) {
 
 func TestResponseDecodeJSON(t *testing.T) {
 	tests := map[string]struct {
-		text      string
-		wantTitle string
-		wantErr   bool
+		text       string
+		stopReason string
+		wantTitle  string
+		wantErr    error
 	}{
-		"正常系_JSON のみの応答の場合_そのまま読み込めること":          {text: `{"title":"a"}`, wantTitle: "a"},
-		"正常系_言語指定つきコードフェンスの場合_フェンスを外して読み込めること":   {text: "```json\n{\"title\":\"b\"}\n```", wantTitle: "b"},
-		"正常系_言語指定なしコードフェンスの場合_フェンスを外して読み込めること":   {text: "```\n{\"title\":\"c\"}\n```", wantTitle: "c"},
-		"正常系_前後に散文がある場合_JSON 部分だけ切り出せること":        {text: "以下が結果です\n{\"title\":\"d\"}\nご確認ください", wantTitle: "d"},
-		"異常系_JSON が含まれない場合_ErrInvalidJSON が返ること": {text: "申し訳ありませんが構造化できませんでした", wantErr: true},
-		"異常系_JSON が壊れている場合_ErrInvalidJSON が返ること": {text: `{"title":}`, wantErr: true},
+		"正常系_JSON のみの応答の場合_そのまま読み込めること":                                         {text: `{"title":"a"}`, wantTitle: "a"},
+		"正常系_言語指定つきコードフェンスの場合_フェンスを外して読み込めること":                                  {text: "```json\n{\"title\":\"b\"}\n```", wantTitle: "b"},
+		"正常系_言語指定なしコードフェンスの場合_フェンスを外して読み込めること":                                  {text: "```\n{\"title\":\"c\"}\n```", wantTitle: "c"},
+		"正常系_前後に散文がある場合_JSON 部分だけ切り出せること":                                       {text: "以下が結果です\n{\"title\":\"d\"}\nご確認ください", wantTitle: "d"},
+		"異常系_JSON が含まれない場合_ErrInvalidJSON が返ること":                                {text: "申し訳ありませんが構造化できませんでした", wantErr: ErrInvalidJSON},
+		"異常系_JSON が壊れている場合_ErrInvalidJSON が返ること":                                {text: `{"title":}`, wantErr: ErrInvalidJSON},
+		"異常系_max_tokens で打ち切られた場合_ErrInvalidJSON ではなく ErrOutputTruncated が返ること": {text: `{"title":"e","sections":[{"heading":"1 Intro`, stopReason: StopReasonMaxTokens, wantErr: ErrOutputTruncated},
+		"境界値_max_tokens で打ち切られたが JSON として読める場合_ErrOutputTruncated が返ること":        {text: `{"title":"f"}`, stopReason: StopReasonMaxTokens, wantErr: ErrOutputTruncated},
 	}
 
 	for name, tt := range tests {
@@ -211,10 +214,10 @@ func TestResponseDecodeJSON(t *testing.T) {
 			var got struct {
 				Title string `json:"title"`
 			}
-			err := (&Response{Text: tt.text}).DecodeJSON(&got)
-			if tt.wantErr {
-				if !errors.Is(err, ErrInvalidJSON) {
-					t.Fatalf("err = %v, want ErrInvalidJSON", err)
+			err := (&Response{Text: tt.text, StopReason: tt.stopReason}).DecodeJSON(&got)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("err = %v, want %v", err, tt.wantErr)
 				}
 				return
 			}

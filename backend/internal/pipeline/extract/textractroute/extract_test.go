@@ -186,6 +186,15 @@ func TestExtractErrors(t *testing.T) {
 			modelID:   "model-x",
 			want:      bedrock.ErrInvalidJSON,
 		},
+		"異常系_出力が上限で打ち切られた場合_JSON 復号の失敗ではなく ErrOutputTruncated になること": {
+			converser: &fakeConverser{resp: &bedrock.Response{
+				Text:       `{"title":"t","sections":[{"heading":"1 Intro`,
+				StopReason: bedrock.StopReasonMaxTokens,
+				Usage:      bedrock.Usage{OutputTokens: 8192},
+			}},
+			modelID: "model-x",
+			want:    bedrock.ErrOutputTruncated,
+		},
 		"異常系_Converse が失敗した場合_そのエラーを返すこと": {
 			converser: &fakeConverser{err: converseErr},
 			modelID:   "model-x",

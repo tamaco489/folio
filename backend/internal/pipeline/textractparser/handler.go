@@ -226,8 +226,12 @@ func (h *Handler) callback(ctx context.Context, message []byte) error {
 		return fmt.Errorf("textractparser: read callback of job %s: %w", n.JobTag, err)
 	}
 	if cb.TextractJobID != n.JobID {
-		slog.InfoContext(ctx, "ignored completion notification of a stale textract job",
-			"jobId", cb.JobID, "textractJobId", n.JobID, "currentTextractJobId", cb.TextractJobID)
+		slog.InfoContext(
+			ctx, "ignored completion notification of a stale textract job",
+			"jobId", cb.JobID,
+			"textractJobId", n.JobID,
+			"currentTextractJobId", cb.TextractJobID,
+		)
 		return nil
 	}
 
@@ -269,6 +273,14 @@ func (h *Handler) process(ctx context.Context, cb Callback) (Result, error) {
 		return Result{}, err
 	}
 
+	// 出力トークン数が上限 (maxTokens) にどれだけ近いかを CloudWatch Logs で追えるようにする
+	slog.InfoContext(
+		ctx, "structured textract output with bedrock",
+		"jobId", cb.JobID,
+		"inputTokens", doc.Provenance.Cost.BedrockInputTokens,
+		"outputTokens", doc.Provenance.Cost.BedrockOutputTokens,
+	)
+
 	// 経過時間は Textract の開始から結果の保存直前までとし、Extract はゼロのまま返すためここで埋める
 	finished := h.now()
 	doc.Provenance.ExtractedAt = finished
@@ -283,6 +295,15 @@ func (h *Handler) process(ctx context.Context, cb Callback) (Result, error) {
 
 // fail は失敗の理由を構造化して SendTaskFailure で返す
 func (h *Handler) fail(ctx context.Context, cb Callback, code, message string) error {
+	// SendTaskFailure の Cause は Step Functions の実行履歴にしか残らないため、CloudWatch Logs にも同じ理由を出す
+	slog.ErrorContext(
+		ctx, "textract task failed",
+		"jobId", cb.JobID,
+		"textractJobId", cb.TextractJobID,
+		"code", code,
+		"message", message,
+	)
+
 	cause, err := json.Marshal(FailureCause{JobID: cb.JobID, TextractJobID: cb.TextractJobID, Message: message})
 	if err != nil {
 		return fmt.Errorf("textractparser: encode failure cause: %w", err)
@@ -298,7 +319,11 @@ func (h *Handler) respond(ctx context.Context, cb Callback, err error) error {
 		return nil
 	}
 	if errors.Is(err, sfn.ErrTaskGone) {
-		slog.WarnContext(ctx, "task is no longer waiting, response dropped", "jobId", cb.JobID, "error", err)
+		slog.WarnContext(
+			ctx, "task is no longer waiting, response dropped",
+			"jobId", cb.JobID,
+			"error", err,
+		)
 		return nil
 	}
 	return err
