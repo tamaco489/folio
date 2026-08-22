@@ -36,6 +36,7 @@ const (
 	segmentBedrock         = "bedrock"
 	pageImageNameTemplate  = "page-%04d.png"
 	pageResultNameTemplate = "page-%04d.json"
+	pageErrorNameTemplate  = "page-%04d.error.json"
 )
 
 // OriginalPDFKey は受領した PDF のキーを組み立てる
@@ -73,6 +74,13 @@ func TextractDocumentKey(jobID string) string {
 // Map から 1 ページずつ書き出され、結合は Map の外で行う。ページ画像と同じ 4 桁ゼロ埋めで辞書順とページ順を揃える
 func BedrockPageResultKey(jobID string, page int) string {
 	return join(PrefixWork, jobID, segmentBedrock, fmt.Sprintf(pageResultNameTemplate, page))
+}
+
+// BedrockPageErrorKey は経路 B で解釈に失敗したモデルの生応答のキーを組み立てる
+//
+// ページ結果と同じ階層に置くが、finalizer はページ結果を固定キーで 1 ページずつ読むため混ざらない
+func BedrockPageErrorKey(jobID string, page int) string {
+	return join(PrefixWork, jobID, segmentBedrock, fmt.Sprintf(pageErrorNameTemplate, page))
 }
 
 // TextLayerKey は PDF から抽出したテキストレイヤーのキーを組み立てる
