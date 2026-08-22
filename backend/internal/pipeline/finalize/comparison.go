@@ -14,7 +14,7 @@ import (
 type RouteStatus string
 
 const (
-	// RouteSucceeded は結果を正規化・検証して outputs/ へ書いた
+	// RouteSucceeded は結果を正規化・検証して outputs/ へ書いた (経路 B はページが欠落していても 1 件でもあれば succeeded とし、不完全さは NeedsReview と MissingPages で表す)
 	RouteSucceeded RouteStatus = "succeeded"
 
 	// RouteFailed は結果が得られなかった (Catch の理由か、finalizer 側の理由を残す)
@@ -47,15 +47,16 @@ type Routes struct {
 
 // RouteResult は 1 経路の結果の所在と状態
 type RouteResult struct {
-	Status      RouteStatus    `json:"status"`
-	ResultKey   string         `json:"resultKey,omitempty"` // ResultKey は succeeded のとき outputs/ のキー
-	Error       string         `json:"error,omitempty"`     // Error は failed のとき Catch の Error か finalizer 側の理由
-	Cause       string         `json:"cause,omitempty"`
-	NeedsReview bool           `json:"needsReview"`
-	DurationMs  int64          `json:"durationMs,omitempty"`
-	Cost        *domain.Cost   `json:"cost,omitempty"`
-	Warnings    []string       `json:"warnings,omitempty"`
-	Report      *verify.Report `json:"report,omitempty"` // Report は succeeded のとき verify の根拠
+	Status       RouteStatus    `json:"status"`
+	ResultKey    string         `json:"resultKey,omitempty"` // ResultKey は succeeded のとき outputs/ のキー
+	Error        string         `json:"error,omitempty"`     // Error は failed のとき Catch の Error か finalizer 側の理由、経路 B が succeeded でも Map の Catch が理由を残していればその Error
+	Cause        string         `json:"cause,omitempty"`
+	MissingPages int            `json:"missingPages,omitempty"` // MissingPages は経路 B が succeeded のとき pageCount のうち結果が無かったページ数
+	NeedsReview  bool           `json:"needsReview"`
+	DurationMs   int64          `json:"durationMs,omitempty"`
+	Cost         *domain.Cost   `json:"cost,omitempty"`
+	Warnings     []string       `json:"warnings,omitempty"`
+	Report       *verify.Report `json:"report,omitempty"` // Report は succeeded のとき verify の根拠
 }
 
 // Diff は両経路の値を並べて置く (どちらが正しいかは判定しない)
