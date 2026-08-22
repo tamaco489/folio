@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awstextract "github.com/aws/aws-sdk-go-v2/service/textract"
 	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 )
@@ -41,18 +40,18 @@ func (c *Client) StartDocumentAnalysis(ctx context.Context, in StartAnalysisInpu
 		QueriesConfig:    in.QueriesConfig,
 	}
 	if in.JobTag != "" {
-		params.JobTag = aws.String(in.JobTag)
+		params.JobTag = new(in.JobTag)
 	}
 	if in.ClientRequestToken != "" {
-		params.ClientRequestToken = aws.String(in.ClientRequestToken)
+		params.ClientRequestToken = new(in.ClientRequestToken)
 	}
 	if in.SNSTopicARN != "" || in.RoleARN != "" {
 		if in.SNSTopicARN == "" || in.RoleARN == "" {
 			return "", fmt.Errorf("%w: sns topic arn and role arn must be set together", ErrInvalidInput)
 		}
 		params.NotificationChannel = &awstextracttypes.NotificationChannel{
-			SNSTopicArn: aws.String(in.SNSTopicARN),
-			RoleArn:     aws.String(in.RoleARN),
+			SNSTopicArn: new(in.SNSTopicARN),
+			RoleArn:     new(in.RoleARN),
 		}
 	}
 
@@ -92,7 +91,7 @@ func (c *Client) GetDocumentAnalysis(ctx context.Context, jobID string) (*Analys
 
 	for {
 		out, err := c.api.GetDocumentAnalysis(ctx, &awstextract.GetDocumentAnalysisInput{
-			JobId:     aws.String(jobID),
+			JobId:     new(jobID),
 			NextToken: next,
 		})
 		if err != nil {

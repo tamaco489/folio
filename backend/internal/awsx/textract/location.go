@@ -3,7 +3,6 @@ package textract
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 )
 
@@ -15,8 +14,8 @@ type S3Location struct {
 
 func (l S3Location) toS3Object() *awstextracttypes.S3Object {
 	return &awstextracttypes.S3Object{
-		Bucket: aws.String(l.Bucket),
-		Name:   aws.String(l.Key),
+		Bucket: new(l.Bucket),
+		Name:   new(l.Key),
 	}
 }
 

@@ -43,8 +43,7 @@ func (r *Replayer) StartDocumentAnalysis(_ context.Context, params *awstextract.
 	if r.rec.JobID == "" {
 		return nil, errors.New("textract replay: recording has no job id")
 	}
-	jobID := r.rec.JobID
-	return &awstextract.StartDocumentAnalysisOutput{JobId: &jobID}, nil
+	return &awstextract.StartDocumentAnalysisOutput{JobId: new(r.rec.JobID)}, nil
 }
 
 // GetDocumentAnalysis は NextToken に対応する記録済みページを返す

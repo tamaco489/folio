@@ -195,22 +195,22 @@ func TestRecorderRoundTrip(t *testing.T) {
 	pages := []*awstextract.GetDocumentAnalysisOutput{
 		{
 			JobStatus:                   awstextracttypes.JobStatusSucceeded,
-			AnalyzeDocumentModelVersion: aws.String("1.0"),
-			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: aws.Int32(1)},
-			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("first"), Confidence: aws.Float32(97.5)}},
-			NextToken:                   aws.String("token-2"),
+			AnalyzeDocumentModelVersion: new("1.0"),
+			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: new(int32(1))},
+			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: new("first"), Confidence: new(float32(97.5))}},
+			NextToken:                   new("token-2"),
 		},
 		{
 			JobStatus:                   awstextracttypes.JobStatusSucceeded,
-			AnalyzeDocumentModelVersion: aws.String("1.0"),
-			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: aws.Int32(1)},
-			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("second")}},
+			AnalyzeDocumentModelVersion: new("1.0"),
+			DocumentMetadata:            &awstextracttypes.DocumentMetadata{Pages: new(int32(1))},
+			Blocks:                      []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: new("second")}},
 		},
 	}
 	calls := 0
 	inner := &fakeAPI{
 		start: func(*awstextract.StartDocumentAnalysisInput) (*awstextract.StartDocumentAnalysisOutput, error) {
-			return &awstextract.StartDocumentAnalysisOutput{JobId: aws.String("recorded-job")}, nil
+			return &awstextract.StartDocumentAnalysisOutput{JobId: new("recorded-job")}, nil
 		},
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
 			out := pages[calls]
@@ -219,8 +219,8 @@ func TestRecorderRoundTrip(t *testing.T) {
 		},
 		detect: func(*awstextract.DetectDocumentTextInput) (*awstextract.DetectDocumentTextOutput, error) {
 			return &awstextract.DetectDocumentTextOutput{
-				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("baseline")}},
-				DetectDocumentTextModelVersion: aws.String("1.0"),
+				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: new("baseline")}},
+				DetectDocumentTextModelVersion: new("1.0"),
 			}, nil
 		},
 	}
