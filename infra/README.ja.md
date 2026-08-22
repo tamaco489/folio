@@ -96,16 +96,22 @@ just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (�
 
 artifacts バケットは storage モジュールが作るため、初回だけ 2 段階になる。
 
-1. `envs/dev/main.tf` に `module "storage"` だけがある状態で `just apply` (artifacts バケットができる)
-2. 上の手順で zip を置く
-3. 残りのモジュールを結線した状態で `just plan` → `just apply`
+```sh
+aws sso login --profile <profile>
+export AWS_PROFILE=<profile>
+export TF_VAR_account_id=$(aws sts get-caller-identity --query Account --output text)
+
+cd infra
+just init
+terraform -chdir=envs/dev apply -target=module.storage
+
+cd ../backend
+just upload
+just upload-layer
+
+cd ../infra
+just plan
+just apply
+```
 
 2 回目以降は「zip を置き直す → `just plan` → `just apply`」だけでよい。
-
-## CI
-
-`.github/workflows/ci-infra.yml` は `infra/**`、`.tool-versions`、ワークフロー自身を変更した PR で動く。`permissions: contents: read` で AWS の認証情報を使わないため、fork からの PR でも実行される。
-ジョブは 3 つ並列で、`terraform fmt -check` と `just validate`、`just lint` (tflint の `terraform` recommended プリセットと `aws` ルールセット)、`trivy config` (設定ミスの検査、MEDIUM 以上で失敗) を実行する。
-`terraform plan` は CI に含めない。
-意図して無効にしている設定は、リソース直前の理由コメントの直後に `#trivy:ignore:<id>` を置いて抑止しており、`just scan` と CI の検出は 0 件になる。
-チェック定義はスキャン時に取得されるため、新しいチェックで落ちたら設定を直すか理由付きの ignore を足す。
