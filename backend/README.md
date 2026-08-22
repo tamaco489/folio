@@ -50,12 +50,31 @@ just submit <pdf>    # Submit a PDF to start the pipeline (Textract / Bedrock ch
 just fetch-corpus    # Fetch evaluation papers from arXiv
 ```
 
-By default `fetch-corpus` filters only by category (`cs.CL` or `cs.LG`). Pass arXiv search syntax to `-query` to narrow by topic, or `-ids` to pick papers directly.
+See `just --list` for the other recipes.
+
+### fetch-corpus options
+
+The default is "5 papers of 8-20 pages from the latest `cs.CL` or `cs.LG` submissions".
+
+Choosing papers:
 
 ```sh
-just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"'   # cs.CL papers with LLM in the title
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"'   # Narrow by topic (arXiv search syntax)
 just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'                 # cs.LG papers with benchmark in the abstract
 just fetch-corpus -ids 2608.20318,2301.07041                           # Pick papers by ID (no search)
 ```
 
-See `just --list` for the other recipes.
+Count and page range:
+
+```sh
+just fetch-corpus -want 3                       # Stop after 3 matching papers (0 = take every candidate)
+just fetch-corpus -max-results 100              # Collect 100 candidates from the search (some are dropped by page count)
+just fetch-corpus -min-pages 10 -max-pages 30   # Change the page range (-max-pages 0 = no upper bound)
+```
+
+Output and network:
+
+```sh
+just fetch-corpus -out ../tmp/papers            # Where the PDFs and corpus.json go (default testdata/pdf)
+just fetch-corpus -interval 5s                  # Interval between arXiv requests (default 3s, the minimum arXiv asks for)
+```
