@@ -2,68 +2,80 @@
 
 English: [README.md](README.md)
 
-Go 単一モジュール (`github.com/tamaco489/folio/backend`)。パイプラインの Lambda 5 本と、その共有層・純ロジックを持つ。
-全体像は [docs/README.ja.md](../docs/README.ja.md) を参照。
+論文 PDF を構造化 JSON に変換するパイプラインの Go コード。全体像は [docs/README.ja.md](../docs/README.ja.md)。
 
-## 前提
+## 構成
 
-- Go は ルートの `.tool-versions` のバージョン ([asdf](https://asdf-vm.com/) で管理)
-- `golangci-lint` も `.tool-versions` で固定している。CI の golangci-lint Action の `version:` と同じ値にする
+| ディレクトリ    | 中身                                                         |
+| --------------- | ------------------------------------------------------------ |
+| `cmd/pipeline/` | Lambda 5 本 (デプロイされるもの)                             |
+| `internal/`     | Lambda とツールが共有するロジック                            |
+| `tools/`        | 評価のためのローカルツール (デプロイしない)                  |
+| `layers/`       | Lambda Layer (poppler)                                       |
+| `testdata/`     | 記録済みの AWS レスポンスと評価用 PDF (`pdf/` は git 管理外) |
+
+## Lambda
+
+| Lambda            | 役割                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `validator`       | 入口。PDF として読めるか、処理済みの jobId (= SHA-256) でないかを判定する                |
+| `preprocessor`    | ページ画像とテキストレイヤーを `work/` に出す                                            |
+| `textract-parser` | 経路 A。Textract で読み取り、Bedrock で書誌情報・章立て・参考文献に整理する (英語のみ)   |
+| `bedrock-parser`  | 経路 B。ページ画像 1 枚を Bedrock に見せて構造化する (ページごとに並列)                  |
+| `finalizer`       | 出口。両経路の結果を正規化し、Crossref で参考文献を照合し、`outputs/` と DynamoDB に残す |
+
+## tools
+
+抽出精度を数値で測るための 3 つ。論文を題材にしたのは LaTeX ソースから正解を機械的に作れるため。
+
+```text
+fetch-corpus ──> PDF ──> (パイプライン) ──> 抽出結果 ──┐
+                  │                                      ├──> evaluate ──> 一致率
+                  └──> LaTeX ソース ──> build-truth ──> 正解 ──┘
+```
+
+| ツール         | 状態            | 何をするか                                                                                                                                                 |
+| -------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetch-corpus` | 実装済み        | arXiv から条件 (cs.CL / cs.LG、8〜20 ページ) に合う論文を取得し、ページ数・参考文献数・LaTeX ソースの有無・ライセンス・SHA-256 を `corpus.json` に記録する |
+| `build-truth`  | Phase 2、未実装 | LaTeX ソースから題名・著者・節見出し・参考文献を取り出し、正解 JSON にする                                                                                 |
+| `evaluate`     | Phase 2、未実装 | 抽出結果と正解 JSON を突き合わせ、項目ごとの一致率を出す。経路 A / B の比較にも使う                                                                        |
 
 ## コマンド
 
-タスクランナーは [just](https://github.com/casey/just)。`backend/` に移動して実行する。
-
 ```sh
 cd backend
-just fmt              # go fmt ./...
-just vet              # go vet ./...
-just lint             # golangci-lint run ./... (設定は .golangci.yml、CI と同じバージョン)
-just test             # go test ./...
-just fix-diff         # go fix -diff ./... (ドライラン)
-just fix              # go fix ./...
-just modernize        # gopls の modernize 解析器 (errorsastype など) の提案を表示する (ドライラン)
-just modernize-fix    # modernize の提案を適用する
-just cmds             # ビルド対象を列挙する (scripts/cmds.sh)
-just build            # 全 Lambda をクロスコンパイルする (scripts/build.sh)
-just build-one <cmd>  # 単一の Lambda をビルドする (scripts/build.sh <cmd>、例: pipeline/validator)
-just package          # bin/{関数名}.zip に固める (scripts/package.sh、先に build を実行する)
-just clean            # bin/ 配下の成果物を削除する (scripts/clean.sh)
-just upload           # package のうえで bin/*.zip を artifacts バケットの lambda/ へ置き、各関数のコードを update-function-code で差し替える (scripts/upload.sh、実行はユーザー)
-just upload-layer     # layers/pdf-processor/pdf-processor.zip を layers/ へアップロードする (先に build.sh で作る。反映は infra の just apply)
-just submit <pdf>     # PDF を documents バケットの uploads/<sha256>/original.pdf に置いてパイプラインを起動する (scripts/submit.sh、Textract / Bedrock の課金あり、実行はユーザー)
-just status [jobId]   # 直近の実行を一覧する。jobId 指定でその実行の状態・失敗原因・DynamoDB・S3 の中間生成物を表示する (scripts/status.sh、読み取りのみ)
-just cleanup <jobId>  # 再投入のために DynamoDB のレコードと uploads/ work/ outputs/ の jobId 配下を消す (scripts/cleanup.sh、確認あり、実行はユーザー)
+just build           # Lambda 5 本をビルドする
+just upload          # zip を S3 に置き、Lambda のコードを差し替える
+just submit <pdf>    # PDF を投入してパイプラインを起動する (Textract / Bedrock の課金あり)
+just fetch-corpus    # 評価用論文を arXiv から取得する
 ```
 
-`submit` `status` `cleanup` は `env` を第 2 引数で受ける (既定は `dev`)。`status` と `cleanup` のリージョンは `AWS_REGION` (未設定なら `us-east-1`) で、プロファイルの既定リージョンには従わない。
+ほかのレシピは `just --list`。
 
-PR を出す前に `just fmt` `just vet` `just lint` `just test` に加え、`just fix-diff` と `just modernize` の提案が 0 件であることを確認する。
+### fetch-corpus のオプション
 
-justfile にはシェルの処理を書かない。単一コマンドで済まないレシピは `scripts/` のスクリプトを呼ぶ。スクリプトは shellcheck で検査でき、just を介さず単体でも実行できる (自身で `backend/` へ移動するためカレントディレクトリは問わない)。
+既定は「`cs.CL` または `cs.LG` の新着から、8〜20 ページの論文を 5 本」。
+参考文献の件数は `[n]` 形式の番号から推定するため、著者-年形式の論文では 0 と出る (参考文献が無いという意味ではない)。
 
-## ビルド
-
-ビルド対象は `cmd/` 配下の `main.go` を探索して動的に決まるため、Lambda を追加しても justfile やスクリプトを変更する必要はない。
-
-ビルドは `provided.al2023` / `arm64`、出力は `bin/{関数名}/bootstrap`。
-`provided` ランタイムは実行ファイル名が `bootstrap` で固定される。
-`bin/` は git 管理外で、成果物は手で編集せず `just build` / `just package` で再生成する。
-
-## Lambda Layer
-
-poppler のネイティブバイナリを Layer として配布する。
+論文の選び方:
 
 ```sh
-cd backend/layers/pdf-processor
-./build.sh
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"' # テーマで絞る (arXiv の検索構文)
+just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'             # 要旨に benchmark を含む cs.LG
+just fetch-corpus -ids 2608.20318,2301.07041                       # ID を指名する (検索しない)
 ```
 
-詳細は [layers/pdf-processor/README.ja.md](layers/pdf-processor/README.ja.md) を参照。
+本数とページ数:
 
-## テスト
+```sh
+just fetch-corpus -want 3                     # 条件に合う論文を 3 本で止める (0 なら候補をすべて)
+just fetch-corpus -max-results 100            # 検索で集める候補を 100 件にする (ページ数で落ちる分を見込む)
+just fetch-corpus -min-pages 10 -max-pages 30 # ページ数の範囲を変える (-max-pages 0 で上限なし)
+```
 
-実 AWS を呼ばない。S3 と DynamoDB はフェイク (`internal/awsx/s3/s3test`、`internal/awsx/dynamo/dynamotest`)、Textract と Bedrock は `testdata/` の記録済みレスポンスの再生、Crossref は `internal/pipeline/verify/testdata/` の記録の再生で検証する。
-規約は `.claude/rules/go/testing.md` を参照。
+出力先と通信:
 
-CI (`.github/workflows/ci-backend.yml`) では `go.mod` の依存関係に対して `trivy fs --scanners vuln` も実行し、HIGH 以上の脆弱性があれば失敗する。ローカルでは `backend/` で `trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .` を実行すると同じ検査ができる (Trivy の版はルートの `.tool-versions` で固定)。
+```sh
+just fetch-corpus -out ../tmp/papers # PDF と corpus.json の置き場所 (既定は testdata/pdf)
+just fetch-corpus -interval 5s       # arXiv へのリクエスト間隔 (既定 3s、利用規約の下限)
+```

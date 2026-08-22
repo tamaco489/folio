@@ -105,7 +105,7 @@ folio/
 │   │   ├── awsx/           Shared — s3, dynamo, sfn, textract, bedrock (SDK wrappers; fakes in s3test, dynamotest)
 │   │   └── pipeline/       Lambda logic: validate, preprocess, textractparser, bedrockparser, finalize
 │   │                       Pure logic: pdf, extract (textractroute, bedrockroute), normalize, verify (crossref)
-│   ├── tools/              fetch-corpus, build-truth, evaluate (not deployed; not implemented yet)
+│   ├── tools/              fetch-corpus (fetches evaluation papers from arXiv); build-truth, evaluate (Phase 2, not implemented yet). Not deployed
 │   ├── testdata/           Recorded responses under textract/ and bedrock/ (Crossref recordings live in internal/pipeline/verify/testdata/)
 │   ├── layers/             Lambda Layer build definitions (Dockerfile + build.sh)
 │   ├── scripts/            Shell scripts behind the justfile recipes (cmds, build, package, clean)

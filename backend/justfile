@@ -8,6 +8,9 @@
 #
 # レシピにシェルの処理を書かない。複数行になる処理は scripts/ に置き、ここでは呼び出すだけにする
 
+# 引数を $1 $2 ... でそのまま渡す ({{ args }} の埋め込みだと sh が再分割し、空白を含む -query やその後ろのフラグが落ちる)
+set positional-arguments
+
 default:
     @just --list
 
@@ -75,6 +78,10 @@ submit pdf env="dev":
 # ステートマシンの直近の実行を一覧する。jobId を指定するとその実行の状態・失敗原因・DynamoDB・S3 の中間生成物を表示する
 status jobId="" env="dev":
     @scripts/status.sh "{{ jobId }}" "{{ env }}"
+
+# 評価用論文を arXiv から取得して testdata/pdf/ (git 管理外) に置き、corpus.json に記録する (課金なし。arXiv の利用規約で 3 秒に 1 リクエスト)
+fetch-corpus *args:
+    go run ./tools/fetch-corpus "$@"
 
 # 再投入のために DynamoDB のレコードと uploads/ work/ outputs/ の jobId 配下を消す (確認あり、実行はユーザー)
 cleanup jobId env="dev":
