@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -88,13 +89,24 @@ func TestExtractReplaysRecordedResponse(t *testing.T) {
 	if doc.Sections[0].Heading != "1 Introduction" {
 		t.Errorf("section heading = %q", doc.Sections[0].Heading)
 	}
-	// 記録は単数の page を返すため、domain の pages へ畳めていることを確かめる
-	if len(doc.Sections[0].Pages) != 1 || doc.Sections[0].Pages[0] != 1 {
-		t.Errorf("section pages = %v, want [1]", doc.Sections[0].Pages)
+	// 本文はモデルの出力ではなく、記録が指した要素 (#1-#2) から組み立てる
+	if doc.Sections[0].Text != "left one\n\nleft two" {
+		t.Errorf("section text = %q, want 要素 #1-#2 の連結", doc.Sections[0].Text)
+	}
+	if !slices.Equal(doc.Sections[0].Pages, []int{1}) {
+		t.Errorf("section pages = %v, want [1] (要素のページから求めること)", doc.Sections[0].Pages)
+	}
+	// from/to が -1 の節は見出しだけを残す
+	if doc.Sections[2].Text != "" || len(doc.Sections[2].Pages) != 0 {
+		t.Errorf("sections[2] = %+v, want 本文とページが空", doc.Sections[2])
 	}
 
 	if len(doc.References) != 1 || doc.References[0].DOI == nil || *doc.References[0].DOI != "10.1000/example.0001" {
 		t.Errorf("references = %+v", doc.References)
+	}
+	// element を持たない応答は raw をそのまま使う
+	if doc.References[0].Raw != "J. Doe. A Survey of Document Understanding. 2020." {
+		t.Errorf("reference raw = %q", doc.References[0].Raw)
 	}
 
 	// 図と表はモデルではなく Read の結果を使う
@@ -166,8 +178,64 @@ func TestExtractBuildsRequest(t *testing.T) {
 	if !ok {
 		t.Fatalf("content = %T, want TextPart", req.Messages[0].Content[0])
 	}
-	if !strings.Contains(text.Text, "[TITLE] Attention Is All You Need") {
+	if !strings.Contains(text.Text, "[#0 TITLE] Attention Is All You Need") {
 		t.Errorf("user prompt に読み順のテキストが含まれない\n---\n%s", text.Text)
+	}
+}
+
+// 節の本文と参考文献の原文を、モデルが指した要素番号から組み立てることを確かめる
+//
+// two-column.json の要素は #0 TITLE、#1-#4 TEXT (left one, left two, right one, right two)、#5 FIGURE、#6 TEXT (キャプション)
+func TestExtractAssemblesTextFromElements(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeConverser{resp: &bedrock.Response{Text: `{
+		"title": "t",
+		"sections": [
+			{"level": 1, "heading": "All", "from": 0, "to": 6},
+			{"level": 2, "heading": "Reversed", "from": 4, "to": 3},
+			{"level": 2, "heading": "Out of range", "from": 6, "to": 7}
+		],
+		"references": [
+			{"element": 6, "title": "caption as reference"},
+			{"element": 99, "title": "missing element"}
+		]
+	}`}}
+	doc, err := textractroute.New(fake, "model-x").Extract(context.Background(), sampleInput(t))
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+
+	if len(doc.Sections) != 3 {
+		t.Fatalf("sections = %d, want 3", len(doc.Sections))
+	}
+	// 見出し (#0 TITLE) と図 (#5 FIGURE) は本文に含めない
+	if want := "left one\n\nleft two\n\nright one\n\nright two\n\nFigure 1: The Transformer architecture."; doc.Sections[0].Text != want {
+		t.Errorf("sections[0].Text = %q, want %q", doc.Sections[0].Text, want)
+	}
+	if !slices.Equal(doc.Sections[0].Pages, []int{1, 2}) {
+		t.Errorf("sections[0].Pages = %v, want [1 2]", doc.Sections[0].Pages)
+	}
+	for i := 1; i <= 2; i++ {
+		if doc.Sections[i].Text != "" || doc.Sections[i].Heading == "" {
+			t.Errorf("sections[%d] = %+v, want 見出しだけを残し本文は空", i, doc.Sections[i])
+		}
+	}
+
+	if len(doc.References) != 2 {
+		t.Fatalf("references = %d, want 2", len(doc.References))
+	}
+	if doc.References[0].Raw != "Figure 1: The Transformer architecture." {
+		t.Errorf("references[0].Raw = %q, want 要素 #6 の文字列", doc.References[0].Raw)
+	}
+	if doc.References[1].Raw != "" {
+		t.Errorf("references[1].Raw = %q, want 空", doc.References[1].Raw)
+	}
+
+	for _, want := range []string{"sections[1]", "sections[2]", "references[1]"} {
+		if !slices.ContainsFunc(doc.Provenance.Warnings, func(w string) bool { return strings.HasPrefix(w, want) }) {
+			t.Errorf("warnings = %q, want %s の警告", doc.Provenance.Warnings, want)
+		}
 	}
 }
 
