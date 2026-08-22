@@ -189,6 +189,10 @@ The justfiles hold no shell logic; recipes that need more than a single command 
 | Lambda timeout         | 15 minutes maximum                      | Wait on the Step Functions side          |
 | Protected PDFs         | Cannot be processed by Textract         | Reject in the validation layer           |
 
+## Phase 1 comparison report
+
+The results of running five English papers through both routes (timing, cost, output differences, confidence, problems encountered) are in [phase1-経路比較/00_目次.html](phase1-経路比較/00_目次.html) (Japanese, HTML). Open it in a browser; GitHub shows HTML files as source.
+
 ## Evaluation corpus
 
 Papers from arXiv `cs.CL` and `cs.LG`, 8 to 20 pages, with LaTeX sources available.
