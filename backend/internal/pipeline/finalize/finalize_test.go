@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -369,7 +370,7 @@ func TestHandleBothRoutesSucceed(t *testing.T) {
 		t.Errorf("comparison のヘッダ = %+v", cmp)
 	}
 	for route, r := range map[string]RouteResult{"textract": cmp.Routes.Textract, "bedrock": cmp.Routes.Bedrock} {
-		if r.Status != RouteSucceeded || r.Error != "" || r.NeedsReview || r.Report == nil || r.Cost == nil || r.DurationMs == 0 {
+		if r.Status != RouteSucceeded || r.Error != "" || r.MissingPages != 0 || r.NeedsReview || r.Report == nil || r.Cost == nil || r.DurationMs == 0 {
 			t.Errorf("routes.%s = %+v", route, r)
 		}
 	}
@@ -555,41 +556,128 @@ func TestHandleSkipTextract(t *testing.T) {
 	}
 }
 
-// 経路 B の一部のページが無くても続行し、欠落を警告に残すことを確かめる
-func TestHandleBedrockPartialPages(t *testing.T) {
+// 経路 B のページが欠落したり Map の Catch が理由を残した場合は、揃ったページで続行しつつ succeeded のまま needsReview に倒し、欠落の件数と理由を comparison.json に残すことを確かめる
+//
+// Map の途中失敗は揃ったページだけの不完全な結果になるため、verify が異常を見つけなくても COMPLETED にしない (経路 A は揃っているので全体は REVIEW_PENDING)
+func TestHandleBedrockPartialRoute(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t)
-	e.seedAll(t)
-	// 3 ページの文書として扱い、3 ページ目だけが無い状態にする
-	in := input()
-	in.PageCount = 3
+	const pageDecodeCatch = `{"Error":"PageDecodeError","Cause":"{\"jobId\":\"` + jobID + `\",\"page\":3}"}`
 
-	out, err := e.handler.Handle(context.Background(), in)
-	if err != nil {
-		t.Fatalf("Handle() error = %v", err)
-	}
-	if out == nil {
-		t.Fatal("Handle() = nil, want output")
-	}
-	if out.ResultBedrockKey != s3.ResultBedrockKey(jobID) {
-		t.Errorf("Handle() = %+v", out)
-	}
-	if !e.fetched(s3.BedrockPageResultKey(jobID, 3)) {
-		t.Error("3 ページ目を読みに行っていない")
+	tests := map[string]struct {
+		pageCount       int
+		seedPages       bool
+		catch           string
+		wantRoute       RouteStatus
+		wantMissing     int
+		wantError       string
+		wantRouteReview bool
+		wantStatus      dynamo.Status
+	}{
+		"正常系_ページが欠落した場合_欠落数を残してレビュー要になること": {
+			pageCount:       3,
+			seedPages:       true,
+			wantRoute:       RouteSucceeded,
+			wantMissing:     1,
+			wantRouteReview: true,
+			wantStatus:      dynamo.StatusReviewPending,
+		},
+		"正常系_Catch の理由がある場合_Error を残してレビュー要になること": {
+			pageCount:       pageCount,
+			seedPages:       true,
+			catch:           pageDecodeCatch,
+			wantRoute:       RouteSucceeded,
+			wantError:       "PageDecodeError",
+			wantRouteReview: true,
+			wantStatus:      dynamo.StatusReviewPending,
+		},
+		"正常系_ページが欠落し Catch の理由もある場合_両方を残してレビュー要になること": {
+			pageCount:       3,
+			seedPages:       true,
+			catch:           pageDecodeCatch,
+			wantRoute:       RouteSucceeded,
+			wantMissing:     1,
+			wantError:       "PageDecodeError",
+			wantRouteReview: true,
+			wantStatus:      dynamo.StatusReviewPending,
+		},
+		"正常系_欠落も Catch の理由も無い場合_従来どおり COMPLETED になること": {
+			pageCount:  pageCount,
+			seedPages:  true,
+			wantRoute:  RouteSucceeded,
+			wantStatus: dynamo.StatusCompleted,
+		},
+		"正常系_ページ結果が 1 件も無い場合_従来どおり failed になること": {
+			pageCount:  pageCount,
+			catch:      pageDecodeCatch,
+			wantRoute:  RouteFailed,
+			wantError:  "PageDecodeError",
+			wantStatus: dynamo.StatusReviewPending,
+		},
 	}
 
-	var b domain.Document
-	e.object(t, s3.ResultBedrockKey(jobID), &b)
-	if !slices.Contains(b.Provenance.Warnings, "ページの抽出結果が欠落したまま結合した: page=3") {
-		t.Errorf("経路 B の warnings = %q, want 欠落の警告", b.Provenance.Warnings)
-	}
-	if b.Source.PageCount != 3 || len(b.Sections) != 2 {
-		t.Errorf("経路 B = pageCount %d, sections %d (揃ったページだけで結合すること)", b.Source.PageCount, len(b.Sections))
-	}
-	cmp := e.comparison(t)
-	if cmp.Routes.Bedrock.Status != RouteSucceeded || !slices.Contains(cmp.Routes.Bedrock.Warnings, "ページの抽出結果が欠落したまま結合した: page=3") {
-		t.Errorf("routes.bedrock = %+v", cmp.Routes.Bedrock)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			e := newEnv(t)
+			e.seedPDF(t)
+			e.seedLayer(t)
+			e.seedTextract(t, textractDocument())
+			if tt.seedPages {
+				e.seedBedrock(t, bedrockPages())
+			}
+			in := input()
+			in.PageCount = tt.pageCount
+			in.Bedrock = json.RawMessage(tt.catch)
+
+			out, err := e.handler.Handle(context.Background(), in)
+			if err != nil {
+				t.Fatalf("Handle() error = %v", err)
+			}
+			if out == nil {
+				t.Fatal("Handle() = nil, want output")
+			}
+			wantReview := tt.wantStatus == dynamo.StatusReviewPending
+			if out.Status != tt.wantStatus || out.NeedsReview != wantReview {
+				t.Errorf("Handle() = %+v, want %s / needsReview %v", out, tt.wantStatus, wantReview)
+			}
+			if got := e.jobs.Attr(jobID, "status"); got != string(tt.wantStatus) {
+				t.Errorf("DynamoDB の status = %q, want %s", got, tt.wantStatus)
+			}
+			for page := 1; page <= tt.pageCount; page++ {
+				if !e.fetched(s3.BedrockPageResultKey(jobID, page)) {
+					t.Errorf("%d ページ目を読みに行っていない", page)
+				}
+			}
+
+			cmp := e.comparison(t)
+			r := cmp.Routes.Bedrock
+			if r.Status != tt.wantRoute || r.MissingPages != tt.wantMissing || r.Error != tt.wantError || r.NeedsReview != tt.wantRouteReview {
+				t.Errorf("routes.bedrock = %+v, want status %s, missingPages %d, error %q, needsReview %v", r, tt.wantRoute, tt.wantMissing, tt.wantError, tt.wantRouteReview)
+			}
+			if cmp.Status != tt.wantStatus || cmp.NeedsReview != wantReview {
+				t.Errorf("comparison = status %q, needsReview %v", cmp.Status, cmp.NeedsReview)
+			}
+			if tt.wantRoute != RouteSucceeded {
+				e.assertAbsent(t, s3.ResultBedrockKey(jobID))
+				return
+			}
+			if r.ResultKey != s3.ResultBedrockKey(jobID) || r.Report == nil || r.Report.NeedsReview {
+				t.Errorf("routes.bedrock = %+v, want resultKey と verify の根拠 (verify 自体はレビュー不要)", r)
+			}
+			// 揃ったページだけで結合し、欠落は Merge の警告にも残ること
+			var b domain.Document
+			e.object(t, s3.ResultBedrockKey(jobID), &b)
+			if b.Source.PageCount != tt.pageCount || len(b.Sections) != 2 {
+				t.Errorf("経路 B = pageCount %d, sections %d (揃ったページだけで結合すること)", b.Source.PageCount, len(b.Sections))
+			}
+			for page := pageCount + 1; page <= tt.pageCount; page++ {
+				warning := fmt.Sprintf("ページの抽出結果が欠落したまま結合した: page=%d", page)
+				if !slices.Contains(b.Provenance.Warnings, warning) || !slices.Contains(r.Warnings, warning) {
+					t.Errorf("欠落の警告が無い: result %q, comparison %q", b.Provenance.Warnings, r.Warnings)
+				}
+			}
+		})
 	}
 }
 

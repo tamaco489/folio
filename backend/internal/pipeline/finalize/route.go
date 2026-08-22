@@ -44,7 +44,9 @@ func (h *Handler) textractRoute(ctx context.Context, in Input, layer string) (ro
 
 // bedrockRoute は経路 B のページ結果を結合し、正規化・検証して outputs/ へ書く
 //
-// 成功したかはページ結果が 1 ページ以上読めたかで判定し、欠落したページは Merge が警告に落として続行する
+// ページ結果が 1 件も無ければ failed、1 件でもあれば succeeded とするが、欠落したページがあるか Map の Catch が理由を残していればレビュー要にする
+// Map の途中失敗は揃ったページだけで結合した不完全な結果になるため (参考文献のページが無いと references が 0 件になる)、verify が異常を見つけなくても COMPLETED にしない
+// 欠落は Merge が警告にも落とすが、件数と Catch の理由を RouteResult に残して comparison.json から読めるようにする
 func (h *Handler) bedrockRoute(ctx context.Context, in Input, layer string) (route, error) {
 	pages, err := h.readPages(ctx, in)
 	if err != nil {
@@ -82,12 +84,23 @@ func (h *Handler) bedrockRoute(ctx context.Context, in Input, layer string) (rou
 		Pages: results,
 	})
 	doc.Provenance.ExtractedAt, doc.Provenance.DurationMs = timing(pages)
-	return h.finish(ctx, doc, layer, s3.ResultBedrockKey(in.JobID))
+	r, err := h.finish(ctx, doc, layer, s3.ResultBedrockKey(in.JobID))
+	if err != nil {
+		return route{}, err
+	}
+	r.result.MissingPages = in.PageCount - len(pages)
+	if c, ok := parseCatch(in.Bedrock); ok {
+		r.result.Error, r.result.Cause = c.Error, c.Cause
+	}
+	if r.result.MissingPages > 0 || r.result.Error != "" {
+		r.result.NeedsReview = true
+	}
+	return r, nil
 }
 
 // readPages は経路 B のページ結果を 1 ページ目から pageCount まで読み、無いページは飛ばす
 //
-// Map の一部が失敗したページは無いままであり、再試行しても現れないため NotFound は失敗として扱わない
+// Map の一部が失敗したページは無いままであり、再試行しても現れないため NotFound はエラーにせず、欠落の件数は bedrockRoute が pageCount との差から求める
 func (h *Handler) readPages(ctx context.Context, in Input) ([]bedrockparser.PageOutput, error) {
 	pages := make([]bedrockparser.PageOutput, 0, in.PageCount)
 	for page := 1; page <= in.PageCount; page++ {
