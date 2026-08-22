@@ -45,6 +45,28 @@ They run in **Parallel** rather than being selected by a Choice state, because t
 
 Textract does not support Japanese, so Japanese PDFs only go through Route B.
 
+### State machine
+
+![folio state machine](images/stepfunctions_graph.svg)
+
+Exported from the Step Functions console (`dev-folio-pipeline`). The definition lives in [infra/modules/pipeline/definition.asl.json](../infra/modules/pipeline/definition.asl.json); re-export the graph after changing it.
+
+The execution has three stages.
+
+| Stage    | States                              | What happens                                                                                                                                            |
+| -------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Intake   | `Validate` → `RouteByDecision`      | validator checks the PDF and idempotency. `PROCEED` continues; an already processed job ends at `Skipped` (Succeed), invalid input at `Rejected` (Fail) |
+| Extract  | `Preprocess` → `Extract` (Parallel) | preprocessor renders page images and the text layer, then route A and route B run side by side                                                          |
+| Finalize | `Finalize` → `Done`                 | finalizer normalizes and verifies both results and writes them to `outputs/` and DynamoDB                                                               |
+
+The two branches of `Extract` fail independently.
+
+- Route A: `TextractOrSkip` diverts Japanese PDFs (`skipTextract`) to `TextractSkipped` (Pass). `Textract` waits on the asynchronous Textract job with `.waitForTaskToken`; textract-parser, invoked by the completion notification, structures the output through Bedrock and returns the token
+- Route B: `BedrockPages` (Map) invokes `BedrockPage` (bedrock-parser) per page with a concurrency of 5
+
+Failures in either branch are caught and routed to `TextractFailed` / `BedrockFailed` (Pass), which carry the error in their output into `Finalize`.
+One failed route does not stop the execution; only when both fail does finalizer return `NoResultError` and fail it. Comparison is the goal, so whichever result was obtained is kept.
+
 ### Lambda functions
 
 | Function          | Responsibility                                       |
@@ -60,32 +82,40 @@ Function names are derived by joining the path under `cmd/` with hyphens.
 
 Environment variables read by the functions (`internal/config`). `FOLIO_ENV` and `AWS_REGION` are read by every function.
 
-| Variable                       | Read by                         | Purpose                                                    |
-| ------------------------------ | ------------------------------- | ---------------------------------------------------------- |
-| `FOLIO_ENV`                    | all                             | Environment identifier (`dev` / `stg` / `prd`)             |
-| `FOLIO_DOCUMENTS_BUCKET`       | all                             | S3 bucket name                                             |
-| `FOLIO_JOBS_TABLE`             | validator, finalizer            | DynamoDB table name                                        |
-| `FOLIO_BEDROCK_MODEL_ID`       | textract-parser, bedrock-parser | Model ID used for structuring                              |
-| `FOLIO_TEXTRACT_SNS_TOPIC_ARN` | textract-parser                 | Textract completion notification topic                     |
-| `FOLIO_TEXTRACT_ROLE_ARN`      | textract-parser                 | Role Textract assumes to publish to SNS                    |
-| `FOLIO_TEXTRACT_FEATURE_TYPES` | textract-parser (optional)      | FeatureTypes, comma-separated (default `LAYOUT,TABLES`)    |
-| `FOLIO_CROSSREF_MAILTO`        | finalizer (optional)            | Contact address for the Crossref polite pool               |
+| Variable                       | Read by                         | Purpose                                                 |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------- |
+| `FOLIO_ENV`                    | all                             | Environment identifier (`dev` / `stg` / `prd`)          |
+| `FOLIO_DOCUMENTS_BUCKET`       | all                             | S3 bucket name                                          |
+| `FOLIO_JOBS_TABLE`             | validator, finalizer            | DynamoDB table name                                     |
+| `FOLIO_BEDROCK_MODEL_ID`       | textract-parser, bedrock-parser | Model ID used for structuring                           |
+| `FOLIO_TEXTRACT_SNS_TOPIC_ARN` | textract-parser                 | Textract completion notification topic                  |
+| `FOLIO_TEXTRACT_ROLE_ARN`      | textract-parser                 | Role Textract assumes to publish to SNS                 |
+| `FOLIO_TEXTRACT_FEATURE_TYPES` | textract-parser (optional)      | FeatureTypes, comma-separated (default `LAYOUT,TABLES`) |
+| `FOLIO_CROSSREF_MAILTO`        | finalizer (optional)            | Contact address for the Crossref polite pool            |
 
 ### S3 key layout
 
 Roles are separated by prefix within a single bucket.
 
 ```text
-uploads/{jobId}/original.pdf          Received PDF. Event trigger point
-work/{jobId}/pages/page-NNNN.png      Rasterized pages
-work/{jobId}/textract/raw.json        Raw Textract output
-work/{jobId}/textract/callback.json   Data needed to answer the Textract completion notification (task token etc.)
-work/{jobId}/textract/document.json   Route A structured result before normalization (read by the finalizer)
-work/{jobId}/bedrock/page-NNNN.json   Per-page extraction result of Route B
-work/{jobId}/text/layer.txt           Extracted text layer
-outputs/{jobId}/result-textract.json  Route A result
-outputs/{jobId}/result-bedrock.json   Route B result
-outputs/{jobId}/comparison.json       Diff and evaluation of both routes
+{bucket}/
+├── uploads/{jobId}/
+│   └── original.pdf            Received PDF. Event trigger point
+├── work/{jobId}/
+│   ├── pages/
+│   │   └── page-NNNN.png       Rasterized pages
+│   ├── text/
+│   │   └── layer.txt           Extracted text layer
+│   ├── textract/
+│   │   ├── raw.json            Raw Textract output
+│   │   ├── callback.json       Data needed to answer the Textract completion notification (task token etc.)
+│   │   └── document.json       Route A structured result before normalization (read by the finalizer)
+│   └── bedrock/
+│       └── page-NNNN.json      Per-page extraction result of Route B
+└── outputs/{jobId}/
+    ├── result-textract.json    Route A result
+    ├── result-bedrock.json     Route B result
+    └── comparison.json         Diff and evaluation of both routes
 ```
 
 Event notifications filter on both the `uploads/` prefix and the `.pdf` suffix.

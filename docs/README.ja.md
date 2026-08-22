@@ -45,6 +45,28 @@ Choice による選択ではなく **Parallel による並走**とするのは�
 
 Textract は日本語に対応しないため、日本語 PDF は経路 B のみを通る。
 
+### ステートマシン
+
+![folio のステートマシン](images/stepfunctions_graph.svg)
+
+図は Step Functions コンソールからエクスポートしたもの (`dev-folio-pipeline`)。定義の編集元は [infra/modules/pipeline/definition.asl.json](../infra/modules/pipeline/definition.asl.json) で、変更したら再エクスポートする。
+
+処理は 3 段に分かれる。
+
+| 段       | State                               | 内容                                                                                                                                           |
+| -------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 受け付け | `Validate` → `RouteByDecision`      | validator が PDF の妥当性と冪等性を判定し、`PROCEED` なら先へ進む。処理済みなら `Skipped` (Succeed)、不正な入力なら `Rejected` (Fail) で終わる |
+| 抽出     | `Preprocess` → `Extract` (Parallel) | preprocessor がページ画像とテキストレイヤーを作り、経路 A と経路 B を並走させる                                                                |
+| 確定     | `Finalize` → `Done`                 | finalizer が両経路の結果を正規化・検証して `outputs/` と DynamoDB に書く                                                                       |
+
+`Extract` の 2 本のブランチはそれぞれ独立に失敗できる。
+
+- 経路 A: `TextractOrSkip` が `skipTextract` (日本語 PDF) を見て `TextractSkipped` (Pass) に逃がす。`Textract` は `.waitForTaskToken` で Textract の非同期ジョブを待ち、完了通知を受けた textract-parser が Bedrock で構造化してトークンを返す
+- 経路 B: `BedrockPages` (Map) がページごとに `BedrockPage` (bedrock-parser) を並列 5 で起動する
+
+どちらのブランチも失敗は Catch で `TextractFailed` / `BedrockFailed` (Pass) に落とし、エラーの内容を出力に載せたまま `Finalize` へ進む。
+片方が失敗しても実行は止めず、両方失敗したときだけ finalizer が `NoResultError` を返して実行を失敗させる。比較が目的なので、取れた方の結果を残すことを優先している。
+
 ### Lambda
 
 | 関数              | 責務                                         |
@@ -76,16 +98,24 @@ Lambda が読む環境変数 (`internal/config`)。`FOLIO_ENV` と `AWS_REGION` 
 同一バケット内でプレフィックスにより役割を分ける。
 
 ```text
-uploads/{jobId}/original.pdf          受領した PDF。イベント発火点
-work/{jobId}/pages/page-NNNN.png      ラスタライズ結果
-work/{jobId}/textract/raw.json        Textract の生出力
-work/{jobId}/textract/callback.json   Textract 完了通知への応答に要する情報 (タスクトークンなど)
-work/{jobId}/textract/document.json   経路 A の正規化前の構造化結果 (finalizer が読む)
-work/{jobId}/bedrock/page-NNNN.json   経路 B のページ単位の抽出結果
-work/{jobId}/text/layer.txt           テキストレイヤー抽出結果
-outputs/{jobId}/result-textract.json  経路 A の抽出結果
-outputs/{jobId}/result-bedrock.json   経路 B の抽出結果
-outputs/{jobId}/comparison.json       両経路の差分と評価
+{bucket}/
+├── uploads/{jobId}/
+│   └── original.pdf            受領した PDF。イベント発火点
+├── work/{jobId}/
+│   ├── pages/
+│   │   └── page-NNNN.png       ラスタライズ結果
+│   ├── text/
+│   │   └── layer.txt           テキストレイヤー抽出結果
+│   ├── textract/
+│   │   ├── raw.json            Textract の生出力
+│   │   ├── callback.json       Textract 完了通知への応答に要する情報 (タスクトークンなど)
+│   │   └── document.json       経路 A の正規化前の構造化結果 (finalizer が読む)
+│   └── bedrock/
+│       └── page-NNNN.json      経路 B のページ単位の抽出結果
+└── outputs/{jobId}/
+    ├── result-textract.json    経路 A の抽出結果
+    ├── result-bedrock.json     経路 B の抽出結果
+    └── comparison.json         両経路の差分と評価
 ```
 
 イベント通知は `uploads/` プレフィックスと `.pdf` サフィックスの両方でフィルタする。
