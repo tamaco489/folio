@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -58,10 +57,10 @@ func (c *Client) MarkFailed(ctx context.Context, jobID, reason string) (Job, err
 
 func (c *Client) updateItem(ctx context.Context, jobID, expr string, names map[string]string, values map[string]awsdynamodbtypes.AttributeValue) (Job, error) {
 	out, err := c.api.UpdateItem(ctx, &awsdynamodb.UpdateItemInput{
-		TableName:                 aws.String(c.tableName),
+		TableName:                 new(c.tableName),
 		Key:                       jobKey(jobID),
-		UpdateExpression:          aws.String(expr),
-		ConditionExpression:       aws.String("attribute_exists(#jobId)"),
+		UpdateExpression:          new(expr),
+		ConditionExpression:       new("attribute_exists(#jobId)"),
 		ExpressionAttributeNames:  names,
 		ExpressionAttributeValues: values,
 		ReturnValues:              awsdynamodbtypes.ReturnValueAllNew,

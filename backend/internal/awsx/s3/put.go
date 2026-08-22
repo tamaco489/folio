@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -17,7 +16,7 @@ type PutOption func(*awss3.PutObjectInput)
 // WithContentType は Content-Type を指定する
 func WithContentType(contentType string) PutOption {
 	return func(in *awss3.PutObjectInput) {
-		in.ContentType = aws.String(contentType)
+		in.ContentType = new(contentType)
 	}
 }
 
@@ -26,7 +25,7 @@ func WithContentType(contentType string) PutOption {
 // SDK は seek できない io.Reader を渡されるとサイズを判定できないため、Put でストリームを渡す場合は明示する
 func WithContentLength(size int64) PutOption {
 	return func(in *awss3.PutObjectInput) {
-		in.ContentLength = aws.Int64(size)
+		in.ContentLength = new(size)
 	}
 }
 
@@ -40,8 +39,8 @@ func WithMetadata(metadata map[string]string) PutOption {
 // Put はストリームをオブジェクトとして保存する
 func (c *Client) Put(ctx context.Context, key string, body io.Reader, opts ...PutOption) error {
 	in := &awss3.PutObjectInput{
-		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Bucket: new(c.bucket),
+		Key:    new(key),
 		Body:   body,
 	}
 	for _, opt := range opts {

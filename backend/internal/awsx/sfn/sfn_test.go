@@ -111,7 +111,7 @@ func TestSendTaskFoldsGoneErrors(t *testing.T) {
 		err      error
 		wantGone bool
 	}{
-		"正常系_InvalidToken の場合_ErrTaskGone に畳まれること":     {err: &awssfntypes.InvalidToken{Message: aws.String("Invalid Token")}, wantGone: true},
+		"正常系_InvalidToken の場合_ErrTaskGone に畳まれること":     {err: &awssfntypes.InvalidToken{Message: new("Invalid Token")}, wantGone: true},
 		"正常系_TaskTimedOut の場合_ErrTaskGone に畳まれること":     {err: &awssfntypes.TaskTimedOut{}, wantGone: true},
 		"正常系_TaskDoesNotExist の場合_ErrTaskGone に畳まれること": {err: &awssfntypes.TaskDoesNotExist{}, wantGone: true},
 		"正常系_その他のエラーの場合_ErrTaskGone にならないこと":           {err: &awssfntypes.InvalidOutput{}, wantGone: false},

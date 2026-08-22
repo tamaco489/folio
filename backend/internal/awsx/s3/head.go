@@ -22,8 +22,8 @@ type ObjectInfo struct {
 // Head はオブジェクトのメタデータを取得する
 func (c *Client) Head(ctx context.Context, key string) (ObjectInfo, error) {
 	out, err := c.api.HeadObject(ctx, &awss3.HeadObjectInput{
-		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Bucket: new(c.bucket),
+		Key:    new(key),
 	})
 	if err != nil {
 		return ObjectInfo{}, wrapErr("head object", key, err)

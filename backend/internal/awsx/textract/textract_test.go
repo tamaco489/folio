@@ -25,7 +25,7 @@ type fakeAPI struct {
 func (f *fakeAPI) StartDocumentAnalysis(_ context.Context, in *awstextract.StartDocumentAnalysisInput, _ ...func(*awstextract.Options)) (*awstextract.StartDocumentAnalysisOutput, error) {
 	f.startInputs = append(f.startInputs, in)
 	if f.start == nil {
-		return &awstextract.StartDocumentAnalysisOutput{JobId: aws.String("job-1")}, nil
+		return &awstextract.StartDocumentAnalysisOutput{JobId: new("job-1")}, nil
 	}
 	return f.start(in)
 }
@@ -142,7 +142,7 @@ func TestGetDocumentAnalysisFailed(t *testing.T) {
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
 			return &awstextract.GetDocumentAnalysisOutput{
 				JobStatus:     awstextracttypes.JobStatusFailed,
-				StatusMessage: aws.String("document is password protected"),
+				StatusMessage: new("document is password protected"),
 			}, nil
 		},
 	}
@@ -163,7 +163,7 @@ func TestGetDocumentAnalysisDetectsRepeatedToken(t *testing.T) {
 		get: func(*awstextract.GetDocumentAnalysisInput) (*awstextract.GetDocumentAnalysisOutput, error) {
 			return &awstextract.GetDocumentAnalysisOutput{
 				JobStatus: awstextracttypes.JobStatusSucceeded,
-				NextToken: aws.String("same"),
+				NextToken: new("same"),
 			}, nil
 		},
 	}
@@ -187,8 +187,8 @@ func TestDetectDocumentTextUsesBytesWhenGiven(t *testing.T) {
 	api := &fakeAPI{
 		detect: func(*awstextract.DetectDocumentTextInput) (*awstextract.DetectDocumentTextOutput, error) {
 			return &awstextract.DetectDocumentTextOutput{
-				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: aws.String("hello")}},
-				DetectDocumentTextModelVersion: aws.String("1.0"),
+				Blocks:                         []awstextracttypes.Block{{BlockType: awstextracttypes.BlockTypeLine, Text: new("hello")}},
+				DetectDocumentTextModelVersion: new("1.0"),
 			}, nil
 		},
 	}

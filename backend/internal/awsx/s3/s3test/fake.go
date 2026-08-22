@@ -69,8 +69,8 @@ func (f *Fake) GetObject(_ context.Context, params *awss3.GetObjectInput, _ ...f
 
 	return &awss3.GetObjectOutput{
 		Body:          io.NopCloser(bytes.NewReader(obj.Body)),
-		ContentLength: aws.Int64(int64(len(obj.Body))),
-		ContentType:   aws.String(obj.ContentType),
+		ContentLength: new(int64(len(obj.Body))),
+		ContentType:   new(obj.ContentType),
 		Metadata:      obj.Metadata,
 	}, nil
 }
@@ -109,10 +109,10 @@ func (f *Fake) HeadObject(_ context.Context, params *awss3.HeadObjectInput, _ ..
 	}
 
 	return &awss3.HeadObjectOutput{
-		ContentLength: aws.Int64(int64(len(obj.Body))),
-		ContentType:   aws.String(obj.ContentType),
-		ETag:          aws.String(`"fake-etag"`),
-		LastModified:  aws.Time(obj.LastModified),
+		ContentLength: new(int64(len(obj.Body))),
+		ContentType:   new(obj.ContentType),
+		ETag:          new(`"fake-etag"`),
+		LastModified:  new(obj.LastModified),
 		Metadata:      obj.Metadata,
 	}, nil
 }

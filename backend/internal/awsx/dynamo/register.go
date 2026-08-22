@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -30,9 +29,9 @@ func (c *Client) RegisterJob(ctx context.Context, jobID, filename string) (Job, 
 	}
 
 	_, err = c.api.PutItem(ctx, &awsdynamodb.PutItemInput{
-		TableName:           aws.String(c.tableName),
+		TableName:           new(c.tableName),
 		Item:                item,
-		ConditionExpression: aws.String("attribute_not_exists(#jobId) OR #status = :failed"),
+		ConditionExpression: new("attribute_not_exists(#jobId) OR #status = :failed"),
 		ExpressionAttributeNames: map[string]string{
 			"#jobId":  attrJobID,
 			"#status": attrStatus,
