@@ -201,8 +201,13 @@
                     "TimeoutSeconds": 660,
                     "Retry": [
                       {
-                        "ErrorEquals": ["InvalidInputError", "PageDecodeError"],
+                        "ErrorEquals": ["InvalidInputError"],
                         "MaxAttempts": 0
+                      },
+                      {
+                        "ErrorEquals": ["PageDecodeError"],
+                        "IntervalSeconds": 5,
+                        "MaxAttempts": 1
                       },
                       {
                         "ErrorEquals": ["States.TaskFailed"],
