@@ -75,7 +75,7 @@ func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, erro
 	}
 
 	in := &awsbedrockruntime.ConverseInput{
-		ModelId:  aws.String(modelID),
+		ModelId:  new(modelID),
 		Messages: messages,
 	}
 	if req.System != "" {

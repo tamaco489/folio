@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
@@ -23,7 +22,7 @@ func (s *fakeSleeper) sleep(_ context.Context, d time.Duration) error {
 }
 
 func throttling() error {
-	return &awsbedrockruntimetypes.ThrottlingException{Message: aws.String("Too many requests")}
+	return &awsbedrockruntimetypes.ThrottlingException{Message: new("Too many requests")}
 }
 
 func testRetryConfig() RetryConfig {
@@ -164,7 +163,7 @@ func TestConverseBackoffJitter(t *testing.T) {
 
 // 入力起因の失敗はリトライしない
 func TestConverseDoesNotRetryValidationError(t *testing.T) {
-	api := &fakeAPI{errs: []error{&awsbedrockruntimetypes.ValidationException{Message: aws.String("bad input")}}}
+	api := &fakeAPI{errs: []error{&awsbedrockruntimetypes.ValidationException{Message: new("bad input")}}}
 	sleeper := &fakeSleeper{}
 	c := New(api,
 		WithDefaultModelID("m"),

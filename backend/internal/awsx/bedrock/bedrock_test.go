@@ -41,11 +41,11 @@ func textOutput(text string) *awsbedrockruntime.ConverseOutput {
 		},
 		StopReason: awsbedrockruntimetypes.StopReasonEndTurn,
 		Usage: &awsbedrockruntimetypes.TokenUsage{
-			InputTokens:  aws.Int32(1200),
-			OutputTokens: aws.Int32(340),
-			TotalTokens:  aws.Int32(1540),
+			InputTokens:  new(int32(1200)),
+			OutputTokens: new(int32(340)),
+			TotalTokens:  new(int32(1540)),
 		},
-		Metrics: &awsbedrockruntimetypes.ConverseMetrics{LatencyMs: aws.Int64(4321)},
+		Metrics: &awsbedrockruntimetypes.ConverseMetrics{LatencyMs: new(int64(4321))},
 	}
 }
 
@@ -56,8 +56,8 @@ func TestConverseTextInput(t *testing.T) {
 	resp, err := c.Converse(context.Background(), Request{
 		System:      "structure the document",
 		Messages:    []Message{UserText("PAGE 1 ...")},
-		MaxTokens:   aws.Int32(4096),
-		Temperature: aws.Float32(0),
+		MaxTokens:   new(int32(4096)),
+		Temperature: new(float32(0)),
 	})
 	if err != nil {
 		t.Fatalf("Converse: %v", err)
