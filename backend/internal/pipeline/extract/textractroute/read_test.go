@@ -290,7 +290,7 @@ func TestReadingText(t *testing.T) {
 
 	for _, want := range []string{
 		"## page 1",
-		"[LINE] Results are summarised below.",
+		"[#0 LINE] Results are summarised below.",
 		"[TABLE table-1]",
 		"| Model | BLEU | BLEU | Cost | Cost |",
 		"| Model | EN-DE | EN-FR | FLOPs | Params |",
@@ -303,11 +303,27 @@ func TestReadingText(t *testing.T) {
 	}
 
 	layout := read(t, filepath.Join(fixtureDir, "two-column.json")).Text()
-	if !strings.Contains(layout, "[TITLE] Attention Is All You Need") {
+	if !strings.Contains(layout, "[#0 TITLE] Attention Is All You Need") {
 		t.Errorf("Text に LAYOUT の種別が付いていない\n---\n%s", layout)
 	}
 	if strings.Index(layout, "left one") > strings.Index(layout, "right one") {
 		t.Error("Text が読み順になっていない")
+	}
+}
+
+// LAYOUT_LIST は子の LAYOUT_TEXT を個別の要素にし、親の連結テキストを重ねて要素にしないことを確かめる
+func TestReadDropsListWrapper(t *testing.T) {
+	t.Parallel()
+
+	r := read(t, filepath.Join(fixtureDir, "list.json"))
+
+	if got := texts(r.Elements); !slices.Equal(got, []string{"[1] first entry", "[2] second entry"}) {
+		t.Fatalf("elements = %q, want 子の 2 件だけ (親 LIST の連結テキストを含まないこと)", got)
+	}
+	for i, e := range r.Elements {
+		if e.Type != awstextracttypes.BlockTypeLayoutText {
+			t.Errorf("elements[%d] の型 = %q, want LAYOUT_TEXT", i, e.Type)
+		}
 	}
 }
 
