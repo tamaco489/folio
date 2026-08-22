@@ -2,6 +2,7 @@ package textractroute_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"slices"
@@ -36,6 +37,11 @@ func (f *fakeConverser) Converse(_ context.Context, req bedrock.Request) (*bedro
 		return nil, f.err
 	}
 	return f.resp, nil
+}
+
+// toolResponse は tool use で受け取った応答を模す
+func toolResponse(input string) *bedrock.Response {
+	return &bedrock.Response{ToolInput: json.RawMessage(input), StopReason: "tool_use"}
 }
 
 func sampleInput(t *testing.T) textractroute.Input {
@@ -149,7 +155,7 @@ func TestExtractReplaysRecordedResponse(t *testing.T) {
 func TestExtractBuildsRequest(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeConverser{resp: &bedrock.Response{Text: `{"title":"t"}`}}
+	fake := &fakeConverser{resp: toolResponse(`{"title":"t"}`)}
 	if _, err := textractroute.New(fake, "model-x").Extract(context.Background(), sampleInput(t)); err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
@@ -168,8 +174,20 @@ func TestExtractBuildsRequest(t *testing.T) {
 	if req.Temperature == nil || *req.Temperature != 0 {
 		t.Errorf("temperature = %v, want 0", req.Temperature)
 	}
-	if !strings.Contains(req.System, `"sections"`) {
-		t.Error("system prompt に出力スキーマが含まれない")
+	if req.Tool == nil || req.Tool.Name == "" {
+		t.Fatalf("tool = %+v, want 出力スキーマを持つ tool", req.Tool)
+	}
+	props, _ := req.Tool.Schema["properties"].(map[string]any)
+	for _, key := range []string{"title", "authors", "abstract", "keywords", "venue", "year", "sections", "references"} {
+		if _, ok := props[key]; !ok {
+			t.Errorf("tool のスキーマに %q が無い", key)
+		}
+	}
+	if !strings.Contains(req.System, req.Tool.Name) {
+		t.Errorf("system prompt が tool の名前 %q に触れていない", req.Tool.Name)
+	}
+	if strings.Contains(req.System, `"sections": [`) {
+		t.Error("system prompt にスキーマの断片が残っている (形は Tool.Schema で渡す)")
 	}
 	if len(req.Messages) != 1 || len(req.Messages[0].Content) != 1 {
 		t.Fatalf("messages = %+v", req.Messages)
@@ -189,7 +207,7 @@ func TestExtractBuildsRequest(t *testing.T) {
 func TestExtractAssemblesTextFromElements(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeConverser{resp: &bedrock.Response{Text: `{
+	fake := &fakeConverser{resp: toolResponse(`{
 		"title": "t",
 		"sections": [
 			{"level": 1, "heading": "All", "from": 0, "to": 6},
@@ -200,7 +218,7 @@ func TestExtractAssemblesTextFromElements(t *testing.T) {
 			{"element": 6, "title": "caption as reference"},
 			{"element": 99, "title": "missing element"}
 		]
-	}`}}
+	}`)}
 	doc, err := textractroute.New(fake, "model-x").Extract(context.Background(), sampleInput(t))
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
@@ -249,8 +267,13 @@ func TestExtractErrors(t *testing.T) {
 		modelID   string
 		want      error
 	}{
-		"異常系_JSON として解釈できない応答の場合_リトライせずエラーになること": {
-			converser: &fakeConverser{resp: &bedrock.Response{Text: "I could not read the paper."}},
+		"異常系_tool use も JSON も無い応答の場合_リトライせずエラーになること": {
+			converser: &fakeConverser{resp: &bedrock.Response{Text: "I could not read the paper.", StopReason: "end_turn"}},
+			modelID:   "model-x",
+			want:      bedrock.ErrInvalidJSON,
+		},
+		"異常系_tool の入力が壊れている応答の場合_リトライせずエラーになること": {
+			converser: &fakeConverser{resp: toolResponse(`{"title":}`)},
 			modelID:   "model-x",
 			want:      bedrock.ErrInvalidJSON,
 		},

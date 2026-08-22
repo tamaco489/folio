@@ -10,34 +10,22 @@ import (
 	"github.com/tamaco489/folio/backend/internal/domain"
 )
 
-// systemPrompt は出力させる JSON の形を指示する
+// systemPrompt は出力の読み方とルールを指示する (形は paperTool のスキーマで渡す)
 //
-// フィールド名は domain.Metadata / domain.Section / domain.Reference の json タグに合わせている
 // 本文と参考文献の原文はモデルに書かせず、入力の要素番号 (#n) で指させて Go 側が Reading から組み立てる
 //   - 全文を書き出させると出力がページ数に比例して増え、19 ページの論文で 24K トークンの上限を超えた
 //   - 図と表は Read が座標付きで復元済みであり、モデルに作らせると行列も座標も失われるため要求しない
 //
 // Textract は日本語に対応しないためこの経路には英語の論文しか流れてこない。指示も英語で書く
-const systemPrompt = `You turn the layout output of an English academic paper into one JSON object.
+const systemPrompt = `You turn the layout output of an English academic paper into structured data.
+
+Record the result by calling the structure_paper tool. Its input schema defines the keys.
 
 Rules:
-- Reply with the JSON object only. No prose and no markdown code fence.
 - Use only what the input contains. Never invent a value.
 - Use "" for a missing string, [] for a missing array, 0 for a missing number and null for a missing doi.
 - Never copy body text or reference entries. Refer to input elements by the number after "#" instead.
 - Do not emit figures or tables. They are extracted separately.
-
-Schema:
-{
-  "title": string,
-  "authors": [{"name": string, "affiliation": string, "email": string}],
-  "abstract": string,
-  "keywords": [string],
-  "venue": string,
-  "year": number,
-  "sections": [{"level": number, "heading": string, "from": number, "to": number}],
-  "references": [{"element": number, "title": string, "authors": [string], "year": number, "venue": string, "doi": string}]
-}
 
 Notes:
 - "level" is 1 for a top level section and grows with nesting.
@@ -48,7 +36,7 @@ Notes:
 func userPrompt(r *Reading) string {
 	return fmt.Sprintf(`Layout output of a %d page paper.
 Each element starts with "#" followed by its number and the Textract layout type it came from. Tables are rendered as markdown.
-Convert it into the JSON object described in the system prompt.
+Record it with the structure_paper tool.
 
 %s`, r.PageCount, r.Text())
 }

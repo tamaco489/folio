@@ -59,14 +59,15 @@ func (e *Extractor) Extract(ctx context.Context, in Input) (*domain.Document, er
 		Messages:    []bedrock.Message{bedrock.UserText(userPrompt(reading))},
 		MaxTokens:   new(maxTokens),
 		Temperature: new(temperature),
+		Tool:        paperTool,
 		RecordKey:   bedrock.RecordKey(in.PaperID, bedrock.RouteTextract),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("textractroute: converse: %w", err)
 	}
 
-	// パースの失敗はリトライしない
-	// awsx/bedrock のリトライはスロットリング用であり、同じ入力を投げ直しても JSON にならない見込みが高いうえ課金だけが増える
+	// 復号の失敗はリトライしない
+	// awsx/bedrock のリトライはスロットリング用であり、同じ入力を投げ直しても同じ出力になる見込みが高いうえ課金だけが増える
 	var s structured
 	if err := resp.DecodeJSON(&s); err != nil {
 		return nil, fmt.Errorf("textractroute: decode structured response: %w", err)
