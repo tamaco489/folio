@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05_差分の内訳 — folio Phase 1</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg: #ffffff; --surface: #f6f8fa; --surface-2: #eef1f4; --line: #d0d7de; --line-soft: #e6e9ed; --fg: #111827; --fg-2: #1f2937; --muted: #4b5563; --faint: #6b7280; --link: #0969da; --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --yellow: #9a6700; --purple: #8250df; --red: #cf222e; --shadow: 0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06); }
+html { -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif; line-height: 1.7; min-height: 100vh; font-size: 15px; }
+header { border-bottom: 1px solid var(--line-soft); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
+.header-logo { font-size: 16px; font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
+.header-logo:hover { color: var(--link); }
+.back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+.back-link:hover { color: var(--link); }
+.breadcrumb { padding: 10px 28px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line-soft); }
+.breadcrumb a { color: var(--link); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { margin: 0 8px; color: var(--faint); }
+main { max-width: 1000px; margin: 0 auto; padding: 48px 28px 96px; }
+body.index main { max-width: 1120px; }
+.page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line-soft); }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--link); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+.page-title { font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
+.page-subtitle { font-size: 15px; color: var(--muted); max-width: 60em; }
+.section { margin-bottom: 44px; }
+.section-title { font-size: 17px; font-weight: 700; color: var(--fg); margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--link); line-height: 1.3; }
+body.index .section-title { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; border-left: 0; padding-left: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
+.block { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; box-shadow: var(--shadow); }
+.block > :last-child { margin-bottom: 0; }
+h3 { font-size: 14.5px; font-weight: 700; color: var(--fg); margin: 22px 0 8px; }
+h3:first-child { margin-top: 0; }
+p { font-size: 14.5px; color: var(--fg-2); line-height: 1.75; margin-bottom: 12px; }
+p.meta { font-size: 13px; color: var(--muted); }
+ul, ol { margin: 0 0 12px 22px; font-size: 14.5px; color: var(--fg-2); }
+li { margin: 5px 0; line-height: 1.7; }
+ul.task-list { list-style: none; margin-left: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+ul.task-list li { display: block; position: relative; padding-left: 18px; margin: 0; }
+ul.task-list li::before { content: "›"; position: absolute; left: 2px; top: 0; color: var(--link); font-weight: 700; }
+a { color: var(--link); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; color: var(--fg); }
+pre { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg); }
+pre code { background: none; border: 0; padding: 0; }
+.table-wrap { overflow-x: auto; margin-bottom: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
+.table-wrap:last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { background: var(--surface); border-bottom: 2px solid var(--line); border-right: 1px solid var(--line); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line-soft); padding: 10px 14px; vertical-align: top; color: var(--fg); line-height: 1.6; }
+th:last-child, td:last-child { border-right: 0; }
+tr:last-child td { border-bottom: 0; }
+tr:nth-child(even) td { background: var(--surface); }
+tr:hover td { background: #eef4fb; }
+td code, th code { background: var(--bg); }
+dl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+dl > div { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 16px; }
+dt { font-size: 14px; color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+dd { font-size: 13.5px; color: var(--fg-2); line-height: 1.7; }
+dd ol, dd ul { margin-top: 6px; font-size: 13.5px; }
+.callout { background: #ddf4ff; border: 1px solid #b6e3ff; border-left: 4px solid var(--blue); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.7; }
+.callout strong { color: var(--blue); }
+.callout.green { background: #dafbe1; border-color: #aceebb; border-left-color: var(--green); }
+.callout.green strong { color: var(--green); }
+.callout.yellow { background: #fff8c5; border-color: #f3e3a0; border-left-color: var(--yellow); }
+.callout.yellow strong { color: var(--yellow); }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout ul.task-list li::before { color: var(--yellow); }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.info-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.info-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .03em; }
+.info-value { font-size: 22px; color: var(--fg); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.info-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; line-height: 1.5; }
+.tag.ok { background: #dafbe1; color: var(--green); border-color: #aceebb; }
+.tag.warn { background: #fff8c5; color: var(--yellow); border-color: #f3e3a0; }
+.tag.ng { background: #ffebe9; color: var(--red); border-color: #ffcecb; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.card:hover { border-color: var(--link); box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12); transform: translateY(-1px); }
+.card-num { font-size: 12px; font-weight: 700; color: var(--link); letter-spacing: .06em; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--fg); line-height: 1.35; }
+.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.badge.blue { background: #ddf4ff; color: var(--blue); }
+.badge.green { background: #dafbe1; color: var(--green); }
+.badge.orange { background: #fff1e5; color: var(--orange); }
+.badge.purple { background: #fbefff; color: var(--purple); }
+.badge.red { background: #ffebe9; color: var(--red); }
+.pager { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.pager a { text-decoration: none; color: var(--muted); }
+.pager a:hover { color: var(--link); }
+footer { border-top: 1px solid var(--line-soft); text-align: center; padding: 24px; font-size: 12.5px; color: var(--faint); }
+.section { --accent: #0969da; --accent-soft: #ddf4ff; --accent-ink: #0550ae; }
+.section.c2 { --accent: #1a7f37; --accent-soft: #dafbe1; --accent-ink: #116329; }
+.section.c3 { --accent: #bc4c00; --accent-soft: #fff1e5; --accent-ink: #953800; }
+.section.c4 { --accent: #8250df; --accent-soft: #fbefff; --accent-ink: #6639ba; }
+.section.c5 { --accent: #0e7c86; --accent-soft: #d8f3f5; --accent-ink: #0b5f67; }
+.section.c6 { --accent: #bf3989; --accent-soft: #ffeff7; --accent-ink: #99286e; }
+.section-title { border-left-color: var(--accent); display: flex; align-items: center; gap: 10px; }
+.section-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.section .block { border-top: 3px solid var(--accent); border-radius: 10px; }
+.section th { background: var(--accent-soft); color: var(--accent-ink); }
+.section strong { color: var(--accent-ink); font-weight: 700; }
+.section dt { color: var(--accent-ink); }
+.section ul.task-list li::before { color: var(--accent); }
+.section dl > div { border-left: 3px solid var(--accent); }
+.section h3 { color: var(--accent-ink); }
+body.index .section-title { border-left: 0; }
+body.index .section-num { display: none; }
+.page-header { border-bottom: 2px solid var(--page-accent, #0969da); }
+.eyebrow { color: var(--page-accent, #0969da); }
+.page-title { color: #0b1220; }
+p { color: var(--fg-2); }
+td { color: var(--fg); }
+a { color: var(--link); font-weight: 500; }
+</style>
+</head>
+<body style="--page-accent: #1a7f37">
+<header>
+<a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+<a class="back-link" href="00_目次.html">← 目次に戻る</a>
+</header>
+<nav class="breadcrumb"><a href="00_目次.html">Phase 1 経路比較</a><span>›</span>05_差分の内訳</nav>
+<main>
+<div class="page-header">
+<div class="eyebrow">Phase 1 経路比較 · 05</div>
+<h1 class="page-title">差分の内訳</h1>
+<p class="page-subtitle">見出し・節・表・図・参考文献ごとに、両経路で何がどう違ったか (抜粋つき)</p>
+</div>
+<p>採用した実行 (<a href="03_実行条件.html">03</a>) の <code>result-textract.json</code> (経路 A) と <code>result-bedrock.json</code> (経路 B) を、原本 (<code>pdftotext</code> の出力とページ画像) と突き合わせた。抜粋は原文のまま (訳さない)。件数や文字数は JSON から機械的に数えたもので、「原本と一致」と書いた箇所は原本の該当行を目視で確認した。確認していない範囲は各節の末尾に書く。</p>
+<section class="section c1">
+<div class="section-title"><span class="section-num">01</span>見出しと節</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>経路 A (Textract → Bedrock)</th><th>経路 B (ページ画像 → Bedrock)</th></tr>
+<tr><td>見出しの番号</td><td>5 本中 4 本で番号を落とす (<code>Background</code>、<code>Task formulation</code>)。Textract の <code>LAYOUT_SECTION_HEADER</code> は番号込み (<code>1 Introduction</code>) で返しているので、落としているのは Bedrock の整形。二段組の 2608.17950v1 だけ番号を保持</td><td>番号を保持するが不揃い。同じ論文で <code>2 Background</code> と <code>Introduction</code> (番号なし) が混在。原本で番号と題名が別行のページでは番号だけの空節と題名だけの節に分かれる (2608.19529v1: <code>4</code> / <code>Experiment</code> / <code>4.1</code> / <code>Datasets</code>)、題名を落として番号だけになる (2608.19526v1 で 10 件、2608.17950v1 の <code>1</code> <code>4.3</code> <code>4.4</code>)</td></tr>
+<tr><td>階層 (level)</td><td>両経路に共通する見出しでは一致。番号つき見出しの level は normalize が番号の要素数から決め直す</td><td>同左。ただし段落冒頭の太字ラベル (<code>(F1) Harmful Memorization:</code>、<code>Connectivity Rate (C<sub>rate</sub>):</code>) や箇条書き、付録のコードブロック内の <code>##</code> を見出しに昇格させる (5 本で 26 件)</td></tr>
+<tr><td>Abstract / References</td><td>Abstract は 2608.17950v1 だけ節として重複格納 (<code>metadata.abstract</code> と同文)。References は 2608.20318v1 で文献 60 件の本文 14,198 文字を持つ節として入る</td><td>Abstract は節にしない。References は空の節として残ることがある (2608.20318v1、2608.19526v1)</td></tr>
+<tr><td>片方にしか無い見出し</td><td>2608.17950v1 の <code>3.3</code> <code>3.4</code> (B は p.4 の左段を落とした)</td><td>目次由来の 35 節 (2608.19526v1、2 ページ目の目次を本文の見出しとして出力。すべて <code>text</code> 空)、段落ラベル由来の節</td></tr>
+</table></div>
+<p>2608.19529v1 の例 (原本は <code>4 Experiment</code>、<code>4.1 Datasets</code>):</p>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td>11</td><td><code>Experiment</code> (L1、10,402 文字。4.1〜4.10 の本文を含む)</td><td><code>4</code> (L1、0 文字)</td></tr>
+<tr><td>12</td><td><code>Datasets</code> (L2、587 文字)</td><td><code>Experiment</code> (L1、0 文字)</td></tr>
+<tr><td>13</td><td><code>Evaluation metrics and baselines</code></td><td><code>4.1</code> (L2、0 文字)</td></tr>
+<tr><td>14</td><td>…</td><td><code>Datasets</code> (L2、587 文字)</td></tr>
+</table></div>
+</div>
+</section>
+<section class="section c2">
+<div class="section-title"><span class="section-num">02</span>本文</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td>親節と子節の重複</td><td>親節の <code>text</code> が子節の本文を丸ごと含む。経路 A は Bedrock が返す要素番号の範囲 <code>from..to</code> を Go 側で連結するため、範囲が入れ子だと重複する。重複は 2608.20318v1 で 10 節 23,300 文字、2608.19529v1 で 21 節 22,498 文字、2608.19526v1 で 29 節 23,129 文字</td><td>重複なし (ページごとの節を見出しで結合するだけ)</td></tr>
+<tr><td>欠落</td><td>2608.20338v1 の付録 (p.12〜17) と <code>4.4.2</code> 配下の本文が無い (同じページの表は <code>tables</code> にあるので Textract は処理している。整形の出力に含まれなかった理由は未確認)。2608.17950v1 の p.2 (Introduction の続きと貢献の箇条書き 4 項目) は A にも B にも無い</td><td>ページ冒頭の継続本文 (見出しの無い段落) を落とす。原本と A で確認した箇所: 2608.20338v1 p.5 / p.9、2608.19529v1 p.2 / p.3、2608.19526v1 p.4 / p.14、2608.17950v1 p.3 / p.7。ページごとの結果 (<code>page-NNNN.json</code>) では <code>continuesPreviousSection: true</code> を返したページでも先頭は見出しつきで、継続文そのものが無い。段全体 (2608.17950v1 p.4 左段)、ページ全体 (同 p.12、復号失敗) の欠落もある</td></tr>
+<tr><td>本文の量</td><td colspan="2">下の表 (重複と References 節を除いた文字数を、原本の References より前の文字数と比べたもの)</td></tr>
+<tr><td>混入</td><td>図表のキャプション (5 本すべて)、脚注の URL、arXiv のスタンプ (<code>arXiv:2608.20318v1 [cs.AI] 20 Aug 2026</code>)、コードのリスティング (2608.19526v1 の Listing 1) が本文に入る。2608.17950v1 では引用文の途中に図 1 のキャプションが割り込む</td><td>キャプション・脚注・ページ番号は入らない (プロンプトで除外している)</td></tr>
+<tr><td>字形</td><td>Textract の OCR 由来の崩れを持ち越す: <code>∈</code> → <code>E</code>、<code>τ</code> → <code>T</code>、<code>BloombergGPT</code> → <code>Bloomberg(</code>、行末ハイフンの残り (<code>cogni- tive</code>)</td><td>原本の字形を保つ (<code>x ∈ Df</code>、<code>τ ≥ 0.85</code>)</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>論文</th><th>原本 (References より前)</th><th>A 合計</th><th>A の重複 (子節 / 文字)</th><th>A の References 節</th><th>A 正味 (原本比)</th><th>B 合計 (原本比)</th></tr>
+<tr><td><code>2608.20318v1</code></td><td>50,245</td><td>88,275</td><td>10 節 / 23,300</td><td>14,198</td><td>50,777 (101%)</td><td>34,285 (68%)</td></tr>
+<tr><td><code>2608.20338v1</code></td><td>34,469</td><td>41,138</td><td>10 節 / 14,206</td><td>—</td><td>26,932 (78%)</td><td>33,949 (98%)</td></tr>
+<tr><td><code>2608.19529v1</code></td><td>42,117</td><td>57,969</td><td>21 節 / 22,498</td><td>—</td><td>35,471 (84%)</td><td>24,612 (58%)</td></tr>
+<tr><td><code>2608.19526v1</code></td><td>34,652</td><td>49,576</td><td>29 節 / 23,129</td><td>—</td><td>26,447 (76%)</td><td>18,868 (54%)</td></tr>
+<tr><td><code>2608.17950v1</code></td><td>35,092</td><td>33,167</td><td>1 節 / 654</td><td>—</td><td>32,513 (93%)</td><td>21,340 (61%)</td></tr>
+</table></div>
+<p>文字数は Python の <code>len</code>。原本は <code>pdftotext</code> (レイアウト無し) の出力から最後の <code>References</code> 行以降を除いたもので、図表のキャプション・脚注・ページ番号を含む。A の「重複」は他の節の <code>text</code> に丸ごと含まれる節。A の 2608.20338v1 は付録 (p.12〜17) を含まず、B の 2608.20338v1 は含むので B が A を上回る。</p>
+<p>2608.17950v1 p.1 の経路 A (引用文の途中にキャプションが入る):</p>
+<pre><code>…We should select any
+
+Figure 1: Illustration of Topological Compression. A 3D PCA projection of an LLM's deep latent man- ifold. … (e.g., Virus).
+
+person from the 1.5 billion inhabitants of the Earth…</code></pre>
+</div>
+</section>
+<section class="section c3">
+<div class="section-title"><span class="section-num">03</span>読み順 (二段組)</div>
+<div class="block">
+<p>2608.17950v1 (ACL 様式の二段組) の p.2〜3 で、段をまたぐ段落を <code>pdftotext -layout</code> で特定して両経路の <code>text</code> を見た。</p>
+<div class="table-wrap"><table>
+<tr><th>箇所</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td>p.2 右段末 → p.3 左段先頭 (<code>…naturally converges on this same</code> → <code>Small-World optimization is a critical frontier…</code>)</td><td>正しい順で連続 (段落区切りを挟む)</td><td>p.2 の末尾で切れ、続きの文がどこにも無い (p.3 の先頭エントリは次の見出し)</td></tr>
+<tr><td>p.3 左段末 → 右段先頭 (<code>…we introduce a novel</code> → <code>methodology for quantifying…</code>)</td><td>正しい順で連続</td><td>正しい順で連続</td></tr>
+<tr><td>p.2 左段末 → 右段 (<code>Our core contributions are as follows:</code> と箇条書き 4 項目)</td><td>無い</td><td>無い</td></tr>
+<tr><td>p.4 (左段 = 3.2 の続き・3.3・3.4、右段 = 4・4.1・4.2)</td><td>3.2 / 3.3 / 3.4 あり</td><td>右段の 3 節のみ。左段が無い (3.2 は p.3 末の 1 文 145 文字だけ)</td></tr>
+</table></div>
+<p>一段組の 4 本では、本文が存在する範囲で両経路とも <code>pdftotext</code> の文順に対する後戻りは無かった (後戻りとして検出されたのはキャプションや表注の挿入)。2608.19526v1 の経路 A に出た警告「page 2: 二段組と判定し … 並べ直した」は目次ページにだけ作用し (目次が <code>tables</code> 3 件になった)、本文 (p.3 以降) の順序は壊れていない。</p>
+<p>設計時の想定「A は段を分離できる、B は読み順が乱れる」に対して、実測では B は乱れるのではなく<strong>段ごと落とす</strong>。A は本文があれば順序は正しいが、p.2 の欠落は A でも起きた (Textract の生ブロックを残していないため、Textract が返していたかは未確認)。</p>
+</div>
+</section>
+<section class="section c4">
+<div class="section-title"><span class="section-num">04</span>表</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>論文</th><th>原本の表</th><th>経路 A の <code>tables</code></th><th>うち原本の表</th><th>経路 B の <code>tables</code></th><th>うち原本の表</th><th>A が表にした表でないもの</th></tr>
+<tr><td>2608.20318v1</td><td>4</td><td>11</td><td>4</td><td>4</td><td>4</td><td>図中テキスト、数式、参考文献 4 件</td></tr>
+<tr><td>2608.20338v1</td><td>9</td><td>10</td><td>9</td><td>9</td><td>9</td><td>著者欄</td></tr>
+<tr><td>2608.19529v1</td><td>10</td><td>15</td><td>10</td><td>10</td><td>10</td><td>図中テキスト、プロンプト例 2 件、参考文献 2 件</td></tr>
+<tr><td>2608.19526v1</td><td>5</td><td>11</td><td>5</td><td>5</td><td>5</td><td>目次 3 件、コード、図中テキスト、番号つきリスト</td></tr>
+<tr><td>2608.17950v1</td><td>5</td><td>5</td><td>5</td><td>5</td><td>5</td><td>—</td></tr>
+<tr><td>合計</td><td>33</td><td>52</td><td>33</td><td>33</td><td>33</td><td>19 件</td></tr>
+</table></div>
+<p>原本の表の数は <code>Table N</code> のキャプションを数えたもの。B の 33 件はすべて原本の表 (2608.20338v1 で Table 1 を <code>figures</code> にも重複登録)。</p>
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td>行列の形</td><td>行の結合が起きる: 2608.20318v1 Table 1 (末尾 2 行を 1 行に)、2608.20338v1 Table 1 (TOFU と MUSE を 1 行に)、同 Table 5 (4 行 → 1 行)、2608.17950v1 Table 4 (4 行 → 2 行)。2608.20318v1 Table 4 の下段パネルを別表に分割</td><td>列ずれが起きる: 2608.20338v1 Table 1 (ヘッダ 6 列に対して行 7 列)、2608.19529v1 Table 3 (2 段ヘッダの上段 6 要素 / 下段 8 要素)、2608.20318v1 Table 4 (下段パネルを 1 セルに圧縮)</td></tr>
+<tr><td>数値</td><td>照合した範囲では原本と一致。2608.20318v1 Table 2 / 3 (33 行 × 14 列、29 行 × 14 列) で 6 行を原本と突き合わせ、A は全列一致</td><td>大きな数値表で改変がある。同じ 6 行で B は大半の列が原本と異なる (例: Baseline の DDPO 列 原本 <code>5.84</code> → B <code>5.34</code>、<code>xhigh</code> → <code>zhigh</code>、行のラベル <code>Kimi K3</code> → <code>● Claude Sonnet 5</code>)。2608.20338v1 Table 1 では原本に無い語 (<code>Maart et al.</code>、<code>2k concept-aligned samples</code>)。小さな表 (2608.19529v1 Table 4〜8、2608.19526v1 Table 1〜4、2608.17950v1 Table 3 / 5) は両経路とも完全一致</td></tr>
+<tr><td>記号</td><td>矢印 <code>↑↓</code> が <code>1</code> / <code>T</code> / <code>t</code> に化けて数値に連結し、値が変わる (2608.20338v1 Table 3: 原本 <code>0.07 ↓ 36%</code> → <code>0.07 136%</code>、9 セル)。<code>✓</code> / <code>×</code> が <code>SELECTED</code> (2608.19526v1 Table 5 の 12 セル全部)、<code>∞</code> → <code>8</code>、<code>τ</code> → <code>π</code> (2608.17950v1 Table 1)</td><td>記号を保持 (<code>0.07 (+36%)</code> と方向を括弧に書き換えた例はある。同 Table 3 で方向の情報が消え、4 セルは数値も変わった)</td></tr>
+<tr><td>結合セル</td><td>値を各セルに複製 (<code>"Beauty"</code> × 4 行)。<code>domain.Table</code> の規約どおり</td><td>空文字を置く</td></tr>
+<tr><td>キャプション</td><td>近傍の別要素を割り当てることがある (2608.20338v1 table-5 に <code>Figure 2: …</code>、2608.19529v1 table-6 に直後の見出し <code>4.8 Ablation study</code>)。表の下の凡例がキャプションになる例も</td><td>原本のキャプション</td></tr>
+</table></div>
+<p>2608.20338v1 Table 3 の 1 行 (原本 p.8: <code>0.07 ↓ 36%</code>、<code>0.48 ↑ 45%</code>):</p>
+<div class="table-wrap"><table>
+<tr><th>原本</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td><code>0.07 ↓ 36%</code></td><td><code>0.07 136%</code></td><td><code>0.07 (+36%)</code></td></tr>
+<tr><td><code>0.48 ↑ 45%</code></td><td><code>0.48 145%</code></td><td><code>0.48 (+45%)</code></td></tr>
+<tr><td><code>HarmScore ↓ HelpScore ↑ CtxtSep ↑</code> (ヘッダ)</td><td><code>HarmScore t</code>、<code>HelpScore 1</code>、<code>CtxtSep 1</code></td><td><code>HarmScore ↓</code>、<code>HelpScore ↑</code>、<code>CtxtSep ↑</code></td></tr>
+</table></div>
+<p>設計時の想定「A は行列として保たれる、B は崩れやすい」は、<strong>数値は A、記号と行構造は B</strong> という分かれ方になった。A の強みは大きな数値表のセル値の正確さ、弱みは記号の OCR と行の結合、表でないものの誤検出。B の強みは記号と行構造、弱みは数値の改変と多段ヘッダの列ずれ。</p>
+</div>
+</section>
+<section class="section c5">
+<div class="section-title"><span class="section-num">05</span>図</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>論文</th><th>原本の図</th><th>経路 A の <code>figures</code></th><th>経路 B の <code>figures</code></th><th>備考</th></tr>
+<tr><td>2608.20318v1</td><td>3</td><td>5</td><td>3</td><td>A は出版社ロゴを図として検出 (caption 空、警告の対象)、2 パネルの Figure 1 を 2 つに分割</td></tr>
+<tr><td>2608.20338v1</td><td>9</td><td>2</td><td>10</td><td>A は p.10 までの 2 図のみ。Figure 2 のキャプションは表に流用。B は Table 1 を図にも重複登録</td></tr>
+<tr><td>2608.19529v1</td><td>6</td><td>4</td><td>6</td><td>A は Figure 3 / 5 (プロンプト例) を表として検出、2 パネルの Figure 6 を 2 つに分割</td></tr>
+<tr><td>2608.19526v1</td><td>1 + Listing 6</td><td>0</td><td>6</td><td>A は図を 1 つも検出せず (Figure 1 は表として)。B は Listing 4 のみ欠落</td></tr>
+<tr><td>2608.17950v1</td><td>5</td><td>5</td><td>5</td><td>A は Figure 2 (左) の caption が空で、Figure 3 (右) に Figure 2 のキャプションを付けた</td></tr>
+<tr><td>合計</td><td>24 (+6)</td><td>16</td><td>30</td><td></td></tr>
+</table></div>
+<p>A の「キャプションを特定できなかった」警告 5 件の正体は、ロゴ (1)、多パネル図の分割片 (2)、キャプションを隣の図に付けた取り違え (1)、単純な未割当 (1)。いずれも B はキャプションつきで取れている。図の検出は B が原本に近い。</p>
+</div>
+</section>
+<section class="section c6">
+<div class="section-title"><span class="section-num">06</span>参考文献</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>論文</th><th>原本</th><th>経路 A</th><th>経路 B</th><th>B の差の内訳</th></tr>
+<tr><td>2608.20318v1</td><td>60</td><td>60</td><td>59</td><td>[54] と [55] を 1 件に結合 (Yamada が独立した件として欠落)</td></tr>
+<tr><td>2608.20338v1</td><td>16</td><td>16</td><td>16</td><td>—</td></tr>
+<tr><td>2608.19529v1</td><td>40</td><td>40</td><td>45</td><td>本文 p.2 の引用番号 <code>[8]</code> <code>[14]</code> <code>[26]</code> <code>[36]</code> <code>[40]</code> が参考文献として 5 件入る</td></tr>
+<tr><td>2608.19526v1</td><td>17</td><td>17</td><td>23</td><td>本文 p.3 の引用番号 <code>[1]</code>〜<code>[7]</code> が 7 件入り、[14] と [15] を結合</td></tr>
+<tr><td>2608.17950v1</td><td>20</td><td>20</td><td>20</td><td>脚注の URL が 1 件入り、Tan と Vaswani を結合 (実質 19 件)</td></tr>
+</table></div>
+<p>件数は A が 5 本すべて原本と一致、B は 5 本すべて不一致。B の不一致は 2 種類で、(1) ページ単位の抽出が本文中の引用番号を参考文献として返す、(2) ページ境界で <code>continuesPreviousReference: true</code> を誤って返し 2 件が 1 件に結合される (<code>work/bedrock/page-NNNN.json</code> で確認)。</p>
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>経路 A</th><th>経路 B</th></tr>
+<tr><td><code>raw</code> (原文)</td><td>Textract の要素そのもの。行末ハイフン (<code>Quantify- ing</code>)、空白の欠落 (<code>arXiv:2403.12776,2024</code>、<code>T.B. Brown</code>)、en dash → ハイフン、文字の欠落 (<code>ttps://</code>) を持ち越す</td><td>原本どおり (en dash、記号を含む)。ただし内容を書き換えることがある: 2608.20318v1 で著者名 8 箇所 (<code>Xu Yang</code> → <code>Xn Yang</code>、<code>Despoina Magka</code> → <code>Desponia Magka</code>) と arXiv ID 2 件 (<code>2506.09092</code> → <code>2502.00092</code>)、2608.17950v1 で題名の改変 (<code>explainable large language models</code> → <code>explainable AI in language models</code>)</td></tr>
+<tr><td>分解 (title / authors / year)</td><td>サンプル 25 件で年・著者の欠落なし。題名にハイフンが残る例 (<code>contextual- ized</code>)</td><td>サンプル 25 件で年・著者の欠落なし</td></tr>
+<tr><td>venue</td><td>arXiv の記載を <code>arXiv preprint arXiv:…</code> として入れる</td><td>末尾の注記 (<code>ICLR</code> など) を入れ、無ければ空。同じ論文の中でページごとに方針が変わる</td></tr>
+<tr><td>DOI</td><td colspan="2">両経路とも捏造なし。原本に DOI がある 2608.20338v1 の 8 件は両経路とも原本どおり、他 4 本は両経路とも全件 <code>null</code></td></tr>
+</table></div>
+</div>
+</section>
+<section class="section c1">
+<div class="section-title"><span class="section-num">07</span>書誌 (題名・著者・要旨)</div>
+<div class="block">
+<p>題名と著者は 5 本すべてで両経路が一致 (正規化後)。要旨は 2 本で一致し、3 本は A の行末ハイフン (<code>accu- rately</code>) や en dash の違い (<code>forgetting-utility</code> vs <code>forgetting–utility</code>) で不一致。2608.20318v1 の A は要旨に <code>SO that</code> (原本 <code>so that</code>) があるが、比較が大文字小文字を無視するため一致扱いになっている。著者の所属は A が所在地まで取り、B が省略する傾向 (2608.20338v1)。2608.20318v1 では 2 つの所属の対応を両経路とも正しく分けられていない (A は <code>Einsia.A</code> と末尾が欠け、B は 10 名全員に 2 所属を連結)。</p>
+</div>
+</section>
+<section class="section c2">
+<div class="section-title"><span class="section-num">08</span>確認していないこと</div>
+<div class="callout yellow"><ul class="task-list">
+<li>2608.20318v1 Table 2 / 3 の残りの行 (照合したのは 6 行)。A / B のセル値の不一致は数値列で 103 + 64 件あるが、どちらが正しいかは未確認</li>
+<li>2608.17950v1 p.2 の欠落が Textract の出力段階で起きたか (生ブロックを残していない)。2608.20338v1 の A に付録が無い原因</li>
+<li>B の図・表の位置 (<code>bbox</code> は全件 <code>null</code>)</li>
+<li>2608.20318v1 の B はページごとの結果を残していないため、Introduction の 3 ページ目と <code>Results</code> (0 文字) の欠落の原因</li>
+</ul>
+</div>
+</section>
+
+<div class="pager"><a href="04_結果一覧.html">← 04_結果一覧</a><a href="06_想定と実測.html">06_想定と実測 →</a></div>
+</main>
+<footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+</body>
+</html>

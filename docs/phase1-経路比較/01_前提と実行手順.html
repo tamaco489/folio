@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01_前提と実行手順 — folio Phase 1</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg: #ffffff; --surface: #f6f8fa; --surface-2: #eef1f4; --line: #d0d7de; --line-soft: #e6e9ed; --fg: #111827; --fg-2: #1f2937; --muted: #4b5563; --faint: #6b7280; --link: #0969da; --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --yellow: #9a6700; --purple: #8250df; --red: #cf222e; --shadow: 0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06); }
+html { -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif; line-height: 1.7; min-height: 100vh; font-size: 15px; }
+header { border-bottom: 1px solid var(--line-soft); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
+.header-logo { font-size: 16px; font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
+.header-logo:hover { color: var(--link); }
+.back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+.back-link:hover { color: var(--link); }
+.breadcrumb { padding: 10px 28px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line-soft); }
+.breadcrumb a { color: var(--link); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { margin: 0 8px; color: var(--faint); }
+main { max-width: 1000px; margin: 0 auto; padding: 48px 28px 96px; }
+body.index main { max-width: 1120px; }
+.page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line-soft); }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--link); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+.page-title { font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
+.page-subtitle { font-size: 15px; color: var(--muted); max-width: 60em; }
+.section { margin-bottom: 44px; }
+.section-title { font-size: 17px; font-weight: 700; color: var(--fg); margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--link); line-height: 1.3; }
+body.index .section-title { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; border-left: 0; padding-left: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
+.block { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; box-shadow: var(--shadow); }
+.block > :last-child { margin-bottom: 0; }
+h3 { font-size: 14.5px; font-weight: 700; color: var(--fg); margin: 22px 0 8px; }
+h3:first-child { margin-top: 0; }
+p { font-size: 14.5px; color: var(--fg-2); line-height: 1.75; margin-bottom: 12px; }
+p.meta { font-size: 13px; color: var(--muted); }
+ul, ol { margin: 0 0 12px 22px; font-size: 14.5px; color: var(--fg-2); }
+li { margin: 5px 0; line-height: 1.7; }
+ul.task-list { list-style: none; margin-left: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+ul.task-list li { display: block; position: relative; padding-left: 18px; margin: 0; }
+ul.task-list li::before { content: "›"; position: absolute; left: 2px; top: 0; color: var(--link); font-weight: 700; }
+a { color: var(--link); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; color: var(--fg); }
+pre { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg); }
+pre code { background: none; border: 0; padding: 0; }
+.table-wrap { overflow-x: auto; margin-bottom: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
+.table-wrap:last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { background: var(--surface); border-bottom: 2px solid var(--line); border-right: 1px solid var(--line); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line-soft); padding: 10px 14px; vertical-align: top; color: var(--fg); line-height: 1.6; }
+th:last-child, td:last-child { border-right: 0; }
+tr:last-child td { border-bottom: 0; }
+tr:nth-child(even) td { background: var(--surface); }
+tr:hover td { background: #eef4fb; }
+td code, th code { background: var(--bg); }
+dl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+dl > div { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 16px; }
+dt { font-size: 14px; color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+dd { font-size: 13.5px; color: var(--fg-2); line-height: 1.7; }
+dd ol, dd ul { margin-top: 6px; font-size: 13.5px; }
+.callout { background: #ddf4ff; border: 1px solid #b6e3ff; border-left: 4px solid var(--blue); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.7; }
+.callout strong { color: var(--blue); }
+.callout.green { background: #dafbe1; border-color: #aceebb; border-left-color: var(--green); }
+.callout.green strong { color: var(--green); }
+.callout.yellow { background: #fff8c5; border-color: #f3e3a0; border-left-color: var(--yellow); }
+.callout.yellow strong { color: var(--yellow); }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout ul.task-list li::before { color: var(--yellow); }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.info-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.info-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .03em; }
+.info-value { font-size: 22px; color: var(--fg); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.info-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; line-height: 1.5; }
+.tag.ok { background: #dafbe1; color: var(--green); border-color: #aceebb; }
+.tag.warn { background: #fff8c5; color: var(--yellow); border-color: #f3e3a0; }
+.tag.ng { background: #ffebe9; color: var(--red); border-color: #ffcecb; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.card:hover { border-color: var(--link); box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12); transform: translateY(-1px); }
+.card-num { font-size: 12px; font-weight: 700; color: var(--link); letter-spacing: .06em; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--fg); line-height: 1.35; }
+.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.badge.blue { background: #ddf4ff; color: var(--blue); }
+.badge.green { background: #dafbe1; color: var(--green); }
+.badge.orange { background: #fff1e5; color: var(--orange); }
+.badge.purple { background: #fbefff; color: var(--purple); }
+.badge.red { background: #ffebe9; color: var(--red); }
+.pager { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.pager a { text-decoration: none; color: var(--muted); }
+.pager a:hover { color: var(--link); }
+footer { border-top: 1px solid var(--line-soft); text-align: center; padding: 24px; font-size: 12.5px; color: var(--faint); }
+.section { --accent: #0969da; --accent-soft: #ddf4ff; --accent-ink: #0550ae; }
+.section.c2 { --accent: #1a7f37; --accent-soft: #dafbe1; --accent-ink: #116329; }
+.section.c3 { --accent: #bc4c00; --accent-soft: #fff1e5; --accent-ink: #953800; }
+.section.c4 { --accent: #8250df; --accent-soft: #fbefff; --accent-ink: #6639ba; }
+.section.c5 { --accent: #0e7c86; --accent-soft: #d8f3f5; --accent-ink: #0b5f67; }
+.section.c6 { --accent: #bf3989; --accent-soft: #ffeff7; --accent-ink: #99286e; }
+.section-title { border-left-color: var(--accent); display: flex; align-items: center; gap: 10px; }
+.section-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.section .block { border-top: 3px solid var(--accent); border-radius: 10px; }
+.section th { background: var(--accent-soft); color: var(--accent-ink); }
+.section strong { color: var(--accent-ink); font-weight: 700; }
+.section dt { color: var(--accent-ink); }
+.section ul.task-list li::before { color: var(--accent); }
+.section dl > div { border-left: 3px solid var(--accent); }
+.section h3 { color: var(--accent-ink); }
+body.index .section-title { border-left: 0; }
+body.index .section-num { display: none; }
+.page-header { border-bottom: 2px solid var(--page-accent, #0969da); }
+.eyebrow { color: var(--page-accent, #0969da); }
+.page-title { color: #0b1220; }
+p { color: var(--fg-2); }
+td { color: var(--fg); }
+a { color: var(--link); font-weight: 500; }
+</style>
+</head>
+<body style="--page-accent: #0969da">
+<header>
+<a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+<a class="back-link" href="00_目次.html">← 目次に戻る</a>
+</header>
+<nav class="breadcrumb"><a href="00_目次.html">Phase 1 経路比較</a><span>›</span>01_前提と実行手順</nav>
+<main>
+<div class="page-header">
+<div class="eyebrow">Phase 1 経路比較 · 01</div>
+<h1 class="page-title">前提と実行手順</h1>
+<p class="page-subtitle">環境の前提 (認証、apply と upload、クォータ) と、取得 → 投入 → 収集 → 再投入の手順</p>
+</div>
+<section class="section c1">
+<div class="section-title"><span class="section-num">01</span>前提</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>項目</th><th>内容</th></tr>
+<tr><td>環境</td><td>dev (us-east-1)。Terraform (<code>infra/envs/dev</code>) を apply 済みで、Lambda 5 関数・Step Functions・S3・DynamoDB・SNS・EventBridge が揃っている状態</td></tr>
+<tr><td>認証</td><td>SSO のプロファイルを <code>AWS_PROFILE</code> で指定する。<code>TF_VAR_account_id</code> (12 桁) と <code>AWS_REGION=us-east-1</code> も export する。アカウント ID はファイルに書かない</td></tr>
+<tr><td>Lambda のコード</td><td><code>cd backend && just upload</code> が S3 に置いて <code>update-function-code</code> まで行う。Terraform はコードの差分を見ないので、コードを変えたら upload だけでよい (<code>get-function-configuration</code> の <code>CodeSha256</code> がローカルの zip と一致することで確認できる)</td></tr>
+<tr><td>Bedrock</td><td>Claude Sonnet 4.5 の Marketplace 購読が済んでいること (未購読だと <code>AccessDeniedException</code>)。クォータはリクエスト 50 / 分、トークン 5,000,000 / 分 (Service Quotas の適用値、2026-08-22)</td></tr>
+<tr><td>Lambda の同時実行数</td><td>このアカウントは 10 (<code>aws lambda get-account-settings</code>)。経路 B の Map は並列 5 なので、2 本同時に投入すると <code>TooManyRequestsException</code> が出る (Retry で回復するが、1 本ずつが安全)</td></tr>
+<tr><td>ローカルのツール</td><td>poppler (<code>pdfinfo</code> <code>pdftotext</code> <code>pdftoppm</code>)。fetch-corpus がページ数と参考文献の推定に使う</td></tr>
+<tr><td>課金</td><td>Textract (LAYOUT + TABLES: $0.015 / ページ) と Bedrock (入力 $3.30 / 出力 $16.50 per 1M トークン) は投入のたびに発生する。Crossref は無料。単価は 2026-08-22 時点の公式料金データ</td></tr>
+</table></div>
+</div>
+</section>
+<section class="section c2">
+<div class="section-title"><span class="section-num">02</span>手順</div>
+<div class="block">
+<h3>1. 論文を集める</h3>
+<pre><code>cd backend
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"' -want 5   # testdata/pdf/ に PDF と corpus.json
+</code></pre>
+<p>8〜20 ページの論文を新着から選ぶ。空白を含む <code>-query</code> は引用符で囲む (囲まないと後続のフラグが落ちる)。LaTeX ソースの無い論文は Phase 2 の正解データが作れないので外す。</p>
+<h3>2. 投入して完走を待つ</h3>
+<pre><code>export AWS_PROFILE=&lt;profile&gt; TF_VAR_account_id=&lt;12 桁&gt; AWS_REGION=us-east-1
+just submit testdata/pdf/&lt;arxivId&gt;.pdf        # jobId (PDF の SHA-256) が表示される
+just status &lt;jobId&gt;                           # 実行の状態、TaskFailed の原因、DynamoDB、S3 のキー
+</code></pre>
+<p>実行は 1 本あたり 1 分半〜5 分。Step Functions の実行が SUCCEEDED でも経路が失敗していることがあるので、<code>status</code> の「TaskFailed の原因」と <code>outputs/comparison.json</code> の <code>routes.*.status</code> / <code>missingPages</code> を見る。</p>
+<h3>3. 成果物を集める (読み取りのみ)</h3>
+<div class="table-wrap"><table>
+<tr><th>取るもの</th><th>コマンド</th><th>何に使うか</th></tr>
+<tr><td>成果物</td><td><code>aws s3 cp s3://&lt;bucket&gt;/outputs/&lt;jobId&gt;/ ./outputs/ --recursive</code></td><td><code>comparison.json</code> が数値の正 (状態、処理時間、トークン数、差分、verify の報告)</td></tr>
+<tr><td>経路 A の中間</td><td><code>aws s3 cp s3://&lt;bucket&gt;/work/&lt;jobId&gt;/textract/document.json ...</code></td><td>正規化前の構造。<code>raw.json</code> (数 MB) は Textract のブロック座標が要るときだけ</td></tr>
+<tr><td>経路 B の中間</td><td><code>aws s3 cp s3://&lt;bucket&gt;/work/&lt;jobId&gt;/bedrock/ ./bedrock/ --recursive</code></td><td><code>page-NNNN.json</code> の <code>usage</code> にページごとのトークン数。欠けたページ番号が分かる</td></tr>
+<tr><td>実行履歴</td><td><code>aws stepfunctions get-execution-history --execution-arn ... --include-execution-data</code></td><td>State の開始・終了時刻、TaskFailed の error / cause</td></tr>
+<tr><td>Lambda のログ</td><td><code>aws logs filter-log-events --log-group-name /aws/lambda/dev-folio-pipeline-&lt;fn&gt; --start-time ... --end-time ...</code></td><td><code>REPORT</code> 行の Duration。textract-parser は <code>inputTokens</code> / <code>outputTokens</code> をログに出す (bedrock-parser と finalizer はアプリのログを出さない)</td></tr>
+<tr><td>DynamoDB</td><td><code>aws dynamodb get-item --table-name dev-folio-jobs --key '{"jobId":{"S":"&lt;jobId&gt;"}}'</code></td><td>最終状態 (<code>COMPLETED</code> / <code>REVIEW_PENDING</code> / <code>FAILED</code>) と更新時刻</td></tr>
+</table></div>
+<h3>4. 再投入する</h3>
+<pre><code>just cleanup &lt;jobId&gt;                          # DynamoDB のレコードと uploads/ work/ outputs/ を消す (確認あり)
+just submit testdata/pdf/&lt;arxivId&gt;.pdf
+</code></pre>
+<p>jobId は PDF の SHA-256 なので、消さずに再投入すると validator が <code>ALREADY_PROCESSED</code> で止める。再投入は Textract と Bedrock の課金が丸ごと再発生する。</p>
+</div>
+</section>
+
+<div class="pager"><a href="00_目次.html">← 00_目次</a><a href="02_対象論文.html">02_対象論文 →</a></div>
+</main>
+<footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+</body>
+</html>

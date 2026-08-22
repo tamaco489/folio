@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06_想定と実測 — folio Phase 1</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg: #ffffff; --surface: #f6f8fa; --surface-2: #eef1f4; --line: #d0d7de; --line-soft: #e6e9ed; --fg: #111827; --fg-2: #1f2937; --muted: #4b5563; --faint: #6b7280; --link: #0969da; --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --yellow: #9a6700; --purple: #8250df; --red: #cf222e; --shadow: 0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06); }
+html { -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif; line-height: 1.7; min-height: 100vh; font-size: 15px; }
+header { border-bottom: 1px solid var(--line-soft); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
+.header-logo { font-size: 16px; font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
+.header-logo:hover { color: var(--link); }
+.back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+.back-link:hover { color: var(--link); }
+.breadcrumb { padding: 10px 28px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line-soft); }
+.breadcrumb a { color: var(--link); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { margin: 0 8px; color: var(--faint); }
+main { max-width: 1000px; margin: 0 auto; padding: 48px 28px 96px; }
+body.index main { max-width: 1120px; }
+.page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line-soft); }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--link); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+.page-title { font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
+.page-subtitle { font-size: 15px; color: var(--muted); max-width: 60em; }
+.section { margin-bottom: 44px; }
+.section-title { font-size: 17px; font-weight: 700; color: var(--fg); margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--link); line-height: 1.3; }
+body.index .section-title { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; border-left: 0; padding-left: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
+.block { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; box-shadow: var(--shadow); }
+.block > :last-child { margin-bottom: 0; }
+h3 { font-size: 14.5px; font-weight: 700; color: var(--fg); margin: 22px 0 8px; }
+h3:first-child { margin-top: 0; }
+p { font-size: 14.5px; color: var(--fg-2); line-height: 1.75; margin-bottom: 12px; }
+p.meta { font-size: 13px; color: var(--muted); }
+ul, ol { margin: 0 0 12px 22px; font-size: 14.5px; color: var(--fg-2); }
+li { margin: 5px 0; line-height: 1.7; }
+ul.task-list { list-style: none; margin-left: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+ul.task-list li { display: block; position: relative; padding-left: 18px; margin: 0; }
+ul.task-list li::before { content: "›"; position: absolute; left: 2px; top: 0; color: var(--link); font-weight: 700; }
+a { color: var(--link); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; color: var(--fg); }
+pre { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg); }
+pre code { background: none; border: 0; padding: 0; }
+.table-wrap { overflow-x: auto; margin-bottom: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
+.table-wrap:last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { background: var(--surface); border-bottom: 2px solid var(--line); border-right: 1px solid var(--line); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line-soft); padding: 10px 14px; vertical-align: top; color: var(--fg); line-height: 1.6; }
+th:last-child, td:last-child { border-right: 0; }
+tr:last-child td { border-bottom: 0; }
+tr:nth-child(even) td { background: var(--surface); }
+tr:hover td { background: #eef4fb; }
+td code, th code { background: var(--bg); }
+dl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+dl > div { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 16px; }
+dt { font-size: 14px; color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+dd { font-size: 13.5px; color: var(--fg-2); line-height: 1.7; }
+dd ol, dd ul { margin-top: 6px; font-size: 13.5px; }
+.callout { background: #ddf4ff; border: 1px solid #b6e3ff; border-left: 4px solid var(--blue); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.7; }
+.callout strong { color: var(--blue); }
+.callout.green { background: #dafbe1; border-color: #aceebb; border-left-color: var(--green); }
+.callout.green strong { color: var(--green); }
+.callout.yellow { background: #fff8c5; border-color: #f3e3a0; border-left-color: var(--yellow); }
+.callout.yellow strong { color: var(--yellow); }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout ul.task-list li::before { color: var(--yellow); }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.info-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.info-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .03em; }
+.info-value { font-size: 22px; color: var(--fg); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.info-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; line-height: 1.5; }
+.tag.ok { background: #dafbe1; color: var(--green); border-color: #aceebb; }
+.tag.warn { background: #fff8c5; color: var(--yellow); border-color: #f3e3a0; }
+.tag.ng { background: #ffebe9; color: var(--red); border-color: #ffcecb; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.card:hover { border-color: var(--link); box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12); transform: translateY(-1px); }
+.card-num { font-size: 12px; font-weight: 700; color: var(--link); letter-spacing: .06em; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--fg); line-height: 1.35; }
+.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.badge.blue { background: #ddf4ff; color: var(--blue); }
+.badge.green { background: #dafbe1; color: var(--green); }
+.badge.orange { background: #fff1e5; color: var(--orange); }
+.badge.purple { background: #fbefff; color: var(--purple); }
+.badge.red { background: #ffebe9; color: var(--red); }
+.pager { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.pager a { text-decoration: none; color: var(--muted); }
+.pager a:hover { color: var(--link); }
+footer { border-top: 1px solid var(--line-soft); text-align: center; padding: 24px; font-size: 12.5px; color: var(--faint); }
+.section { --accent: #0969da; --accent-soft: #ddf4ff; --accent-ink: #0550ae; }
+.section.c2 { --accent: #1a7f37; --accent-soft: #dafbe1; --accent-ink: #116329; }
+.section.c3 { --accent: #bc4c00; --accent-soft: #fff1e5; --accent-ink: #953800; }
+.section.c4 { --accent: #8250df; --accent-soft: #fbefff; --accent-ink: #6639ba; }
+.section.c5 { --accent: #0e7c86; --accent-soft: #d8f3f5; --accent-ink: #0b5f67; }
+.section.c6 { --accent: #bf3989; --accent-soft: #ffeff7; --accent-ink: #99286e; }
+.section-title { border-left-color: var(--accent); display: flex; align-items: center; gap: 10px; }
+.section-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.section .block { border-top: 3px solid var(--accent); border-radius: 10px; }
+.section th { background: var(--accent-soft); color: var(--accent-ink); }
+.section strong { color: var(--accent-ink); font-weight: 700; }
+.section dt { color: var(--accent-ink); }
+.section ul.task-list li::before { color: var(--accent); }
+.section dl > div { border-left: 3px solid var(--accent); }
+.section h3 { color: var(--accent-ink); }
+body.index .section-title { border-left: 0; }
+body.index .section-num { display: none; }
+.page-header { border-bottom: 2px solid var(--page-accent, #0969da); }
+.eyebrow { color: var(--page-accent, #0969da); }
+.page-title { color: #0b1220; }
+p { color: var(--fg-2); }
+td { color: var(--fg); }
+a { color: var(--link); font-weight: 500; }
+</style>
+</head>
+<body style="--page-accent: #1a7f37">
+<header>
+<a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+<a class="back-link" href="00_目次.html">← 目次に戻る</a>
+</header>
+<nav class="breadcrumb"><a href="00_目次.html">Phase 1 経路比較</a><span>›</span>06_想定と実測</nav>
+<main>
+<div class="page-header">
+<div class="eyebrow">Phase 1 経路比較 · 06</div>
+<h1 class="page-title">想定と実測</h1>
+<p class="page-subtitle">設計時の 5 観点 (処理の分担、表、二段組、コスト、根拠の追跡) を実測で埋めた表</p>
+</div>
+<p><code>docs/README.ja.md</code> の「2 つの抽出経路」にある設計時の想定を、5 本の実測 (<a href="04_結果一覧.html">04</a>〜<a href="05_差分の内訳.html">05</a>、<a href="07_処理時間とコスト.html">07</a>) で埋めた。</p>
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>設計時の想定</th><th>実測</th><th>判定</th></tr>
+<tr><td>処理の分担</td><td>A は Textract で読み取り、Bedrock で解釈。B は Bedrock がページ画像から一体で処理</td><td>想定どおり。A は Textract の非同期ジョブが処理時間の 1/3〜2/3、Bedrock 整形は 1 回 (34〜142 秒)。B はページごとに 1 回 (平均 18〜22 秒) を並列 5 で回す</td><td>一致</td></tr>
+<tr><td>表の構造</td><td>A は行列として保たれる、B は崩れやすい</td><td>数値は A が正確 (大きな数値表で原本一致)、行構造と記号は B が正確 (A は行の結合と矢印・チェック記号の化けで値が変わる)。A は表でないもの 19 件を表にした。小さな表は両経路とも一致</td><td>部分的に一致 (「保たれる」のは数値、「崩れる」のは記号と行)</td></tr>
+<tr><td>二段組</td><td>A は段として分離できる、B は読み順が乱れることがある</td><td>本文がある範囲では両経路とも順序は正しい。B は乱れるのではなく段やページ冒頭の段落を落とす (p.4 の左段全体、p.12 全体)。A でも p.2 の Introduction の続きが欠けた (原因未確認)</td><td>A は一致、B は想定と違う形で劣る</td></tr>
+<tr><td>コスト</td><td>A はページ単位で安価、B はトークン課金で高い</td><td>A $0.28〜$0.55 / B $0.30〜$0.60 でほぼ同額、5 本とも B がわずかに高い。A は Textract (Tables) が 52〜71%</td><td>不一致 (差はほぼ無い)</td></tr>
+<tr><td>日本語</td><td>A は扱えない、B は扱える</td><td>今回は英語論文のみ。日本語は疎通テスト (8 ページ) で B のみ完走済み。比較はしていない</td><td>未検証</td></tr>
+<tr><td>根拠の追跡</td><td>A は原本の座標が残る、B は残らない</td><td>A は <code>work/textract/raw.json</code> にブロック座標、<code>figures</code> / <code>tables</code> に <code>bbox</code>。B は <code>bbox</code> が全件 <code>null</code> でページ番号のみ</td><td>一致</td></tr>
+</table></div>
+<section class="section c1">
+<div class="section-title"><span class="section-num">01</span>設計時に無かった観点</div>
+<div class="block">
+<div class="table-wrap"><table>
+<tr><th>観点</th><th>実測</th></tr>
+<tr><td>完走の安定性</td><td>A は 5 本完走 (出力は上限 16,384 の最大 57%)。B は JSON の破損 (引用符) で 3 本が途中停止し、tool use に切り替えた後も型の崩れで 1 ページ欠けた (<a href="09_想定外と原因.html">09</a>)</td></tr>
+<tr><td>本文の完全さ</td><td>A は親節に子節を含む重複 (最大 23,300 文字) と、キャプション・脚注の混入。B はページ冒頭の段落と段・ページ単位の欠落で、本文量は原本の 44〜61% (付録まで取れた 2608.20338v1 だけ 98%)。A の正味は原本の 65〜93% (<a href="05_差分の内訳.html">05</a> の表)</td></tr>
+<tr><td>見出し</td><td>A は番号を落とす (4/5 本)、B は番号と題名を分離・欠落させ、段落ラベルを見出しに昇格させる。どちらも原本の章立てをそのまま再現できていない</td></tr>
+<tr><td>参考文献</td><td>件数は A が 5/5 で一致、B は 5/5 で不一致 (引用番号の混入、ページ境界の結合)。<code>raw</code> は B が原本に忠実だが内容を書き換える (固有名詞 8 箇所、arXiv ID 2 件)。A は OCR 由来の文字崩れだけ</td></tr>
+<tr><td>図</td><td>B が原本に近い (24 図 + Listing 6 に対して 30 件)。A は 16 件で、ロゴや多パネル図の分割片を含む</td></tr>
+<tr><td>字形</td><td>A は <code>∈</code> <code>τ</code> <code>↑↓</code> <code>✓×</code> <code>∞</code> を落とす。B は保つ</td></tr>
+</table></div>
+</div>
+</section>
+<section class="section c2">
+<div class="section-title"><span class="section-num">02</span>まとめ</div>
+<div class="block">
+<p>「A は構造、B は意味」という分担の想定は、実測では「A は<strong>存在と位置と数値</strong>に強く、B は<strong>記号と文脈の読み</strong>に強いが内容を書き換え、ページ単位で落とす」という形になった。どちらか一方で完結する品質ではなく、比較そのものが目的の Phase 1 としては、両経路の差が数値で出せる状態になったことが成果になる。</p>
+</div>
+</section>
+
+<div class="pager"><a href="05_差分の内訳.html">← 05_差分の内訳</a><a href="07_処理時間とコスト.html">07_処理時間とコスト →</a></div>
+</main>
+<footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+</body>
+</html>

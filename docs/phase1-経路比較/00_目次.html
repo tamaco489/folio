@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>00_目次 — folio Phase 1</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg: #ffffff; --surface: #f6f8fa; --surface-2: #eef1f4; --line: #d0d7de; --line-soft: #e6e9ed; --fg: #111827; --fg-2: #1f2937; --muted: #4b5563; --faint: #6b7280; --link: #0969da; --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --yellow: #9a6700; --purple: #8250df; --red: #cf222e; --shadow: 0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06); }
+html { -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif; line-height: 1.7; min-height: 100vh; font-size: 15px; }
+header { border-bottom: 1px solid var(--line-soft); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
+.header-logo { font-size: 16px; font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
+.header-logo:hover { color: var(--link); }
+.back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+.back-link:hover { color: var(--link); }
+.breadcrumb { padding: 10px 28px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line-soft); }
+.breadcrumb a { color: var(--link); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { margin: 0 8px; color: var(--faint); }
+main { max-width: 1000px; margin: 0 auto; padding: 48px 28px 96px; }
+body.index main { max-width: 1120px; }
+.page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line-soft); }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--link); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+.page-title { font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
+.page-subtitle { font-size: 15px; color: var(--muted); max-width: 60em; }
+.section { margin-bottom: 44px; }
+.section-title { font-size: 17px; font-weight: 700; color: var(--fg); margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--link); line-height: 1.3; }
+body.index .section-title { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; border-left: 0; padding-left: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
+.block { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; box-shadow: var(--shadow); }
+.block > :last-child { margin-bottom: 0; }
+h3 { font-size: 14.5px; font-weight: 700; color: var(--fg); margin: 22px 0 8px; }
+h3:first-child { margin-top: 0; }
+p { font-size: 14.5px; color: var(--fg-2); line-height: 1.75; margin-bottom: 12px; }
+p.meta { font-size: 13px; color: var(--muted); }
+ul, ol { margin: 0 0 12px 22px; font-size: 14.5px; color: var(--fg-2); }
+li { margin: 5px 0; line-height: 1.7; }
+ul.task-list { list-style: none; margin-left: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+ul.task-list li { display: block; position: relative; padding-left: 18px; margin: 0; }
+ul.task-list li::before { content: "›"; position: absolute; left: 2px; top: 0; color: var(--link); font-weight: 700; }
+a { color: var(--link); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; color: var(--fg); }
+pre { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg); }
+pre code { background: none; border: 0; padding: 0; }
+.table-wrap { overflow-x: auto; margin-bottom: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
+.table-wrap:last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { background: var(--surface); border-bottom: 2px solid var(--line); border-right: 1px solid var(--line); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line-soft); padding: 10px 14px; vertical-align: top; color: var(--fg); line-height: 1.6; }
+th:last-child, td:last-child { border-right: 0; }
+tr:last-child td { border-bottom: 0; }
+tr:nth-child(even) td { background: var(--surface); }
+tr:hover td { background: #eef4fb; }
+td code, th code { background: var(--bg); }
+dl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+dl > div { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 16px; }
+dt { font-size: 14px; color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+dd { font-size: 13.5px; color: var(--fg-2); line-height: 1.7; }
+dd ol, dd ul { margin-top: 6px; font-size: 13.5px; }
+.callout { background: #ddf4ff; border: 1px solid #b6e3ff; border-left: 4px solid var(--blue); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.7; }
+.callout strong { color: var(--blue); }
+.callout.green { background: #dafbe1; border-color: #aceebb; border-left-color: var(--green); }
+.callout.green strong { color: var(--green); }
+.callout.yellow { background: #fff8c5; border-color: #f3e3a0; border-left-color: var(--yellow); }
+.callout.yellow strong { color: var(--yellow); }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout ul.task-list li::before { color: var(--yellow); }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.info-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
+.info-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .03em; }
+.info-value { font-size: 22px; color: var(--fg); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.info-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; line-height: 1.5; }
+.tag.ok { background: #dafbe1; color: var(--green); border-color: #aceebb; }
+.tag.warn { background: #fff8c5; color: var(--yellow); border-color: #f3e3a0; }
+.tag.ng { background: #ffebe9; color: var(--red); border-color: #ffcecb; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.card:hover { border-color: var(--link); box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12); transform: translateY(-1px); }
+.card-num { font-size: 12px; font-weight: 700; color: var(--link); letter-spacing: .06em; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--fg); line-height: 1.35; }
+.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.badge.blue { background: #ddf4ff; color: var(--blue); }
+.badge.green { background: #dafbe1; color: var(--green); }
+.badge.orange { background: #fff1e5; color: var(--orange); }
+.badge.purple { background: #fbefff; color: var(--purple); }
+.badge.red { background: #ffebe9; color: var(--red); }
+.pager { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.pager a { text-decoration: none; color: var(--muted); }
+.pager a:hover { color: var(--link); }
+footer { border-top: 1px solid var(--line-soft); text-align: center; padding: 24px; font-size: 12.5px; color: var(--faint); }
+.section { --accent: #0969da; --accent-soft: #ddf4ff; --accent-ink: #0550ae; }
+.section.c2 { --accent: #1a7f37; --accent-soft: #dafbe1; --accent-ink: #116329; }
+.section.c3 { --accent: #bc4c00; --accent-soft: #fff1e5; --accent-ink: #953800; }
+.section.c4 { --accent: #8250df; --accent-soft: #fbefff; --accent-ink: #6639ba; }
+.section.c5 { --accent: #0e7c86; --accent-soft: #d8f3f5; --accent-ink: #0b5f67; }
+.section.c6 { --accent: #bf3989; --accent-soft: #ffeff7; --accent-ink: #99286e; }
+.section-title { border-left-color: var(--accent); display: flex; align-items: center; gap: 10px; }
+.section-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.section .block { border-top: 3px solid var(--accent); border-radius: 10px; }
+.section th { background: var(--accent-soft); color: var(--accent-ink); }
+.section strong { color: var(--accent-ink); font-weight: 700; }
+.section dt { color: var(--accent-ink); }
+.section ul.task-list li::before { color: var(--accent); }
+.section dl > div { border-left: 3px solid var(--accent); }
+.section h3 { color: var(--accent-ink); }
+body.index .section-title { border-left: 0; }
+body.index .section-num { display: none; }
+.page-header { border-bottom: 2px solid var(--page-accent, #0969da); }
+.eyebrow { color: var(--page-accent, #0969da); }
+.page-title { color: #0b1220; }
+p { color: var(--fg-2); }
+td { color: var(--fg); }
+a { color: var(--link); font-weight: 500; }
+</style>
+</head>
+<body class="index" style="--page-accent: #0969da">
+<header>
+<a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+
+</header>
+<nav class="breadcrumb">Phase 1 経路比較</nav>
+<main>
+<div class="page-header">
+<div class="eyebrow">folio · Phase 1</div>
+<h1 class="page-title">Phase 1 経路比較</h1>
+<p class="page-subtitle">5 本の英語論文を経路 A (Textract → Bedrock) と経路 B (ページ画像 → Bedrock) に通した比較の記録 (2026-08-22, dev)</p>
+</div>
+<p>Phase 1 の到達点「同一の論文を経路 A (Textract → Bedrock) と経路 B (ページ画像 → Bedrock) に通し、出力を比較できる状態」で得た結果の記録。
+5 本の英語論文を dev 環境の両経路に通し、出力の差・処理時間・コスト・信頼度を設計時の想定と突き合わせ、Phase 2 (数値評価) に渡す項目を洗い出す。</p>
+<div class="callout">実行日 2026-08-22 (JST)。数値はすべて成果物 (<code>outputs/comparison.json</code>、<code>result-*.json</code>) と Step Functions の実行履歴から機械的に集計したもので、出どころは各ページに書く。論文本文を含む JSON と、アカウント ID を含む画面は git 管理外の <code>tmp/findings/2026-08-22-phase1-route-comparison/</code> に置き、ここには載せない。</p>
+<div class="info-grid"><div class="info-item"><div class="info-label">対象論文</div><div class="info-value">5 本</div><div class="info-note">英語、8〜20 ページ、うち二段組 1 本</div></div><div class="info-item"><div class="info-label">実行</div><div class="info-value">8 回</div><div class="info-note">採用 5 回 + 途中停止 3 回</div></div><div class="info-item"><div class="info-label">経路 A の完走</div><div class="info-value">5 / 5</div><div class="info-note">出力は上限の最大 57%</div></div><div class="info-item"><div class="info-label">経路 B の全ページ</div><div class="info-value">4 / 5</div><div class="info-note">残り 1 本は 12 ページ中 11</div></div><div class="info-item"><div class="info-label">コスト (採用分)</div><div class="info-value">$4.10</div><div class="info-note">Textract + Bedrock、単価 × 使用量</div></div></div>
+ class="section c1">
+<div class="section-title"><span class="section-num">01</span>読む順</div>
+<div class="card-grid">
+<a class="card" href="01_前提と実行手順.html"><div class="card-num">01</div><div class="card-title">前提と実行手順</div><div class="card-desc">環境の前提 (認証、apply と upload、クォータ) と、取得 → 投入 → 収集 → 再投入の手順</div><span class="badge blue">前提</span></a>
+<a class="card" href="02_対象論文.html"><div class="card-num">02</div><div class="card-title">対象論文</div><div class="card-desc">5 本の一覧 (ページ数、段組、参考文献、LaTeX ソース、ライセンス、選んだ理由)</div><span class="badge blue">前提</span></a>
+<a class="card" href="03_実行条件.html"><div class="card-num">03</div><div class="card-title">実行条件</div><div class="card-desc">日付、コード (コミット)、モデル ID、FeatureTypes、maxTokens、並列数、Lambda の設定、jobId</div><span class="badge blue">前提</span></a>
+<a class="card" href="04_結果一覧.html"><div class="card-num">04</div><div class="card-title">結果一覧</div><div class="card-desc">論文 × 経路の完走可否、処理時間、トークン数、コスト、差分件数 (数値の正)</div><span class="badge green">結果</span></a>
+<a class="card" href="05_差分の内訳.html"><div class="card-num">05</div><div class="card-title">差分の内訳</div><div class="card-desc">見出し・節・表・図・参考文献ごとに、両経路で何がどう違ったか (抜粋つき)</div><span class="badge green">結果</span></a>
+<a class="card" href="06_想定と実測.html"><div class="card-num">06</div><div class="card-title">想定と実測</div><div class="card-desc">設計時の 5 観点 (処理の分担、表、二段組、コスト、根拠の追跡) を実測で埋めた表</div><span class="badge green">結果</span></a>
+<a class="card" href="07_処理時間とコスト.html"><div class="card-num">07</div><div class="card-title">処理時間とコスト</div><div class="card-desc">State ごとの所要時間、経路別の合計と 1 本あたり、課金の内訳と算出式</div><span class="badge orange">数値</span></a>
+<a class="card" href="08_信頼度の分布.html"><div class="card-num">08</div><div class="card-title">信頼度の分布</div><div class="card-desc">provenance.confidence の項目別の値、hallucination 判定、レビュー閾値 (#23) の見直し案</div><span class="badge orange">数値</span></a>
+<a class="card" href="09_想定外と原因.html"><div class="card-num">09</div><div class="card-title">想定外と原因</div><div class="card-desc">実行で踏んだ問題 (JSON の破損、欠落の黙殺、Lambda の上限など) と原因・対応</div><span class="badge red">問題</span></a>
+<a class="card" href="10_次への反映.html"><div class="card-num">10</div><div class="card-title">次への反映</div><div class="card-desc">Phase 2 で自動評価する項目、正規化 (#22) の確認結果、設計判断の更新</div><span class="badge purple">次</span></a>
+</div>
+</section>
+<section class="section c2">
+<div class="section-title"><span class="section-num">02</span>結論の要約</div>
+<div class="block">
+<ul class="task-list">
+<li>5 本すべてで経路 A は完走し、経路 B は 4 本で全ページ、1 本 (二段組) で 12 ページ中 11 ページが揃った (<a href="04_結果一覧.html">04</a>)</li>
+<li>経路 B は当初 4 本中 3 本で JSON が壊れて途中停止した (引用符のエスケープ漏れ)。tool use で受け取る修正 (#111) の後は引用符では壊れなくなったが、型の崩れ (配列が文字列で返る) が 1 ページ残った (<a href="09_想定外と原因.html">09</a>)</li>
+<li>コストは設計時の「A が安価」という想定と違い、完走した論文ではほぼ同額で B がやや高い。A は Textract (Tables の課金) が 5〜7 割を占める (<a href="07_処理時間とコスト.html">07</a>)</li>
+<li>信頼度は経路 A で title か tables が最低、経路 B は sections が最低で tables はほぼ 1.0 だった。ただし B の tables の信頼度は原本照合だけで、構造の正しさは測っていない (<a href="08_信頼度の分布.html">08</a>)</li>
+</ul>
+</div>
+</section>
+<section class="section c3">
+<div class="section-title"><span class="section-num">03</span>関連</div>
+<div class="block">
+<ul class="task-list">
+<li>Issue: <a href="https://github.com/tamaco489/folio/issues/35">#35</a>。実行で見つかった問題: <a href="https://github.com/tamaco489/folio/issues/111">#111</a> <a href="https://github.com/tamaco489/folio/issues/112">#112</a> <a href="https://github.com/tamaco489/folio/issues/113">#113</a> <a href="https://github.com/tamaco489/folio/issues/118">#118</a></li>
+<li>設計: <code>docs/README.ja.md</code> (アーキテクチャ、2 つの抽出経路、ステートマシン)</li>
+</ul>
+</div>
+</section>
+
+<div class="pager"><span></span><a href="01_前提と実行手順.html">01_前提と実行手順 →</a></div>
+</main>
+<footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+</body>
+</html>
