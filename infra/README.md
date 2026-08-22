@@ -96,16 +96,22 @@ The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `T
 
 The artifacts bucket is created by the storage module, so only the first run takes two steps.
 
-1. `just apply` with only `module "storage"` in `envs/dev/main.tf` (creates the artifacts bucket)
-2. Upload the zips as above
-3. `just plan` -> `just apply` with the remaining modules wired
+```sh
+aws sso login --profile <profile>
+export AWS_PROFILE=<profile>
+export TF_VAR_account_id=$(aws sts get-caller-identity --query Account --output text)
+
+cd infra
+just init
+terraform -chdir=envs/dev apply -target=module.storage
+
+cd ../backend
+just upload
+just upload-layer
+
+cd ../infra
+just plan
+just apply
+```
 
 From then on it is just "re-upload the zips -> `just plan` -> `just apply`".
-
-## CI
-
-`.github/workflows/ci-infra.yml` runs on pull requests that touch `infra/**`, `.tool-versions`, or the workflow itself, with `permissions: contents: read` and no AWS credentials, so it also runs for pull requests from forks.
-Three jobs run in parallel: `terraform fmt -check` and `just validate`, `just lint` (tflint with the `terraform` recommended preset and the `aws` ruleset), and `trivy config` (misconfiguration checks, failing on MEDIUM or higher).
-`terraform plan` is intentionally not part of CI.
-Settings disabled on purpose are suppressed with `#trivy:ignore:<id>` placed right after the reason comment above the resource, so `just scan` and CI report zero findings.
-The check bundle is fetched at scan time; if a newly added check fails the job, either fix the configuration or add an ignore with a reason.
