@@ -59,22 +59,22 @@ just fetch-corpus    # 評価用論文を arXiv から取得する
 論文の選び方:
 
 ```sh
-just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"'   # テーマで絞る (arXiv の検索構文)
-just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'                 # 要旨に benchmark を含む cs.LG
-just fetch-corpus -ids 2608.20318,2301.07041                           # ID を指名する (検索しない)
+just fetch-corpus -query 'cat:cs.CL AND ti:"large language model"' # テーマで絞る (arXiv の検索構文)
+just fetch-corpus -query 'cat:cs.LG AND abs:benchmark'             # 要旨に benchmark を含む cs.LG
+just fetch-corpus -ids 2608.20318,2301.07041                       # ID を指名する (検索しない)
 ```
 
 本数とページ数:
 
 ```sh
-just fetch-corpus -want 3                       # 条件に合う論文を 3 本で止める (0 なら候補をすべて)
-just fetch-corpus -max-results 100              # 検索で集める候補を 100 件にする (ページ数で落ちる分を見込む)
-just fetch-corpus -min-pages 10 -max-pages 30   # ページ数の範囲を変える (-max-pages 0 で上限なし)
+just fetch-corpus -want 3                     # 条件に合う論文を 3 本で止める (0 なら候補をすべて)
+just fetch-corpus -max-results 100            # 検索で集める候補を 100 件にする (ページ数で落ちる分を見込む)
+just fetch-corpus -min-pages 10 -max-pages 30 # ページ数の範囲を変える (-max-pages 0 で上限なし)
 ```
 
 出力先と通信:
 
 ```sh
-just fetch-corpus -out ../tmp/papers            # PDF と corpus.json の置き場所 (既定は testdata/pdf)
-just fetch-corpus -interval 5s                  # arXiv へのリクエスト間隔 (既定 3s、利用規約の下限)
+just fetch-corpus -out ../tmp/papers # PDF と corpus.json の置き場所 (既定は testdata/pdf)
+just fetch-corpus -interval 5s       # arXiv へのリクエスト間隔 (既定 3s、利用規約の下限)
 ```
