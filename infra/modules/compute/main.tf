@@ -2,7 +2,7 @@ locals {
   name_prefix = "${var.env}-folio"
 
   # artifacts バケット内の zip のキー (backend の just package が作る bin/{関数名}.zip と Layer の pdf-processor.zip を同じ名前で置く)
-  # キーは固定で、差し替えの検出はバケットのバージョニング (storage) と s3_object_version で行う
+  # キーは固定で、関数のコードは just upload が同じキーで差し替え、Layer だけバケットのバージョニング (storage) と s3_object_version で検出する
   lambda_key_prefix = "lambda/"
   layer_key         = "layers/pdf-processor.zip"
 
