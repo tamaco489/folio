@@ -1,184 +1,888 @@
 <!doctype html>
 <html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>04_結果一覧 — folio Phase 1</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-:root { --bg: #ffffff; --surface: #f6f8fa; --surface-2: #eef1f4; --line: #d0d7de; --line-soft: #e6e9ed; --fg: #111827; --fg-2: #1f2937; --muted: #4b5563; --faint: #6b7280; --link: #0969da; --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --yellow: #9a6700; --purple: #8250df; --red: #cf222e; --shadow: 0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06); }
-html { -webkit-font-smoothing: antialiased; }
-body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Helvetica, Arial, sans-serif; line-height: 1.7; min-height: 100vh; font-size: 15px; }
-header { border-bottom: 1px solid var(--line-soft); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
-.header-logo { font-size: 16px; font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
-.header-logo:hover { color: var(--link); }
-.back-link { font-size: 13px; color: var(--muted); text-decoration: none; }
-.back-link:hover { color: var(--link); }
-.breadcrumb { padding: 10px 28px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line-soft); }
-.breadcrumb a { color: var(--link); text-decoration: none; }
-.breadcrumb a:hover { text-decoration: underline; }
-.breadcrumb span { margin: 0 8px; color: var(--faint); }
-main { max-width: 1000px; margin: 0 auto; padding: 48px 28px 96px; }
-body.index main { max-width: 1120px; }
-.page-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line-soft); }
-.eyebrow { font-size: 12px; font-weight: 600; color: var(--link); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
-.page-title { font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
-.page-subtitle { font-size: 15px; color: var(--muted); max-width: 60em; }
-.section { margin-bottom: 44px; }
-.section-title { font-size: 17px; font-weight: 700; color: var(--fg); margin-bottom: 14px; padding-left: 12px; border-left: 4px solid var(--link); line-height: 1.3; }
-body.index .section-title { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .04em; border-left: 0; padding-left: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
-.block { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; box-shadow: var(--shadow); }
-.block > :last-child { margin-bottom: 0; }
-h3 { font-size: 14.5px; font-weight: 700; color: var(--fg); margin: 22px 0 8px; }
-h3:first-child { margin-top: 0; }
-p { font-size: 14.5px; color: var(--fg-2); line-height: 1.75; margin-bottom: 12px; }
-p.meta { font-size: 13px; color: var(--muted); }
-ul, ol { margin: 0 0 12px 22px; font-size: 14.5px; color: var(--fg-2); }
-li { margin: 5px 0; line-height: 1.7; }
-ul.task-list { list-style: none; margin-left: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-ul.task-list li { display: block; position: relative; padding-left: 18px; margin: 0; }
-ul.task-list li::before { content: "›"; position: absolute; left: 2px; top: 0; color: var(--link); font-weight: 700; }
-a { color: var(--link); }
-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px; color: var(--fg); }
-pre { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg); }
-pre code { background: none; border: 0; padding: 0; }
-.table-wrap { overflow-x: auto; margin-bottom: 16px; border: 1px solid var(--line-soft); border-radius: 8px; }
-.table-wrap:last-child { margin-bottom: 0; }
-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-th { background: var(--surface); border-bottom: 2px solid var(--line); border-right: 1px solid var(--line); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
-td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line-soft); padding: 10px 14px; vertical-align: top; color: var(--fg); line-height: 1.6; }
-th:last-child, td:last-child { border-right: 0; }
-tr:last-child td { border-bottom: 0; }
-tr:nth-child(even) td { background: var(--surface); }
-tr:hover td { background: #eef4fb; }
-td code, th code { background: var(--bg); }
-dl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-dl > div { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; padding: 12px 16px; }
-dt { font-size: 14px; color: var(--fg); font-weight: 700; margin-bottom: 4px; }
-dd { font-size: 13.5px; color: var(--fg-2); line-height: 1.7; }
-dd ol, dd ul { margin-top: 6px; font-size: 13.5px; }
-.callout { background: #ddf4ff; border: 1px solid #b6e3ff; border-left: 4px solid var(--blue); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 16px; font-size: 14px; color: var(--fg-2); line-height: 1.7; }
-.callout strong { color: var(--blue); }
-.callout.green { background: #dafbe1; border-color: #aceebb; border-left-color: var(--green); }
-.callout.green strong { color: var(--green); }
-.callout.yellow { background: #fff8c5; border-color: #f3e3a0; border-left-color: var(--yellow); }
-.callout.yellow strong { color: var(--yellow); }
-.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
-.callout ul.task-list li::before { color: var(--yellow); }
-.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
-.info-item { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); }
-.info-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .03em; }
-.info-value { font-size: 22px; color: var(--fg); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
-.info-note { font-size: 12px; color: var(--faint); margin-top: 6px; }
-.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; line-height: 1.5; }
-.tag.ok { background: #dafbe1; color: var(--green); border-color: #aceebb; }
-.tag.warn { background: #fff8c5; color: var(--yellow); border-color: #f3e3a0; }
-.tag.ng { background: #ffebe9; color: var(--red); border-color: #ffcecb; }
-.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-.card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s, transform .15s; }
-.card:hover { border-color: var(--link); box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12); transform: translateY(-1px); }
-.card-num { font-size: 12px; font-weight: 700; color: var(--link); letter-spacing: .06em; }
-.card-title { font-size: 16px; font-weight: 700; color: var(--fg); line-height: 1.35; }
-.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
-.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
-.badge.blue { background: #ddf4ff; color: var(--blue); }
-.badge.green { background: #dafbe1; color: var(--green); }
-.badge.orange { background: #fff1e5; color: var(--orange); }
-.badge.purple { background: #fbefff; color: var(--purple); }
-.badge.red { background: #ffebe9; color: var(--red); }
-.pager { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-soft); font-size: 14px; }
-.pager a { text-decoration: none; color: var(--muted); }
-.pager a:hover { color: var(--link); }
-footer { border-top: 1px solid var(--line-soft); text-align: center; padding: 24px; font-size: 12.5px; color: var(--faint); }
-.section { --accent: #0969da; --accent-soft: #ddf4ff; --accent-ink: #0550ae; }
-.section.c2 { --accent: #1a7f37; --accent-soft: #dafbe1; --accent-ink: #116329; }
-.section.c3 { --accent: #bc4c00; --accent-soft: #fff1e5; --accent-ink: #953800; }
-.section.c4 { --accent: #8250df; --accent-soft: #fbefff; --accent-ink: #6639ba; }
-.section.c5 { --accent: #0e7c86; --accent-soft: #d8f3f5; --accent-ink: #0b5f67; }
-.section.c6 { --accent: #bf3989; --accent-soft: #ffeff7; --accent-ink: #99286e; }
-.section-title { border-left-color: var(--accent); display: flex; align-items: center; gap: 10px; }
-.section-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
-.section .block { border-top: 3px solid var(--accent); border-radius: 10px; }
-.section th { background: var(--accent-soft); color: var(--accent-ink); }
-.section strong { color: var(--accent-ink); font-weight: 700; }
-.section dt { color: var(--accent-ink); }
-.section ul.task-list li::before { color: var(--accent); }
-.section dl > div { border-left: 3px solid var(--accent); }
-.section h3 { color: var(--accent-ink); }
-body.index .section-title { border-left: 0; }
-body.index .section-num { display: none; }
-.page-header { border-bottom: 2px solid var(--page-accent, #0969da); }
-.eyebrow { color: var(--page-accent, #0969da); }
-.page-title { color: #0b1220; }
-p { color: var(--fg-2); }
-td { color: var(--fg); }
-a { color: var(--link); font-weight: 500; }
-</style>
-</head>
-<body style="--page-accent: #1a7f37">
-<header>
-<a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
-<a class="back-link" href="00_目次.html">← 目次に戻る</a>
-</header>
-<nav class="breadcrumb"><a href="00_目次.html">Phase 1 経路比較</a><span>›</span>04_結果一覧</nav>
-<main>
-<div class="page-header">
-<div class="eyebrow">Phase 1 経路比較 · 04</div>
-<h1 class="page-title">結果一覧</h1>
-<p class="page-subtitle">論文 × 経路の完走可否、処理時間、トークン数、コスト、差分件数 (数値の正)</p>
-</div>
-<p>採用した実行 (<a href="03_実行条件.html">03</a>) の結果。このページの数値が正で、05〜08 はここを参照する。</p>
-<div class="table-wrap"><table>
-<tr><th>論文</th><th>ページ</th><th>全体</th><th>実行時間</th><th>経路 A</th><th>経路 B (揃ったページ)</th><th>節 A / B</th><th>図 A / B</th><th>表 A / B</th><th>参考文献 A / B</th><th>題名 / 著者 / 要旨の一致</th><th>コスト</th></tr>
-<tr><td><code>2608.20318v1</code></td><td>19</td><td><span class="tag ok">COMPLETED</span></td><td>316 秒</td><td>succeeded (160 秒)</td><td>succeeded 19 / 19 (133 秒)</td><td>19 / 29</td><td>5 / 3</td><td>11 / 4</td><td>60 / 59</td><td>o / o / o</td><td>$1.15</td></tr>
-<tr><td><code>2608.20338v1</code></td><td>17</td><td><span class="tag ok">COMPLETED</span></td><td>176 秒</td><td>succeeded (121 秒)</td><td>succeeded 17 / 17 (84 秒)</td><td>19 / 36</td><td>2 / 10</td><td>10 / 9</td><td>16 / 16</td><td>o / o / x</td><td>$0.80</td></tr>
-<tr><td><code>2608.19529v1</code></td><td>17</td><td><span class="tag ok">COMPLETED</span></td><td>256 秒</td><td>succeeded (139 秒)</td><td>succeeded 17 / 17 (78 秒)</td><td>31 / 35</td><td>4 / 6</td><td>15 / 10</td><td>40 / 45</td><td>o / o / x</td><td>$0.89</td></tr>
-<tr><td><code>2608.19526v1</code></td><td>15</td><td><span class="tag ok">COMPLETED</span></td><td>141 秒</td><td>succeeded (81 秒)</td><td>succeeded 15 / 15 (53 秒)</td><td>36 / 77</td><td>0 / 6</td><td>11 / 5</td><td>17 / 23</td><td>o / o / x</td><td>$0.67</td></tr>
-<tr><td><code>2608.17950v1</code></td><td>12</td><td><span class="tag warn">REVIEW_PENDING</span></td><td>136 秒</td><td>succeeded (50 秒)</td><td>succeeded 11 / 12 (63 秒)</td><td>30 / 28</td><td>5 / 5</td><td>5 / 5</td><td>20 / 20</td><td>o / o / o</td><td>$0.58</td></tr>
-</table></div>
-<section class="section c1">
-<div class="section-title"><span class="section-num">01</span>列の出どころ</div>
-<div class="block">
-<ul class="task-list">
-<li>全体: <code>comparison.json</code> の <code>status</code>。<code>REVIEW_PENDING</code> は <code>needsReview: true</code> (どちらかの経路が verify でレビュー要、または欠落ページあり)</li>
-<li>実行時間: Step Functions の実行の <code>startDate</code> → <code>stopDate</code></li>
-<li>経路 A / B の処理時間: <code>routes.*.durationMs</code>。A は Textract の起動から <code>document.json</code> の保存まで、B は最も早いページの開始から最も遅いページの完了まで (壁時計時間)</li>
-<li>揃ったページ: ページ数 − <code>routes.bedrock.missingPages</code> (#112 以降のフィールド。1 回目の実行は <code>provenance.warnings</code> の欠落警告から数えた)</li>
-<li>節・図・表・参考文献: <code>result-*.json</code> の配列の長さ (<code>diff.counts</code> と同じ値)</li>
-<li>題名 / 著者 / 要旨の一致: <code>diff.title.equal</code> など (正規化後の完全一致)</li>
-<li>コスト: <a href="07_処理時間とコスト.html">07</a> の算出式 (Textract のページ数 × 単価 + Bedrock のトークン数 × 単価)</li>
-</ul>
-</div>
-</section>
-<section class="section c2">
-<div class="section-title"><span class="section-num">02</span>トークン数</div>
-<div class="block">
-<div class="table-wrap"><table>
-<tr><th>論文</th><th>ページ</th><th>経路 A 入力 / 出力 (1 回の呼び出し)</th><th>経路 B 入力 / 出力 (ページの合計)</th><th>経路 B 1 ページあたり</th><th>経路 A の出力 / 上限 16,384</th></tr>
-<tr><td><code>2608.20318v1</code></td><td>19</td><td>33,346 / 9,371</td><td>40,565 / 28,426</td><td>2,135 / 1,496</td><td>57%</td></tr>
-<tr><td><code>2608.20338v1</code></td><td>17</td><td>18,705 / 3,968</td><td>36,295 / 18,066</td><td>2,135 / 1,063</td><td>24%</td></tr>
-<tr><td><code>2608.19529v1</code></td><td>17</td><td>21,662 / 5,448</td><td>51,187 / 18,377</td><td>3,011 / 1,081</td><td>33%</td></tr>
-<tr><td><code>2608.19526v1</code></td><td>15</td><td>13,058 / 2,962</td><td>45,990 / 12,222</td><td>3,066 / 815</td><td>18%</td></tr>
-<tr><td><code>2608.17950v1</code></td><td>12</td><td>14,201 / 3,240</td><td>33,726 / 11,711</td><td>3,066 / 1,065</td><td>20%</td></tr>
-</table></div>
-<p>トークン数は <code>comparison.json</code> の <code>routes.*.cost.bedrockInputTokens</code> / <code>bedrockOutputTokens</code>。経路 B は失敗した呼び出しの usage が残らないため、揃ったページ分だけの合計。</p>
-</div>
-</section>
-<section class="section c3">
-<div class="section-title"><span class="section-num">03</span>1 回目の実行 (途中停止した 3 本)</div>
-<div class="block">
-<div class="table-wrap"><table>
-<tr><th>論文</th><th>開始 → 終了</th><th>全体</th><th>経路 A</th><th>経路 B (揃ったページ)</th><th>経路 B の節 / 図 / 表 / 参考文献</th><th>コスト</th></tr>
-<tr><td><code>2608.19529v1</code></td><td>21:42:26 → 21:45:10</td><td>COMPLETED</td><td>succeeded (76 秒)</td><td>14 / 17 (76 秒)</td><td>29 / 6 / 8 / 15</td><td>$0.72</td></tr>
-<tr><td><code>2608.19526v1</code></td><td>21:48:24 → 21:49:55</td><td>COMPLETED</td><td>succeeded (52 秒)</td><td>7 / 15 (29 秒)</td><td>49 / 4 / 2 / 0</td><td>$0.44</td></tr>
-<tr><td><code>2608.17950v1</code></td><td>22:00:53 → 22:02:51</td><td>REVIEW_PENDING</td><td>succeeded (54 秒)</td><td>11 / 12 (63 秒)</td><td>32 / 5 / 5 / 20</td><td>$0.56</td></tr>
-</table></div>
-<p>いずれも <code>PageDecodeError</code> で Map が止まり、finalizer が揃ったページだけで結合した。2608.19526v1 は参考文献のページが未処理で <code>references</code> が 0 件のまま <code>COMPLETED</code> になっている。経緯は <a href="09_想定外と原因.html">09</a>。</p>
-</div>
-</section>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>04_結果一覧 — folio Phase 1</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #ffffff;
+        --surface: #f6f8fa;
+        --surface-2: #eef1f4;
+        --line: #d0d7de;
+        --line-soft: #e6e9ed;
+        --fg: #111827;
+        --fg-2: #1f2937;
+        --muted: #4b5563;
+        --faint: #6b7280;
+        --link: #0969da;
+        --blue: #0969da;
+        --green: #1a7f37;
+        --orange: #bc4c00;
+        --yellow: #9a6700;
+        --purple: #8250df;
+        --red: #cf222e;
+        --shadow:
+          0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06);
+      }
+      html {
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+          "Noto Sans JP", Helvetica, Arial, sans-serif;
+        line-height: 1.7;
+        min-height: 100vh;
+        font-size: 15px;
+      }
+      header {
+        border-bottom: 1px solid var(--line-soft);
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .header-logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+      }
+      .header-logo:hover {
+        color: var(--link);
+      }
+      .back-link {
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--link);
+      }
+      .breadcrumb {
+        padding: 10px 28px;
+        font-size: 12.5px;
+        color: var(--muted);
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .breadcrumb a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      .breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      .breadcrumb span {
+        margin: 0 8px;
+        color: var(--faint);
+      }
+      main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      body.index main {
+        max-width: 1120px;
+      }
+      .page-header {
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--link);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .page-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--fg);
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .page-subtitle {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 60em;
+      }
+      .section {
+        margin-bottom: 44px;
+      }
+      .section-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--fg);
+        margin-bottom: 14px;
+        padding-left: 12px;
+        border-left: 4px solid var(--link);
+        line-height: 1.3;
+      }
+      body.index .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        border-left: 0;
+        padding-left: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .block {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+        box-shadow: var(--shadow);
+      }
+      .block > :last-child {
+        margin-bottom: 0;
+      }
+      h3 {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: var(--fg);
+        margin: 22px 0 8px;
+      }
+      h3:first-child {
+        margin-top: 0;
+      }
+      p {
+        font-size: 14.5px;
+        color: var(--fg-2);
+        line-height: 1.75;
+        margin-bottom: 12px;
+      }
+      p.meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      ul,
+      ol {
+        margin: 0 0 12px 22px;
+        font-size: 14.5px;
+        color: var(--fg-2);
+      }
+      li {
+        margin: 5px 0;
+        line-height: 1.7;
+      }
+      ul.task-list {
+        list-style: none;
+        margin-left: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      ul.task-list li {
+        display: block;
+        position: relative;
+        padding-left: 18px;
+        margin: 0;
+      }
+      ul.task-list li::before {
+        content: "›";
+        position: absolute;
+        left: 2px;
+        top: 0;
+        color: var(--link);
+        font-weight: 700;
+      }
+      a {
+        color: var(--link);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--fg);
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 0 0 12px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--fg);
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-bottom: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+      }
+      .table-wrap:last-child {
+        margin-bottom: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+      th {
+        background: var(--surface);
+        border-bottom: 2px solid var(--line);
+        border-right: 1px solid var(--line);
+        padding: 10px 14px;
+        text-align: left;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      td {
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line-soft);
+        padding: 10px 14px;
+        vertical-align: top;
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      th:last-child,
+      td:last-child {
+        border-right: 0;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tr:nth-child(even) td {
+        background: var(--surface);
+      }
+      tr:hover td {
+        background: #eef4fb;
+      }
+      td code,
+      th code {
+        background: var(--bg);
+      }
+      dl {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      dl > div {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      dt {
+        font-size: 14px;
+        color: var(--fg);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      dd {
+        font-size: 13.5px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      dd ol,
+      dd ul {
+        margin-top: 6px;
+        font-size: 13.5px;
+      }
+      .callout {
+        background: #ddf4ff;
+        border: 1px solid #b6e3ff;
+        border-left: 4px solid var(--blue);
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      .callout strong {
+        color: var(--blue);
+      }
+      .callout.green {
+        background: #dafbe1;
+        border-color: #aceebb;
+        border-left-color: var(--green);
+      }
+      .callout.green strong {
+        color: var(--green);
+      }
+      .callout.yellow {
+        background: #fff8c5;
+        border-color: #f3e3a0;
+        border-left-color: var(--yellow);
+      }
+      .callout.yellow strong {
+        color: var(--yellow);
+      }
+      .callout p:last-child,
+      .callout ul:last-child {
+        margin-bottom: 0;
+      }
+      .callout ul.task-list li::before {
+        color: var(--yellow);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .info-item {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+      .info-label {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+      .info-value {
+        font-size: 22px;
+        color: var(--fg);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+      }
+      .info-note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 6px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid;
+        white-space: nowrap;
+        vertical-align: middle;
+        line-height: 1.5;
+      }
+      .tag.ok {
+        background: #dafbe1;
+        color: var(--green);
+        border-color: #aceebb;
+      }
+      .tag.warn {
+        background: #fff8c5;
+        color: var(--yellow);
+        border-color: #f3e3a0;
+      }
+      .tag.ng {
+        background: #ffebe9;
+        color: var(--red);
+        border-color: #ffcecb;
+      }
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 22px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: var(--shadow);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          transform 0.15s;
+      }
+      .card:hover {
+        border-color: var(--link);
+        box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12);
+        transform: translateY(-1px);
+      }
+      .card-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--link);
+        letter-spacing: 0.06em;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        line-height: 1.35;
+      }
+      .card-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+        flex: 1;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        align-self: flex-start;
+      }
+      .badge.blue {
+        background: #ddf4ff;
+        color: var(--blue);
+      }
+      .badge.green {
+        background: #dafbe1;
+        color: var(--green);
+      }
+      .badge.orange {
+        background: #fff1e5;
+        color: var(--orange);
+      }
+      .badge.purple {
+        background: #fbefff;
+        color: var(--purple);
+      }
+      .badge.red {
+        background: #ffebe9;
+        color: var(--red);
+      }
+      .pager {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 14px;
+      }
+      .pager a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+      .pager a:hover {
+        color: var(--link);
+      }
+      footer {
+        border-top: 1px solid var(--line-soft);
+        text-align: center;
+        padding: 24px;
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+      .section {
+        --accent: #0969da;
+        --accent-soft: #ddf4ff;
+        --accent-ink: #0550ae;
+      }
+      .section.c2 {
+        --accent: #1a7f37;
+        --accent-soft: #dafbe1;
+        --accent-ink: #116329;
+      }
+      .section.c3 {
+        --accent: #bc4c00;
+        --accent-soft: #fff1e5;
+        --accent-ink: #953800;
+      }
+      .section.c4 {
+        --accent: #8250df;
+        --accent-soft: #fbefff;
+        --accent-ink: #6639ba;
+      }
+      .section.c5 {
+        --accent: #0e7c86;
+        --accent-soft: #d8f3f5;
+        --accent-ink: #0b5f67;
+      }
+      .section.c6 {
+        --accent: #bf3989;
+        --accent-soft: #ffeff7;
+        --accent-ink: #99286e;
+      }
+      .section-title {
+        border-left-color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .section .block {
+        border-top: 3px solid var(--accent);
+        border-radius: 10px;
+      }
+      .section th {
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .section strong {
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .section dt {
+        color: var(--accent-ink);
+      }
+      .section ul.task-list li::before {
+        color: var(--accent);
+      }
+      .section dl > div {
+        border-left: 3px solid var(--accent);
+      }
+      .section h3 {
+        color: var(--accent-ink);
+      }
+      body.index .section-title {
+        border-left: 0;
+      }
+      body.index .section-num {
+        display: none;
+      }
+      .page-header {
+        border-bottom: 2px solid var(--page-accent, #0969da);
+      }
+      .eyebrow {
+        color: var(--page-accent, #0969da);
+      }
+      .page-title {
+        color: #0b1220;
+      }
+      p {
+        color: var(--fg-2);
+      }
+      td {
+        color: var(--fg);
+      }
+      a {
+        color: var(--link);
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body style="--page-accent: #1a7f37">
+    <header>
+      <a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+      <a class="back-link" href="00_目次.html">← 目次に戻る</a>
+    </header>
+    <nav class="breadcrumb">
+      <a href="00_目次.html">Phase 1 経路比較</a><span>›</span>04_結果一覧
+    </nav>
+    <main>
+      <div class="page-header">
+        <div class="eyebrow">Phase 1 経路比較 · 04</div>
+        <h1 class="page-title">結果一覧</h1>
+        <p class="page-subtitle">
+          論文 × 経路の完走可否、処理時間、トークン数、コスト、差分件数
+          (数値の正)
+        </p>
+      </div>
+      <p>
+        採用した実行 (<a href="03_実行条件.html">03</a>)
+        の結果。このページの数値が正で、05〜08 はここを参照する。
+      </p>
+      <div class="table-wrap">
+        <table>
+          <tr>
+            <th>論文</th>
+            <th>ページ</th>
+            <th>全体</th>
+            <th>実行時間</th>
+            <th>経路 A</th>
+            <th>経路 B (揃ったページ)</th>
+            <th>節 A / B</th>
+            <th>図 A / B</th>
+            <th>表 A / B</th>
+            <th>参考文献 A / B</th>
+            <th>題名 / 著者 / 要旨の一致</th>
+            <th>コスト</th>
+          </tr>
+          <tr>
+            <td><code>2608.20318v1</code></td>
+            <td>19</td>
+            <td><span class="tag ok">COMPLETED</span></td>
+            <td>316 秒</td>
+            <td>succeeded (160 秒)</td>
+            <td>succeeded 19 / 19 (133 秒)</td>
+            <td>19 / 29</td>
+            <td>5 / 3</td>
+            <td>11 / 4</td>
+            <td>60 / 59</td>
+            <td>o / o / o</td>
+            <td>$1.15</td>
+          </tr>
+          <tr>
+            <td><code>2608.20338v1</code></td>
+            <td>17</td>
+            <td><span class="tag ok">COMPLETED</span></td>
+            <td>176 秒</td>
+            <td>succeeded (121 秒)</td>
+            <td>succeeded 17 / 17 (84 秒)</td>
+            <td>19 / 36</td>
+            <td>2 / 10</td>
+            <td>10 / 9</td>
+            <td>16 / 16</td>
+            <td>o / o / x</td>
+            <td>$0.80</td>
+          </tr>
+          <tr>
+            <td><code>2608.19529v1</code></td>
+            <td>17</td>
+            <td><span class="tag ok">COMPLETED</span></td>
+            <td>256 秒</td>
+            <td>succeeded (139 秒)</td>
+            <td>succeeded 17 / 17 (78 秒)</td>
+            <td>31 / 35</td>
+            <td>4 / 6</td>
+            <td>15 / 10</td>
+            <td>40 / 45</td>
+            <td>o / o / x</td>
+            <td>$0.89</td>
+          </tr>
+          <tr>
+            <td><code>2608.19526v1</code></td>
+            <td>15</td>
+            <td><span class="tag ok">COMPLETED</span></td>
+            <td>141 秒</td>
+            <td>succeeded (81 秒)</td>
+            <td>succeeded 15 / 15 (53 秒)</td>
+            <td>36 / 77</td>
+            <td>0 / 6</td>
+            <td>11 / 5</td>
+            <td>17 / 23</td>
+            <td>o / o / x</td>
+            <td>$0.67</td>
+          </tr>
+          <tr>
+            <td><code>2608.17950v1</code></td>
+            <td>12</td>
+            <td><span class="tag warn">REVIEW_PENDING</span></td>
+            <td>136 秒</td>
+            <td>succeeded (50 秒)</td>
+            <td>succeeded 11 / 12 (63 秒)</td>
+            <td>30 / 28</td>
+            <td>5 / 5</td>
+            <td>5 / 5</td>
+            <td>20 / 20</td>
+            <td>o / o / o</td>
+            <td>$0.58</td>
+          </tr>
+        </table>
+      </div>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">01</span>列の出どころ
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              全体: <code>comparison.json</code> の <code>status</code>。<code
+                >REVIEW_PENDING</code
+              >
+              は <code>needsReview: true</code> (どちらかの経路が verify
+              でレビュー要、または欠落ページあり)
+            </li>
+            <li>
+              実行時間: Step Functions の実行の <code>startDate</code> →
+              <code>stopDate</code>
+            </li>
+            <li>
+              経路 A / B の処理時間: <code>routes.*.durationMs</code>。A は
+              Textract の起動から <code>document.json</code> の保存まで、B
+              は最も早いページの開始から最も遅いページの完了まで (壁時計時間)
+            </li>
+            <li>
+              揃ったページ: ページ数 −
+              <code>routes.bedrock.missingPages</code> (#112 以降のフィールド。1
+              回目の実行は
+              <code>provenance.warnings</code> の欠落警告から数えた)
+            </li>
+            <li>
+              節・図・表・参考文献: <code>result-*.json</code> の配列の長さ
+              (<code>diff.counts</code> と同じ値)
+            </li>
+            <li>
+              題名 / 著者 / 要旨の一致: <code>diff.title.equal</code> など
+              (正規化後の完全一致)
+            </li>
+            <li>
+              コスト: <a href="07_処理時間とコスト.html">07</a> の算出式
+              (Textract のページ数 × 単価 + Bedrock のトークン数 × 単価)
+            </li>
+          </ul>
+        </div>
+      </section>
+      <section class="section c2">
+        <div class="section-title">
+          <span class="section-num">02</span>トークン数
+        </div>
+        <div class="block">
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>ページ</th>
+                <th>経路 A 入力 / 出力 (1 回の呼び出し)</th>
+                <th>経路 B 入力 / 出力 (ページの合計)</th>
+                <th>経路 B 1 ページあたり</th>
+                <th>経路 A の出力 / 上限 16,384</th>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>19</td>
+                <td>33,346 / 9,371</td>
+                <td>40,565 / 28,426</td>
+                <td>2,135 / 1,496</td>
+                <td>57%</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>17</td>
+                <td>18,705 / 3,968</td>
+                <td>36,295 / 18,066</td>
+                <td>2,135 / 1,063</td>
+                <td>24%</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>17</td>
+                <td>21,662 / 5,448</td>
+                <td>51,187 / 18,377</td>
+                <td>3,011 / 1,081</td>
+                <td>33%</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>15</td>
+                <td>13,058 / 2,962</td>
+                <td>45,990 / 12,222</td>
+                <td>3,066 / 815</td>
+                <td>18%</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>12</td>
+                <td>14,201 / 3,240</td>
+                <td>33,726 / 11,711</td>
+                <td>3,066 / 1,065</td>
+                <td>20%</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            トークン数は <code>comparison.json</code> の
+            <code>routes.*.cost.bedrockInputTokens</code> /
+            <code>bedrockOutputTokens</code>。経路 B は失敗した呼び出しの usage
+            が残らないため、揃ったページ分だけの合計。
+          </p>
+        </div>
+      </section>
+      <section class="section c3">
+        <div class="section-title">
+          <span class="section-num">03</span>1 回目の実行 (途中停止した 3 本)
+        </div>
+        <div class="block">
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>開始 → 終了</th>
+                <th>全体</th>
+                <th>経路 A</th>
+                <th>経路 B (揃ったページ)</th>
+                <th>経路 B の節 / 図 / 表 / 参考文献</th>
+                <th>コスト</th>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>21:42:26 → 21:45:10</td>
+                <td>COMPLETED</td>
+                <td>succeeded (76 秒)</td>
+                <td>14 / 17 (76 秒)</td>
+                <td>29 / 6 / 8 / 15</td>
+                <td>$0.72</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>21:48:24 → 21:49:55</td>
+                <td>COMPLETED</td>
+                <td>succeeded (52 秒)</td>
+                <td>7 / 15 (29 秒)</td>
+                <td>49 / 4 / 2 / 0</td>
+                <td>$0.44</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>22:00:53 → 22:02:51</td>
+                <td>REVIEW_PENDING</td>
+                <td>succeeded (54 秒)</td>
+                <td>11 / 12 (63 秒)</td>
+                <td>32 / 5 / 5 / 20</td>
+                <td>$0.56</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            いずれも <code>PageDecodeError</code> で Map が止まり、finalizer
+            が揃ったページだけで結合した。2608.19526v1
+            は参考文献のページが未処理で <code>references</code> が 0 件のまま
+            <code>COMPLETED</code> になっている。経緯は
+            <a href="09_想定外と原因.html">09</a>。
+          </p>
+        </div>
+      </section>
 
-<div class="pager"><a href="03_実行条件.html">← 03_実行条件</a><a href="05_差分の内訳.html">05_差分の内訳 →</a></div>
-</main>
-<footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
-</body>
+      <div class="pager">
+        <a href="03_実行条件.html">← 03_実行条件</a
+        ><a href="05_差分の内訳.html">05_差分の内訳 →</a>
+      </div>
+    </main>
+    <footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+  </body>
 </html>
