@@ -10,9 +10,11 @@
 # アカウント ID は環境変数 TF_VAR_account_id から取り、未設定なら aws sts get-caller-identity で調べる
 # AWS の認証情報は AWS_PROFILE などで用意する
 #
-# キーは固定で、同じキーへ上書きするとバケットのバージョニングが新しい version_id を振る
-# Terraform はその version_id を s3_object_version で参照し、次の plan が関数 (と Layer) の更新を検出する
-# Lambda の更新は Terraform の apply で行い、このスクリプトは S3 に置くところまでを担う
+# キーは固定で、同じキーへ上書きするとバケットのバージョニングが新しい version_id を振る (旧版はロールバック用の履歴)
+# functions は S3 に置いた後、同じキーで各関数のコードを aws lambda update-function-code で差し替える
+# Terraform は関数のコードを追跡しない (s3_object_version も source_code_hash も書かない) ので、upload だけで反映され plan に差分は出ない
+# 関数がまだ無い (初回の apply 前) ときは S3 に置くだけにし、作成は Terraform に任せる
+# layer は版が不変で関数側の参照の更新が要るため、従来どおり upload の後に infra の just apply で反映する
 #
 # zip 自体は作らない。functions は just の依存宣言 (upload: package) が先に package を走らせ、layer は layers/pdf-processor/build.sh で作っておく
 #
@@ -54,6 +56,22 @@ upload() {
     aws s3 cp "$src" "s3://$bucket/$key"
 }
 
+deploy() {
+    local name="$1" key="$2"
+    local function_name="${env}-folio-${name}" err
+    if ! err=$(aws lambda get-function-configuration --function-name "$function_name" --query FunctionName --output text 2>&1 >/dev/null); then
+        if [[ "$err" == *ResourceNotFoundException* ]]; then
+            echo "skip: $function_name はまだ無いので S3 に置くだけ (初回は infra の just apply が作る)"
+            return
+        fi
+        echo "$err" >&2
+        exit 1
+    fi
+    aws lambda update-function-code --function-name "$function_name" --s3-bucket "$bucket" --s3-key "$key" --query CodeSha256 --output text >/dev/null
+    aws lambda wait function-updated --function-name "$function_name"
+    echo "deployed: $function_name"
+}
+
 case "$kind" in
 functions)
     targets=$("$script_dir/cmds.sh")
@@ -64,6 +82,7 @@ functions)
     while read -r target; do
         name=$(echo "$target" | tr '/' '-')
         upload "bin/$name.zip" "lambda/$name.zip"
+        deploy "$name" "lambda/$name.zip"
     done <<< "$targets"
     ;;
 layer)
