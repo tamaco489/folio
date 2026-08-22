@@ -7,7 +7,7 @@
 - `.claude/rules/go/` — Go のコーディングとテストの規約
 - `.claude/rules/terraform/` — Terraform のコーディング規約
 - [docs/README.ja.md](docs/README.ja.md) — プロジェクトの構成・アーキテクチャ
-- [backend/README.ja.md](backend/README.ja.md) — Go のコマンド、ビルド、Layer、テストの前提
+- [backend/README.ja.md](backend/README.ja.md) — backend の構成、Lambda とツールの役割
 - [infra/README.ja.md](infra/README.ja.md) — Terraform の前提 (state バケット、`TF_VAR_account_id`) と使い方
 
 ## 制約事項
