@@ -105,7 +105,7 @@ folio/
 │   │   ├── awsx/           共有層 — s3, dynamo, sfn, textract, bedrock (SDK のラッパ。フェイクは s3test, dynamotest)
 │   │   └── pipeline/       Lambda のロジック: validate, preprocess, textractparser, bedrockparser, finalize
 │   │                       純ロジック: pdf, extract (textractroute, bedrockroute), normalize, verify (crossref)
-│   ├── tools/              fetch-corpus, build-truth, evaluate (デプロイ対象外。未実装)
+│   ├── tools/              fetch-corpus (arXiv から評価用論文を取得)、build-truth, evaluate (Phase 2、未実装)。デプロイ対象外
 │   ├── testdata/           textract/ と bedrock/ に記録済みレスポンス (Crossref の記録は internal/pipeline/verify/testdata/)
 │   ├── layers/             Lambda Layer のビルド定義 (Dockerfile + build.sh)
 │   ├── scripts/            justfile のレシピから呼ぶシェルスクリプト (cmds, build, package, clean)

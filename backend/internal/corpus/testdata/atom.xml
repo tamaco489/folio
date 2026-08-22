@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 手書きの合成データであり実 API のレスポンスではない。arXiv API の Atom のうち toEntry が読む要素だけを持つ -->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <entry>
+    <id>http://arxiv.org/abs/9000.00001v2</id>
+    <title>Learning to Structure
+  Scientific Documents</title>
+    <published>2026-08-20T00:00:00Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <category term="cs.CL"/>
+    <category term="cs.LG"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/9000.00002v1</id>
+    <title>A Very Long Survey</title>
+    <published>2026-08-19T00:00:00Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <category term="cs.LG"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/9000.00003v1</id>
+    <title>PDF Only Submission</title>
+    <published>2026-08-18T00:00:00Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <category term="cs.CL"/>
+  </entry>
+</feed>
