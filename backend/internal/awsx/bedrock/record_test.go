@@ -43,8 +43,11 @@ func TestReplayerReplaysRecordedResponses(t *testing.T) {
 			if resp.Usage.TotalTokens != resp.Usage.InputTokens+resp.Usage.OutputTokens {
 				t.Errorf("TotalTokens = %d, does not match input+output", resp.Usage.TotalTokens)
 			}
-			if resp.StopReason != "end_turn" {
-				t.Errorf("StopReason = %q", resp.StopReason)
+			if resp.StopReason != "tool_use" {
+				t.Errorf("StopReason = %q, want tool_use", resp.StopReason)
+			}
+			if len(resp.ToolInput) == 0 {
+				t.Fatal("ToolInput が記録から読めていない")
 			}
 
 			// domain の型に依存しないよう、汎用の map で構造だけ確かめる
@@ -72,46 +75,78 @@ func TestReplayerErrors(t *testing.T) {
 
 // 記録モードが応答をファイルに残し、再生モードで読み戻せることを確かめる
 func TestRecorderRoundTrip(t *testing.T) {
-	dir := t.TempDir()
-	api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{textOutput(`{"title":"recorded"}`)}}
-	live := New(api, WithDefaultModelID("m"))
-
-	recorder := NewRecorder(live, dir, RouteBedrock)
-	recorder.now = func() time.Time { return time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC) }
-
-	key := RecordKey("9999.99999", RouteBedrock)
-	got, err := recorder.Converse(context.Background(), Request{
-		ModelID:   "m",
-		RecordKey: key,
-		Messages:  []Message{UserImage(ImageFormatPNG, []byte{0x89, 'P'}, "read")},
-	})
-	if err != nil {
-		t.Fatalf("Converse: %v", err)
+	tests := map[string]struct {
+		out       *awsbedrockruntime.ConverseOutput
+		wantTitle string
+	}{
+		"正常系_自由文の応答の場合_Text が記録され再生で読み戻せること":            {out: textOutput(`{"title":"recorded"}`), wantTitle: "recorded"},
+		"正常系_tool use の応答の場合_ToolInput が記録され再生で読み戻せること": {out: toolUseOutput(map[string]any{"title": "recorded by tool"}), wantTitle: "recorded by tool"},
+		"正常系_tool use の応答に引用符が含まれる場合_記録を経ても引用符が壊れないこと":  {out: toolUseOutput(map[string]any{"title": `the word "Beauty"`}), wantTitle: `the word "Beauty"`},
 	}
 
-	replayed, err := NewReplayer(dir).Converse(context.Background(), Request{RecordKey: key})
-	if err != nil {
-		t.Fatalf("replay: %v", err)
-	}
-	if replayed.Text != got.Text {
-		t.Errorf("text = %q, want %q", replayed.Text, got.Text)
-	}
-	if replayed.Usage != got.Usage {
-		t.Errorf("usage = %+v, want %+v", replayed.Usage, got.Usage)
-	}
-	if replayed.LatencyMs != got.LatencyMs {
-		t.Errorf("latencyMs = %d, want %d", replayed.LatencyMs, got.LatencyMs)
-	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			api := &fakeAPI{outputs: []*awsbedrockruntime.ConverseOutput{tt.out}}
+			live := New(api, WithDefaultModelID("m"))
 
-	rec, err := NewStore(dir).Load(key)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if rec.Route != RouteBedrock || rec.ModelID != "m" {
-		t.Errorf("recording metadata = %+v", rec)
-	}
-	if rec.RecordedAt.IsZero() {
-		t.Error("RecordedAt が記録されていない")
+			recorder := NewRecorder(live, dir, RouteBedrock)
+			recorder.now = func() time.Time { return time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC) }
+
+			key := RecordKey("9999.99999", RouteBedrock)
+			got, err := recorder.Converse(context.Background(), Request{
+				ModelID:   "m",
+				RecordKey: key,
+				Messages:  []Message{UserImage(ImageFormatPNG, []byte{0x89, 'P'}, "read")},
+				Tool:      sampleTool,
+			})
+			if err != nil {
+				t.Fatalf("Converse: %v", err)
+			}
+
+			replayed, err := NewReplayer(dir).Converse(context.Background(), Request{RecordKey: key})
+			if err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+			if replayed.Text != got.Text {
+				t.Errorf("text = %q, want %q", replayed.Text, got.Text)
+			}
+			// 記録は整形して書くため、バイト列ではなく JSON として同じことを確かめる
+			if len(got.ToolInput) > 0 && compactJSON(t, replayed.ToolInput) != compactJSON(t, got.ToolInput) {
+				t.Errorf("toolInput = %s, want %s", replayed.ToolInput, got.ToolInput)
+			}
+			if replayed.Usage != got.Usage {
+				t.Errorf("usage = %+v, want %+v", replayed.Usage, got.Usage)
+			}
+			if replayed.LatencyMs != got.LatencyMs {
+				t.Errorf("latencyMs = %d, want %d", replayed.LatencyMs, got.LatencyMs)
+			}
+
+			var decoded struct {
+				Title string `json:"title"`
+			}
+			if err := replayed.DecodeJSON(&decoded); err != nil {
+				t.Fatalf("DecodeJSON: %v", err)
+			}
+			if decoded.Title != tt.wantTitle {
+				t.Errorf("title = %q, want %q", decoded.Title, tt.wantTitle)
+			}
+
+			rec, err := NewStore(dir).Load(key)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if rec.Route != RouteBedrock || rec.ModelID != "m" {
+				t.Errorf("recording metadata = %+v", rec)
+			}
+			if rec.RecordedAt.IsZero() {
+				t.Error("RecordedAt が記録されていない")
+			}
+			// 再生時に tool use の記録が自由文の経路へ落ちないよう、text を持たないことも確かめる
+			if len(got.ToolInput) > 0 && rec.Response.Text != "" {
+				t.Errorf("text = %q, want 空", rec.Response.Text)
+			}
+		})
 	}
 }
 
