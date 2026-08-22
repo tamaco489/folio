@@ -1,0 +1,39 @@
+{
+  "modelId": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "route": "bedrock",
+  "recordedAt": "2026-08-22T00:00:00Z",
+  "response": {
+    "toolInput": {
+      "sections": [
+        {
+          "text": "Participants were asked to rate each image. The word \"Beauty\" was shown above the scale, and the instruction read “On a scale from 1 to 7”."
+        },
+        {
+          "level": 2,
+          "heading": "5.2 Analysis",
+          "text": "We \"prove\" nothing here; the analysis is descriptive."
+        }
+      ],
+      "references": [
+        {
+          "raw": "A. Author. \"Quoted Title\". Journal, 2024.",
+          "title": "Quoted Title",
+          "authors": [
+            "A. Author"
+          ],
+          "year": 2024,
+          "venue": "Journal"
+        }
+      ],
+      "continuesPreviousSection": true
+    },
+    "stopReason": "tool_use",
+    "usage": {
+      "inputTokens": 2410,
+      "outputTokens": 198,
+      "totalTokens": 2608
+    },
+    "latencyMs": 4702
+  },
+  "note": "synthetic fixture written by hand for Issue #111, modelled on page 11 of 2608.19529v1 where the body quotes the word \"Beauty\"; not a real recording"
+}
