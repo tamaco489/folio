@@ -185,7 +185,9 @@ func (t Table) markdown() string {
 			if c < len(row) {
 				v = escapeCell(row[c])
 			}
-			sb.WriteString(" " + v + " |")
+			sb.WriteString(" ")
+			sb.WriteString(v)
+			sb.WriteString(" |")
 		}
 		sb.WriteString("\n")
 	}
