@@ -8,9 +8,15 @@ import (
 
 // DecodeJSON は応答テキストを構造化 JSON として v に読み込む
 //
+// 生成が上限で打ち切られた応答 (StopReason が max_tokens) は末尾が欠けているため、JSON の解釈に入らず ErrOutputTruncated を返す
+//
 // モデルは前置きやコードフェンスを伴う応答を返すことがあるため、JSON 部分を切り出してから解釈する
+//
 // 切り出しても解釈できない場合は ErrInvalidJSON を返し、生テキストは Response.Text に残したままとする
 func (r *Response) DecodeJSON(v any) error {
+	if r.StopReason == StopReasonMaxTokens {
+		return fmt.Errorf("%w (outputTokens=%d)", ErrOutputTruncated, r.Usage.OutputTokens)
+	}
 	payload, ok := extractJSON(r.Text)
 	if !ok {
 		return fmt.Errorf("%w: no json object found", ErrInvalidJSON)

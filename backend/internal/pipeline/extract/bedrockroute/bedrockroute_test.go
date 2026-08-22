@@ -27,9 +27,10 @@ var samplePNG = []byte{0x89, 'P', 'N', 'G'}
 
 // fakeConverser は bedrock.Converser のフェイク (実 API は一切呼ばない)
 type fakeConverser struct {
-	reqs []bedrock.Request
-	text string
-	err  error
+	reqs       []bedrock.Request
+	text       string
+	stopReason string // stopReason は空なら end_turn
+	err        error
 }
 
 var _ bedrock.Converser = (*fakeConverser)(nil)
@@ -39,9 +40,13 @@ func (f *fakeConverser) Converse(_ context.Context, req bedrock.Request) (*bedro
 	if f.err != nil {
 		return nil, f.err
 	}
+	stop := f.stopReason
+	if stop == "" {
+		stop = "end_turn"
+	}
 	return &bedrock.Response{
 		Text:       f.text,
-		StopReason: "end_turn",
+		StopReason: stop,
 		Usage:      bedrock.Usage{InputTokens: 1200, OutputTokens: 340, TotalTokens: 1540},
 	}, nil
 }
@@ -162,15 +167,18 @@ func TestPagePromptWithoutLanguage(t *testing.T) {
 // パースに失敗した応答をリトライせずエラーとして返すことを確かめる
 func TestExtractPageDecodeFailure(t *testing.T) {
 	tests := map[string]struct {
-		text string
+		text       string
+		stopReason string
+		want       error
 	}{
-		"異常系_JSON を含まない応答の場合_ErrPageDecode が返ること":  {text: "この画像からは読み取れませんでした"},
-		"異常系_JSON が壊れている応答の場合_ErrPageDecode が返ること": {text: `{"page": 1, "title":}`},
+		"異常系_JSON を含まない応答の場合_ErrPageDecode が返ること":                         {text: "この画像からは読み取れませんでした", want: bedrock.ErrInvalidJSON},
+		"異常系_JSON が壊れている応答の場合_ErrPageDecode が返ること":                        {text: `{"page": 1, "title":}`, want: bedrock.ErrInvalidJSON},
+		"異常系_出力が上限で打ち切られた応答の場合_ErrPageDecode と ErrOutputTruncated を満たすこと": {text: `{"page": 1, "sections": [{"heading": "1 Intro`, stopReason: bedrock.StopReasonMaxTokens, want: bedrock.ErrOutputTruncated},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			conv := &fakeConverser{text: tt.text}
+			conv := &fakeConverser{text: tt.text, stopReason: tt.stopReason}
 			e := New(conv, sampleModelID)
 
 			_, err := e.ExtractPage(context.Background(), PageInput{Page: 1, Image: samplePNG})
@@ -178,8 +186,8 @@ func TestExtractPageDecodeFailure(t *testing.T) {
 				t.Fatalf("err = %v, want ErrPageDecode", err)
 			}
 			// 呼び出し側が再送を判断できるよう、応答の由来も辿れる必要がある
-			if !errors.Is(err, bedrock.ErrInvalidJSON) {
-				t.Errorf("err = %v, want bedrock.ErrInvalidJSON も満たすこと", err)
+			if !errors.Is(err, tt.want) {
+				t.Errorf("err = %v, want %v も満たすこと", err, tt.want)
 			}
 			if conv.calls() != 1 {
 				t.Errorf("Converse の呼び出し回数 = %d, want 1 (パース失敗をこの層で再送しない)", conv.calls())

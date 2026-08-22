@@ -21,6 +21,9 @@ var (
 	// ErrInvalidJSON はモデルの応答を JSON として解釈できない場合に返る
 	ErrInvalidJSON = errors.New("bedrock: response is not valid json")
 
+	// ErrOutputTruncated はモデルの生成が Request.MaxTokens で打ち切られ、応答の末尾が欠けている場合に返る
+	ErrOutputTruncated = errors.New("bedrock: output truncated at max tokens")
+
 	// ErrRetryExhausted はリトライ上限に達した場合に返る
 	ErrRetryExhausted = errors.New("bedrock: retry attempts exhausted")
 
