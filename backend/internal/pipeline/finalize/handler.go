@@ -150,8 +150,7 @@ func (h *Handler) finalize(ctx context.Context, in Input) (*Output, error) {
 		Routes:      routes,
 	}
 	if succeeded == 2 {
-		d := diff(*textract.doc, *bedrock.doc)
-		cmp.Diff = &d
+		cmp.Diff = new(diff(*textract.doc, *bedrock.doc))
 	}
 	comparisonKey := s3.ComparisonKey(in.JobID)
 	if err := h.docs.PutJSON(ctx, comparisonKey, cmp); err != nil {

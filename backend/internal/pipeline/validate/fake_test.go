@@ -3,7 +3,6 @@ package validate
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
@@ -37,6 +36,6 @@ func (o *oversizeS3) HeadObject(ctx context.Context, params *awss3.HeadObjectInp
 	if err != nil {
 		return nil, err
 	}
-	out.ContentLength = aws.Int64(o.size)
+	out.ContentLength = new(o.size)
 	return out, nil
 }
