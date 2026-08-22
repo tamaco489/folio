@@ -18,7 +18,7 @@ Record the result by calling the extract_page tool. Its input schema defines the
 
 Rules:
 - Transcribe text in the language of the document. Never translate.
-- Omit any key you cannot fill. Never invent a value.
+- Never invent a value. Omit an optional key you cannot fill. A required key with nothing to record takes "" or [].
 - "title", "authors", "abstract" and "keywords" describe the paper as a whole. Fill them only on the page that prints them, which is normally the first page, and omit them elsewhere.
 - "sections" lists the body blocks of this page in reading order. Start a new entry at every heading, put the heading text in "heading" and its depth in "level", where a top level heading is 1.
 - If the page opens with body text that carries no heading, make it the first entry and omit "heading".

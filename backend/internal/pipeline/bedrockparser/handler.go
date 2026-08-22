@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/domain"
 	"github.com/tamaco489/folio/backend/internal/pipeline/extract/bedrockroute"
@@ -38,6 +39,17 @@ type PageOutput struct {
 	ExtractedAt time.Time               `json:"extractedAt"` // ExtractedAt は保存直前の時刻
 	DurationMs  int64                   `json:"durationMs"`  // DurationMs は画像の取得から抽出完了までの所要時間
 	Result      bedrockroute.PageResult `json:"result"`
+}
+
+// PageError は解釈に失敗したモデルの応答を残す封筒
+//
+// PageDecodeError は同じ応答を再現する手段が無いため、何が返ったかをここに残して原因を調べられるようにする
+type PageError struct {
+	JobID    string           `json:"jobId"`
+	Page     int              `json:"page"`
+	FailedAt time.Time        `json:"failedAt"`
+	Error    string           `json:"error"`
+	Response bedrock.Response `json:"response"` // Response は toolInput を含む生の応答
 }
 
 // Handler は 1 ページ分の抽出の依存をまとめる
@@ -95,6 +107,11 @@ func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 		Language: in.Language,
 	})
 	if err != nil {
+		if derr, ok := errors.AsType[*bedrockroute.DecodeError](err); ok {
+			if serr := h.saveError(ctx, in, derr); serr != nil {
+				err = fmt.Errorf("%w (error dump not saved: %w)", err, serr)
+			}
+		}
 		return nil, classify(err)
 	}
 	finished := h.now()
@@ -111,4 +128,15 @@ func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	}
 
 	return &Output{JobID: in.JobID, Page: in.Page, ResultKey: key}, nil
+}
+
+// saveError は解釈に失敗した応答を page-NNNN.error.json へ残す
+func (h *Handler) saveError(ctx context.Context, in Input, derr *bedrockroute.DecodeError) error {
+	return h.storage.PutJSON(ctx, s3.BedrockPageErrorKey(in.JobID, in.Page), PageError{
+		JobID:    in.JobID,
+		Page:     in.Page,
+		FailedAt: h.now().UTC(),
+		Error:    derr.Error(),
+		Response: *derr.Response,
+	})
 }

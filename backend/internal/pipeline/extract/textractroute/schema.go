@@ -1,6 +1,11 @@
 package textractroute
 
-import "github.com/tamaco489/folio/backend/internal/awsx/bedrock"
+import (
+	"maps"
+	"slices"
+
+	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
+)
 
 // paperTool は構造化の結果を tool use の入力として受け取る定義
 //
@@ -37,8 +42,16 @@ var (
 	integer     = map[string]any{"type": "integer"}
 )
 
+// object は strict な tool use の object を組み立てる (additionalProperties: false は strict の必須条件)
+//
+// この経路は欠損を "" / [] / 0 / null で表す約束 (systemPrompt) のため、全キーを required にする
 func object(properties map[string]any) map[string]any {
-	return map[string]any{"type": "object", "properties": properties}
+	return map[string]any{
+		"type":                 "object",
+		"properties":           properties,
+		"required":             slices.Sorted(maps.Keys(properties)),
+		"additionalProperties": false,
+	}
 }
 
 func array(items map[string]any) map[string]any {

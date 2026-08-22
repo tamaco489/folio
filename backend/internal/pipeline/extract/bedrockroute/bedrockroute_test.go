@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -239,6 +241,62 @@ func TestPageToolSchemaMatchesPageResult(t *testing.T) {
 	assertObjectKeys(t, props, "references", "raw", "title", "authors", "year", "venue", "doi")
 }
 
+// スキーマが strict の条件を満たし、required が意図したキーに限られることを確かめる
+//
+// additionalProperties: false を欠くと Bedrock が 400 を返し、required のタイプミスは出力を黙って歪める
+func TestPageToolSchemaIsStrict(t *testing.T) {
+	want := map[string][]string{
+		"":             {"sections", "figures", "tables", "references"},
+		"authors[]":    {"name"},
+		"sections[]":   {"text"},
+		"figures[]":    {"label", "caption"},
+		"tables[]":     {"label", "caption", "header", "rows"},
+		"references[]": {"raw"},
+	}
+
+	got := map[string][]string{}
+	collectStrictObjects(t, "", pageTool.Schema, got)
+	if !maps.EqualFunc(want, got, slices.Equal) {
+		t.Errorf("object ごとの required = %v, want %v", got, want)
+	}
+}
+
+// collectStrictObjects はスキーマを辿り、object ごとに strict の条件を検査しつつ required を path 別に集める
+func collectStrictObjects(t *testing.T, path string, schema map[string]any, out map[string][]string) {
+	t.Helper()
+
+	switch schema["type"] {
+	case "object":
+		if v, ok := schema["additionalProperties"].(bool); !ok || v {
+			t.Errorf("%q: additionalProperties が false でない", path)
+		}
+		props, _ := schema["properties"].(map[string]any)
+		required, ok := schema["required"].([]string)
+		if !ok {
+			t.Errorf("%q: required が無い", path)
+		}
+		for _, k := range required {
+			if _, ok := props[k]; !ok {
+				t.Errorf("%q: required の %q が properties に無い", path, k)
+			}
+		}
+		out[path] = required
+		for k, v := range props {
+			if m, ok := v.(map[string]any); ok {
+				child := k
+				if path != "" {
+					child = path + "." + k
+				}
+				collectStrictObjects(t, child, m, out)
+			}
+		}
+	case "array":
+		if m, ok := schema["items"].(map[string]any); ok {
+			collectStrictObjects(t, path+"[]", m, out)
+		}
+	}
+}
+
 // assertObjectKeys は配列プロパティの要素 object が持つキーの集合を確かめる
 func assertObjectKeys(t *testing.T, props map[string]any, name string, keys ...string) {
 	t.Helper()
@@ -293,6 +351,14 @@ func TestExtractPageDecodeFailure(t *testing.T) {
 			}
 			if conv.calls() != 1 {
 				t.Errorf("Converse の呼び出し回数 = %d, want 1 (パース失敗をこの層で再送しない)", conv.calls())
+			}
+			// 何が返ったかを呼び出し側が残せるよう、生の応答を保持する
+			derr, ok := errors.AsType[*DecodeError](err)
+			if !ok {
+				t.Fatalf("err = %T, want *DecodeError", err)
+			}
+			if derr.Page != 1 || derr.Response == nil || string(derr.Response.ToolInput) != tt.input || derr.Response.Text != tt.text {
+				t.Errorf("DecodeError = page %d, response %+v, want 生の応答を保持すること", derr.Page, derr.Response)
 			}
 		})
 	}

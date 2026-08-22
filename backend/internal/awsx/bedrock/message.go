@@ -61,7 +61,7 @@ func UserImage(format ImageFormat, b []byte, prompt string) Message {
 type ToolSpec struct {
 	Name        string         // Name はモデルに呼ばせる tool の名前
 	Description string         // Description は tool の用途 (空なら送らない)
-	Schema      map[string]any // Schema は tool の入力を表す JSON Schema (最上位は object)
+	Schema      map[string]any // Schema は tool の入力を表す JSON Schema (最上位は object で、strict のため全 object に additionalProperties: false を持つ)
 }
 
 // Request は Converse API への入力

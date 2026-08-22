@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -316,4 +317,56 @@ func TestExtractErrors(t *testing.T) {
 	if fake.req.RecordKey != "" {
 		t.Error("モデル ID が無いまま Converse を呼んでいる")
 	}
+}
+
+// スキーマが strict の条件を満たし、全 object で全キーが required であることを確かめる
+//
+// additionalProperties: false を欠くと Bedrock が 400 を返す
+// この経路は欠損を "" / [] / 0 / null で表す約束のため、required から漏れたキーはモデルが省略でき約束が崩れる
+func TestExtractToolSchemaIsStrict(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeConverser{resp: toolResponse(`{"title":"t"}`)}
+	if _, err := textractroute.New(fake, "model-x").Extract(context.Background(), sampleInput(t)); err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+
+	want := []string{"", "authors[]", "references[]", "sections[]"}
+	got := collectStrictObjects(t, "", fake.req.Tool.Schema, nil)
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Errorf("object の path = %v, want %v", got, want)
+	}
+}
+
+// collectStrictObjects はスキーマを辿り、object ごとに strict の条件と required が全キーであることを検査しつつ path を集める
+func collectStrictObjects(t *testing.T, path string, schema map[string]any, paths []string) []string {
+	t.Helper()
+
+	switch schema["type"] {
+	case "object":
+		if v, ok := schema["additionalProperties"].(bool); !ok || v {
+			t.Errorf("%q: additionalProperties が false でない", path)
+		}
+		props, _ := schema["properties"].(map[string]any)
+		required, _ := schema["required"].([]string)
+		if want := slices.Sorted(maps.Keys(props)); !slices.Equal(slices.Sorted(slices.Values(required)), want) {
+			t.Errorf("%q: required = %v, want 全キー %v", path, required, want)
+		}
+		paths = append(paths, path)
+		for k, v := range props {
+			if m, ok := v.(map[string]any); ok {
+				child := k
+				if path != "" {
+					child = path + "." + k
+				}
+				paths = collectStrictObjects(t, child, m, paths)
+			}
+		}
+	case "array":
+		if m, ok := schema["items"].(map[string]any); ok {
+			paths = collectStrictObjects(t, path+"[]", m, paths)
+		}
+	}
+	return paths
 }

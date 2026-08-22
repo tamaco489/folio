@@ -102,6 +102,9 @@ func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, erro
 }
 
 // toToolConfig は tool を 1 つだけ登録し、toolChoice でその tool の呼び出しを強制する
+//
+// strict を常に有効にするのは、無効だとスキーマが型を保証せず配列が文字列で返ることがあったため (constrained decoding で出力をスキーマに従わせる)
+// strict はスキーマに制約 (全 object に additionalProperties: false、minimum や minLength は不可) を課すため、スキーマは呼び出し側がその範囲で書く
 func toToolConfig(t *ToolSpec) (*awsbedrockruntimetypes.ToolConfiguration, error) {
 	if t.Name == "" || t.Schema == nil {
 		return nil, ErrInvalidToolSpec
@@ -109,6 +112,7 @@ func toToolConfig(t *ToolSpec) (*awsbedrockruntimetypes.ToolConfiguration, error
 	spec := awsbedrockruntimetypes.ToolSpecification{
 		Name:        new(t.Name),
 		InputSchema: &awsbedrockruntimetypes.ToolInputSchemaMemberJson{Value: awsbedrockruntimedocument.NewLazyDocument(t.Schema)},
+		Strict:      new(true),
 	}
 	if t.Description != "" {
 		spec.Description = new(t.Description)
