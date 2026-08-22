@@ -76,7 +76,7 @@ just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 
 ### zip の配置
 
-compute モジュールは Lambda の zip と Layer の zip を artifacts バケット (`{env}-folio-artifacts-{account_id}`、バージョニング有効) の**固定キー**から `data "aws_s3_object"` で読み、`version_id` を `s3_object_version` に渡す。
+compute モジュールは Lambda の zip と Layer の zip を artifacts バケット (`{env}-folio-artifacts-{account_id}`、バージョニング有効) の**固定キー**に置く。
 zip が無いと plan の段階で失敗するので、先に置く。
 
 | キー                                | 作り方                                                                 |
@@ -86,11 +86,13 @@ zip が無いと plan の段階で失敗するので、先に置く。
 
 ```sh
 cd backend
-just upload          # package → bin/pipeline-*.zip を lambda/ へ (scripts/upload.sh)
-just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)
+just upload          # package → bin/pipeline-*.zip を lambda/ へ置き、各関数のコードを update-function-code で差し替える (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)。反映は just plan → just apply
 ```
 
-バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。アップロードはユーザーが実行する。同じキーへ上書きすると新しい `version_id` が付き、次の `just plan` が関数 (と Layer) の更新を検出する。反映は `just apply` で行い、`aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。
+バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。アップロードはユーザーが実行する。
+関数のコードは `just upload` が `aws lambda update-function-code` で差し替え、Terraform は関数の設定 (ロール、timeout、環境変数など) だけを管理する。`s3_object_version` と `source_code_hash` を書かないため、upload 後の `just plan` に差分は出ない。
+Layer は版が不変で関数側の `layers` の更新が要るため、`data "aws_s3_object"` の `version_id` を `s3_object_version` に渡し、`just upload-layer` の後に `just plan` → `just apply` で反映する。
 
 ### 初回の apply
 
@@ -114,4 +116,4 @@ just plan
 just apply
 ```
 
-2 回目以降は「zip を置き直す → `just plan` → `just apply`」だけでよい。
+2 回目以降は関数のコードなら `just upload` だけでよい。Layer を変えたときは `just upload-layer` → `just plan` → `just apply`。

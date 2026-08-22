@@ -36,7 +36,7 @@
 - 絵文字の使用禁止 (明示的に求められた場合を除く)
 - **インフラ適用・AWS リソース操作の禁止** — 以下はユーザーのみが実行する。Claude が実行してはならない:
   - `terraform apply` / `terraform destroy` (`terraform fmt` / `validate` / `plan` は可)
-  - `aws lambda update-function-code`
+  - `aws lambda update-function-code` (`just upload` 経由を含む)
   - `aws s3 cp` (Lambda 成果物・Layer のアップロード)
   - AWS の読み取り (`aws sts get-caller-identity`、`describe-*` / `get-*` / `ls`) は確認目的で行ってよい
 - **課金が発生する API の実呼び出し禁止** — Textract と Bedrock はユーザーの承認を得てから実行する。検証は記録済みレスポンスの再生で行う

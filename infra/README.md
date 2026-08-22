@@ -76,7 +76,7 @@ The environment-level variables in `terraform.tfvars` are only `env` and `bedroc
 
 ### Placing the zips
 
-The compute module reads the Lambda zips and the Layer zip from **fixed keys** in the artifacts bucket (`{env}-folio-artifacts-{account_id}`, versioning enabled) with `data "aws_s3_object"` and passes `version_id` to `s3_object_version`.
+The compute module takes the Lambda zips and the Layer zip from **fixed keys** in the artifacts bucket (`{env}-folio-artifacts-{account_id}`, versioning enabled).
 Plan fails when a zip is missing, so upload first.
 
 | Key                              | How to build                                                                |
@@ -86,11 +86,13 @@ Plan fails when a zip is missing, so upload first.
 
 ```sh
 cd backend
-just upload          # package -> bin/pipeline-*.zip to lambda/ (scripts/upload.sh)
-just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first)
+just upload          # package -> bin/pipeline-*.zip to lambda/, then swap each function's code with update-function-code (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first); apply with just plan -> just apply
 ```
 
-The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). The upload is run by the user. Overwriting the same key creates a new `version_id`, and the next `just plan` detects the function (and Layer) update. Apply it with `just apply`; do not use `aws lambda update-function-code` (Terraform stays the single source of truth).
+The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). The upload is run by the user.
+`just upload` swaps each function's code with `aws lambda update-function-code`; Terraform manages only the function configuration (role, timeout, environment variables, ...). Neither `s3_object_version` nor `source_code_hash` is set, so `just plan` shows no diff after an upload.
+Layer versions are immutable and the functions' `layers` reference must follow, so the Layer keeps `data "aws_s3_object"`'s `version_id` in `s3_object_version` and is applied with `just plan` -> `just apply` after `just upload-layer`.
 
 ### First apply
 
@@ -114,4 +116,4 @@ just plan
 just apply
 ```
 
-From then on it is just "re-upload the zips -> `just plan` -> `just apply`".
+From then on, function code needs only `just upload`. When the Layer changes: `just upload-layer` -> `just plan` -> `just apply`.

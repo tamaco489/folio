@@ -48,5 +48,5 @@
 - `terraform fmt` / `validate` / `plan` は実行してよい。**`terraform apply` / `destroy` はユーザーだけが実行する**
 - `just lint` (tflint) と `just scan` (trivy config) は AWS に触れないためローカルで実行してよい。PR を出す前に `just fmt-check` `just validate` `just lint` `just scan` を通す
 - backend を変えた直後の `init` は `-reconfigure` を使う (旧 backend に state が無いことを確認したうえで)
-- Lambda のコードは artifacts バケットの固定キーに置いた zip を `data "aws_s3_object"` の `version_id` (`s3_object_version`) で参照し、差し替えは `plan` / `apply` で反映する。`source_code_hash` と `aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。アップロード (`cd backend && just upload` / `just upload-layer`) はユーザーが行う
+- Lambda の関数のコードは `cd backend && just upload` が artifacts バケットの固定キーへ置いたうえで `aws lambda update-function-code` で差し替える (実行はユーザー)。Terraform は `s3_bucket` / `s3_key` で初回作成と設定だけを担い、`s3_object_version` `source_code_hash` `code_sha256` は書かない (書くと upload のたびに apply が要る、または外部の差し替えが drift になる)。Layer だけは `data "aws_s3_object"` の `version_id` を `s3_object_version` で参照し、`just upload-layer` → `plan` / `apply` で反映する
 - justfile にシェルの処理を書かない (`.claude/rules/general/justfile.md`)
