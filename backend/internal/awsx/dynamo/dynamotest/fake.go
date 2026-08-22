@@ -81,7 +81,7 @@ func (f *Fake) PutItem(_ context.Context, params *awsdynamodb.PutItemInput, _ ..
 		return nil, err
 	}
 	if !ok {
-		condErr := &awsdynamodbtypes.ConditionalCheckFailedException{Message: aws.String("The conditional request failed")}
+		condErr := &awsdynamodbtypes.ConditionalCheckFailedException{Message: new("The conditional request failed")}
 		if params.ReturnValuesOnConditionCheckFailure == awsdynamodbtypes.ReturnValuesOnConditionCheckFailureAllOld {
 			condErr.Item = copyItem(existing)
 		}
@@ -118,7 +118,7 @@ func (f *Fake) UpdateItem(_ context.Context, params *awsdynamodb.UpdateItemInput
 		return nil, err
 	}
 	if !ok {
-		return nil, &awsdynamodbtypes.ConditionalCheckFailedException{Message: aws.String("The conditional request failed")}
+		return nil, &awsdynamodbtypes.ConditionalCheckFailedException{Message: new("The conditional request failed")}
 	}
 	updated := copyItem(existing)
 	if err := applyUpdate(aws.ToString(params.UpdateExpression), updated, params.ExpressionAttributeNames, params.ExpressionAttributeValues); err != nil {
