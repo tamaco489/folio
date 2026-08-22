@@ -76,7 +76,7 @@ just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 
 ### zip の配置
 
-compute モジュールは Lambda の zip と Layer の zip を artifacts バケット (`{env}-folio-artifacts-{account_id}`、バージョニング有効) の**固定キー**から `data "aws_s3_object"` で読み、`version_id` を `s3_object_version` に渡す。
+compute モジュールは Lambda の zip と Layer の zip を artifacts バケット (`{env}-folio-artifacts-{account_id}`、バージョニング有効) の**固定キー**に置く。
 zip が無いと plan の段階で失敗するので、先に置く。
 
 | キー                                | 作り方                                                                 |
@@ -86,34 +86,34 @@ zip が無いと plan の段階で失敗するので、先に置く。
 
 ```sh
 cd backend
-just upload          # package → bin/pipeline-*.zip を lambda/ へ (scripts/upload.sh)
-just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)
+just upload          # package → bin/pipeline-*.zip を lambda/ へ置き、各関数のコードを update-function-code で差し替える (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip を layers/ へ (先に layers/pdf-processor/build.sh)。反映は just plan → just apply
 ```
 
-バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。同じキーへ上書きすると新しい `version_id` が付き、次の `just plan` が関数 (と Layer) の更新を検出する。反映は `just apply` で行い、`aws lambda update-function-code` は使わない (Terraform を唯一の真実に保つ)。
-
-`just upload` は CI からも実行できる。`.github/workflows/cd-backend.yml` を Actions から手動実行 (`workflow_dispatch`、入力 `env`、Phase 1 は `dev` のみ) すると、`main` を checkout して `just upload` を走らせ、`lambda/` の zip を置き直す。事前に `terraform -chdir=envs/dev output -raw github_actions_role_arn` の値を GitHub の secret `AWS_ROLE_ARN` に登録する (ARN にアカウント ID が含まれるため variable ではなく secret)。Layer は CI に含めない (Docker のビルドが要り、poppler の更新時だけなので手元で `just upload-layer` を実行する)。CI が行うのも S3 に置くところまでで、反映は同じく `just plan` → `just apply`。
-
-### GitHub Actions 用の OIDC ロール
-
-iam モジュールは OIDC プロバイダ (`token.actions.githubusercontent.com`、audience `sts.amazonaws.com`) と、`cd-backend.yml` が引き受けるロール `{env}-folio-github-actions-role` を作る。信頼ポリシーは `aud = sts.amazonaws.com` と `sub = repo:{github_repository}:ref:refs/heads/main` に限り、main 以外のブランチや他のリポジトリからは引き受けられない。権限は artifacts バケットの `lambda/*` と `layers/*` への `s3:PutObject` (と multipart 用の `s3:AbortMultipartUpload`) だけで、Lambda や Terraform の state には触れない。
-`github_repository` は `terraform.tfvars` に置く。値は OIDC トークンの `sub` の `repo:` に続く部分で、2026-07-15 以降に作られたこのリポジトリは immutable subject claim (`owner@id/repo@id`) の形になるため `gh api repos/tamaco489/folio/actions/oidc/customization/sub --jq .sub_claim_prefix` の値から `repo:` を除いて書く。
-OIDC プロバイダの ARN は URL で決まるためアカウントに 1 つしか作れない。同じアカウントに stg / prd を足すときはプロバイダを iam モジュールの外へ切り出す (Phase 1 は dev のみ)。`thumbprint_list` は書かない (GitHub の証明書は AWS の信頼済みルート CA で検証され、値は使われない)。
+バケット名は `{env}-folio-artifacts-{アカウント ID}` で、アカウント ID は `TF_VAR_account_id` (未設定なら `aws sts get-caller-identity`) から取る。アップロードはユーザーが実行する。
+関数のコードは `just upload` が `aws lambda update-function-code` で差し替え、Terraform は関数の設定 (ロール、timeout、環境変数など) だけを管理する。`s3_object_version` と `source_code_hash` を書かないため、upload 後の `just plan` に差分は出ない。
+Layer は版が不変で関数側の `layers` の更新が要るため、`data "aws_s3_object"` の `version_id` を `s3_object_version` に渡し、`just upload-layer` の後に `just plan` → `just apply` で反映する。
 
 ### 初回の apply
 
 artifacts バケットは storage モジュールが作るため、初回だけ 2 段階になる。
 
-1. `envs/dev/main.tf` に `module "storage"` だけがある状態で `just apply` (artifacts バケットができる)
-2. 上の手順で zip を置く
-3. 残りのモジュールを結線した状態で `just plan` → `just apply`
+```sh
+aws sso login --profile <profile>
+export AWS_PROFILE=<profile>
+export TF_VAR_account_id=$(aws sts get-caller-identity --query Account --output text)
 
-2 回目以降は「zip を置き直す → `just plan` → `just apply`」だけでよい。
+cd infra
+just init
+terraform -chdir=envs/dev apply -target=module.storage
 
-## CI
+cd ../backend
+just upload
+just upload-layer
 
-`.github/workflows/ci-infra.yml` は `infra/**`、`.tool-versions`、ワークフロー自身を変更した PR で動く。`permissions: contents: read` で AWS の認証情報を使わないため、fork からの PR でも実行される。
-ジョブは 3 つ並列で、`terraform fmt -check` と `just validate`、`just lint` (tflint の `terraform` recommended プリセットと `aws` ルールセット)、`trivy config` (設定ミスの検査、MEDIUM 以上で失敗) を実行する。
-`terraform plan` は CI に含めない。
-意図して無効にしている設定は、リソース直前の理由コメントの直後に `#trivy:ignore:<id>` を置いて抑止しており、`just scan` と CI の検出は 0 件になる。
-チェック定義はスキャン時に取得されるため、新しいチェックで落ちたら設定を直すか理由付きの ignore を足す。
+cd ../infra
+just plan
+just apply
+```
+
+2 回目以降は関数のコードなら `just upload` だけでよい。Layer を変えたときは `just upload-layer` → `just plan` → `just apply`。

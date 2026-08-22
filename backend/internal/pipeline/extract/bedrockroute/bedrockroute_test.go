@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -27,9 +29,11 @@ var samplePNG = []byte{0x89, 'P', 'N', 'G'}
 
 // fakeConverser は bedrock.Converser のフェイク (実 API は一切呼ばない)
 type fakeConverser struct {
-	reqs []bedrock.Request
-	text string
-	err  error
+	reqs       []bedrock.Request
+	input      string // input は tool use の入力 (JSON)
+	text       string // text は tool use を経ない自由文の応答
+	stopReason string // stopReason は空なら tool_use
+	err        error
 }
 
 var _ bedrock.Converser = (*fakeConverser)(nil)
@@ -39,9 +43,14 @@ func (f *fakeConverser) Converse(_ context.Context, req bedrock.Request) (*bedro
 	if f.err != nil {
 		return nil, f.err
 	}
+	stop := f.stopReason
+	if stop == "" {
+		stop = "tool_use"
+	}
 	return &bedrock.Response{
 		Text:       f.text,
-		StopReason: "end_turn",
+		ToolInput:  json.RawMessage(f.input),
+		StopReason: stop,
 		Usage:      bedrock.Usage{InputTokens: 1200, OutputTokens: 340, TotalTokens: 1540},
 	}, nil
 }
@@ -92,9 +101,41 @@ func TestExtractPageReplaysRecording(t *testing.T) {
 	}
 }
 
-// 経路 B の Request がページ画像と指示テキストの組で組み立てられることを確かめる
+// 引用符を含む本文が tool use の記録を再生しても壊れずに復元できることを確かめる
+//
+// 2608.19529-bedrock.json は Issue #111 で PageDecodeError になったページを模した合成の記録
+func TestExtractPageReplaysQuotedText(t *testing.T) {
+	e := New(bedrock.NewReplayer(testdataDir()), sampleModelID)
+
+	got, err := e.ExtractPage(context.Background(), PageInput{
+		Page:      11,
+		Image:     samplePNG,
+		RecordKey: bedrock.RecordKey("2608.19529", bedrock.RouteBedrock),
+	})
+	if err != nil {
+		t.Fatalf("ExtractPage: %v", err)
+	}
+
+	if len(got.Sections) != 2 {
+		t.Fatalf("Sections = %+v, want 2 件", got.Sections)
+	}
+	if want := `The word "Beauty" was shown`; !strings.Contains(got.Sections[0].Text, want) {
+		t.Errorf("Sections[0].Text = %q, want %q を含むこと", got.Sections[0].Text, want)
+	}
+	if want := `We "prove" nothing`; !strings.Contains(got.Sections[1].Text, want) {
+		t.Errorf("Sections[1].Text = %q, want %q を含むこと", got.Sections[1].Text, want)
+	}
+	if len(got.References) != 1 || got.References[0].Raw != `A. Author. "Quoted Title". Journal, 2024.` {
+		t.Errorf("References = %+v", got.References)
+	}
+	if got.ContinuesPreviousSection == nil || !*got.ContinuesPreviousSection {
+		t.Errorf("ContinuesPreviousSection = %v, want true", got.ContinuesPreviousSection)
+	}
+}
+
+// 経路 B の Request がページ画像と指示テキストの組で組み立てられ、tool use でスキーマを渡すことを確かめる
 func TestExtractPageBuildsRequest(t *testing.T) {
-	conv := &fakeConverser{text: `{"page":7}`}
+	conv := &fakeConverser{input: `{"page":7}`}
 	e := New(conv, sampleModelID)
 
 	if _, err := e.ExtractPage(context.Background(), PageInput{
@@ -120,6 +161,15 @@ func TestExtractPageBuildsRequest(t *testing.T) {
 	}
 	if req.RecordKey != "" {
 		t.Errorf("RecordKey = %q, want 空 (本番の呼び出しでは記録しない)", req.RecordKey)
+	}
+	if req.Tool == nil || req.Tool.Name != pageTool.Name {
+		t.Fatalf("Tool = %+v, want %s", req.Tool, pageTool.Name)
+	}
+	if !strings.Contains(req.System, req.Tool.Name) {
+		t.Errorf("System プロンプトが tool の名前 %q に触れていない", req.Tool.Name)
+	}
+	if strings.Contains(req.System, `"title": string`) {
+		t.Error("System プロンプトにスキーマの断片が残っている (形は Tool.Schema で渡す)")
 	}
 
 	if len(req.Messages) != 1 {
@@ -148,6 +198,120 @@ func TestExtractPageBuildsRequest(t *testing.T) {
 	}
 }
 
+// スキーマのキーが PageResult の json タグと一致することを確かめる (食い違うと tool の入力が黙って捨てられる)
+func TestPageToolSchemaMatchesPageResult(t *testing.T) {
+	props, ok := pageTool.Schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("properties = %T", pageTool.Schema["properties"])
+	}
+
+	want := map[string]any{
+		"title": "t", "abstract": "a", "keywords": []string{"k"},
+		"authors":                    []domain.Author{{Name: "n", Affiliation: "f", Email: "e"}},
+		"sections":                   []PageSection{{Level: 1, Heading: "h", Text: "x"}},
+		"figures":                    []PageFigure{{Label: "l", Caption: "c"}},
+		"tables":                     []PageTable{{Label: "l", Caption: "c", Header: [][]string{{"h"}}, Rows: [][]string{{"r"}}}},
+		"references":                 []PageReference{{Raw: "r", Title: "t", Authors: []string{"a"}, Year: 1, Venue: "v", DOI: "d"}},
+		"continuesPreviousSection":   true,
+		"continuesPreviousReference": true,
+	}
+	b, err := json.Marshal(want)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
+	for key := range got {
+		if _, ok := props[key]; !ok {
+			t.Errorf("スキーマに %q が無い", key)
+		}
+	}
+	for key := range props {
+		if _, ok := got[key]; !ok {
+			t.Errorf("スキーマの %q が PageResult に無い", key)
+		}
+	}
+	assertObjectKeys(t, props, "authors", "name", "affiliation", "email")
+	assertObjectKeys(t, props, "sections", "level", "heading", "text")
+	assertObjectKeys(t, props, "figures", "label", "caption")
+	assertObjectKeys(t, props, "tables", "label", "caption", "header", "rows")
+	assertObjectKeys(t, props, "references", "raw", "title", "authors", "year", "venue", "doi")
+}
+
+// スキーマが strict の条件を満たし、required が意図したキーに限られることを確かめる
+//
+// additionalProperties: false を欠くと Bedrock が 400 を返し、required のタイプミスは出力を黙って歪める
+func TestPageToolSchemaIsStrict(t *testing.T) {
+	want := map[string][]string{
+		"":             {"sections", "figures", "tables", "references"},
+		"authors[]":    {"name"},
+		"sections[]":   {"text"},
+		"figures[]":    {"label", "caption"},
+		"tables[]":     {"label", "caption", "header", "rows"},
+		"references[]": {"raw"},
+	}
+
+	got := map[string][]string{}
+	collectStrictObjects(t, "", pageTool.Schema, got)
+	if !maps.EqualFunc(want, got, slices.Equal) {
+		t.Errorf("object ごとの required = %v, want %v", got, want)
+	}
+}
+
+// collectStrictObjects はスキーマを辿り、object ごとに strict の条件を検査しつつ required を path 別に集める
+func collectStrictObjects(t *testing.T, path string, schema map[string]any, out map[string][]string) {
+	t.Helper()
+
+	switch schema["type"] {
+	case "object":
+		if v, ok := schema["additionalProperties"].(bool); !ok || v {
+			t.Errorf("%q: additionalProperties が false でない", path)
+		}
+		props, _ := schema["properties"].(map[string]any)
+		required, ok := schema["required"].([]string)
+		if !ok {
+			t.Errorf("%q: required が無い", path)
+		}
+		for _, k := range required {
+			if _, ok := props[k]; !ok {
+				t.Errorf("%q: required の %q が properties に無い", path, k)
+			}
+		}
+		out[path] = required
+		for k, v := range props {
+			if m, ok := v.(map[string]any); ok {
+				child := k
+				if path != "" {
+					child = path + "." + k
+				}
+				collectStrictObjects(t, child, m, out)
+			}
+		}
+	case "array":
+		if m, ok := schema["items"].(map[string]any); ok {
+			collectStrictObjects(t, path+"[]", m, out)
+		}
+	}
+}
+
+// assertObjectKeys は配列プロパティの要素 object が持つキーの集合を確かめる
+func assertObjectKeys(t *testing.T, props map[string]any, name string, keys ...string) {
+	t.Helper()
+	items, _ := props[name].(map[string]any)["items"].(map[string]any)
+	got, _ := items["properties"].(map[string]any)
+	if len(got) != len(keys) {
+		t.Errorf("%s の要素のキー = %v, want %v", name, got, keys)
+	}
+	for _, k := range keys {
+		if _, ok := got[k]; !ok {
+			t.Errorf("%s の要素に %q が無い", name, k)
+		}
+	}
+}
+
 // 言語ヒントを省略した場合に言語の指定が付かないことを確かめる
 func TestPagePromptWithoutLanguage(t *testing.T) {
 	got := pagePrompt(3, "")
@@ -162,15 +326,19 @@ func TestPagePromptWithoutLanguage(t *testing.T) {
 // パースに失敗した応答をリトライせずエラーとして返すことを確かめる
 func TestExtractPageDecodeFailure(t *testing.T) {
 	tests := map[string]struct {
-		text string
+		input      string
+		text       string
+		stopReason string
+		want       error
 	}{
-		"異常系_JSON を含まない応答の場合_ErrPageDecode が返ること":  {text: "この画像からは読み取れませんでした"},
-		"異常系_JSON が壊れている応答の場合_ErrPageDecode が返ること": {text: `{"page": 1, "title":}`},
+		"異常系_tool use も JSON も含まない応答の場合_ErrPageDecode が返ること":              {text: "この画像からは読み取れませんでした", stopReason: "end_turn", want: bedrock.ErrInvalidJSON},
+		"異常系_tool の入力が壊れている応答の場合_ErrPageDecode が返ること":                     {input: `{"page": 1, "title":}`, want: bedrock.ErrInvalidJSON},
+		"異常系_出力が上限で打ち切られた応答の場合_ErrPageDecode と ErrOutputTruncated を満たすこと": {text: `{"page": 1, "sections": [{"heading": "1 Intro`, stopReason: bedrock.StopReasonMaxTokens, want: bedrock.ErrOutputTruncated},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			conv := &fakeConverser{text: tt.text}
+			conv := &fakeConverser{input: tt.input, text: tt.text, stopReason: tt.stopReason}
 			e := New(conv, sampleModelID)
 
 			_, err := e.ExtractPage(context.Background(), PageInput{Page: 1, Image: samplePNG})
@@ -178,11 +346,19 @@ func TestExtractPageDecodeFailure(t *testing.T) {
 				t.Fatalf("err = %v, want ErrPageDecode", err)
 			}
 			// 呼び出し側が再送を判断できるよう、応答の由来も辿れる必要がある
-			if !errors.Is(err, bedrock.ErrInvalidJSON) {
-				t.Errorf("err = %v, want bedrock.ErrInvalidJSON も満たすこと", err)
+			if !errors.Is(err, tt.want) {
+				t.Errorf("err = %v, want %v も満たすこと", err, tt.want)
 			}
 			if conv.calls() != 1 {
 				t.Errorf("Converse の呼び出し回数 = %d, want 1 (パース失敗をこの層で再送しない)", conv.calls())
+			}
+			// 何が返ったかを呼び出し側が残せるよう、生の応答を保持する
+			derr, ok := errors.AsType[*DecodeError](err)
+			if !ok {
+				t.Fatalf("err = %T, want *DecodeError", err)
+			}
+			if derr.Page != 1 || derr.Response == nil || string(derr.Response.ToolInput) != tt.input || derr.Response.Text != tt.text {
+				t.Errorf("DecodeError = page %d, response %+v, want 生の応答を保持すること", derr.Page, derr.Response)
 			}
 		})
 	}
@@ -201,7 +377,7 @@ func TestExtractPageValidation(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			conv := &fakeConverser{text: "{}"}
+			conv := &fakeConverser{input: "{}"}
 			e := New(conv, sampleModelID)
 
 			if _, err := e.ExtractPage(context.Background(), tt.in); !errors.Is(err, tt.want) {

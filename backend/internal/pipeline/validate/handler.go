@@ -57,13 +57,13 @@ func New(docs *s3.Client, jobs *dynamo.Client, info PDFInfo) *Handler {
 // 冪等性の判定を検証より先に行う
 //   - S3 のイベント通知は同じオブジェクトに対して複数回届きうるため、重複起動を PDF の取得と pdfinfo の実行に到達させない
 //   - MarkFailed は既存レコードを前提とするため、検証の失敗を errorReason に残すには先に登録されている必要がある
-func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	if in.Bucket != h.docs.Bucket() {
-		return Output{}, fmt.Errorf("validate: bucket %q is not the documents bucket %q", in.Bucket, h.docs.Bucket())
+		return nil, fmt.Errorf("validate: bucket %q is not the documents bucket %q", in.Bucket, h.docs.Bucket())
 	}
 	jobID, err := s3.JobIDFromUploadKey(in.Key)
 	if err != nil {
-		return Output{}, fmt.Errorf("validate: %w", err)
+		return nil, fmt.Errorf("validate: %w", err)
 	}
 
 	if _, err := h.jobs.RegisterJob(ctx, jobID, in.Key); err != nil {
@@ -72,11 +72,11 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 
 	reason, err := h.validate(ctx, in.Key, jobID)
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 	if reason != nil {
 		if _, err := h.jobs.MarkFailed(ctx, jobID, reason.errorReason()); err != nil {
-			return Output{}, fmt.Errorf("validate: record failure of job %s: %w", jobID, err)
+			return nil, fmt.Errorf("validate: record failure of job %s: %w", jobID, err)
 		}
 		return newOutput(in, jobID, DecisionRejected, reason), nil
 	}
@@ -86,19 +86,19 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 // decideOnConflict は条件付き書き込みが弾かれたときの扱いを決める
 //
 // 旧レコードは JobExistsError に載って返るため、status を読むための追加の取得は行わない
-func (h *Handler) decideOnConflict(in Input, jobID string, err error) (Output, error) {
+func (h *Handler) decideOnConflict(in Input, jobID string, err error) (*Output, error) {
 	exists, ok := dynamo.AsJobExists(err)
 	if !ok {
-		return Output{}, fmt.Errorf("validate: register job %s: %w", jobID, err)
+		return nil, fmt.Errorf("validate: register job %s: %w", jobID, err)
 	}
 	if exists.ExistingErr != nil {
-		return Output{}, fmt.Errorf("validate: register job %s: %w", jobID, exists.ExistingErr)
+		return nil, fmt.Errorf("validate: register job %s: %w", jobID, exists.ExistingErr)
 	}
 
 	status := exists.Existing.Status
 	if status.Reprocessable() {
 		// FAILED は条件式が書き込みを通すため、ここに来るのは書き込みと競合した別の実行がレコードを差し替えた場合に限られる
-		return Output{}, fmt.Errorf("validate: register job %s: conflicted with a reprocessable status %s", jobID, status)
+		return nil, fmt.Errorf("validate: register job %s: conflicted with a reprocessable status %s", jobID, status)
 	}
 
 	switch status {
@@ -115,7 +115,7 @@ func (h *Handler) decideOnConflict(in Input, jobID string, err error) (Output, e
 		}), nil
 
 	default:
-		return Output{}, fmt.Errorf("validate: register job %s: unknown status %s", jobID, status)
+		return nil, fmt.Errorf("validate: register job %s: unknown status %s", jobID, status)
 	}
 }
 
@@ -188,8 +188,8 @@ func (h *Handler) download(ctx context.Context, key string) (string, string, err
 	return f.Name(), hex.EncodeToString(sum.Sum(nil)), nil
 }
 
-func newOutput(in Input, jobID string, decision Decision, reason *Reason) Output {
-	return Output{
+func newOutput(in Input, jobID string, decision Decision, reason *Reason) *Output {
+	return &Output{
 		JobID:    jobID,
 		Bucket:   in.Bucket,
 		Key:      in.Key,

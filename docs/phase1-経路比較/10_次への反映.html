@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>10_次への反映 — folio Phase 1</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #ffffff;
+        --surface: #f6f8fa;
+        --surface-2: #eef1f4;
+        --line: #d0d7de;
+        --line-soft: #e6e9ed;
+        --fg: #111827;
+        --fg-2: #1f2937;
+        --muted: #4b5563;
+        --faint: #6b7280;
+        --link: #0969da;
+        --blue: #0969da;
+        --green: #1a7f37;
+        --orange: #bc4c00;
+        --yellow: #9a6700;
+        --purple: #8250df;
+        --red: #cf222e;
+        --shadow:
+          0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06);
+      }
+      html {
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+          "Noto Sans JP", Helvetica, Arial, sans-serif;
+        line-height: 1.7;
+        min-height: 100vh;
+        font-size: 15px;
+      }
+      header {
+        border-bottom: 1px solid var(--line-soft);
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .header-logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+      }
+      .header-logo:hover {
+        color: var(--link);
+      }
+      .back-link {
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--link);
+      }
+      .breadcrumb {
+        padding: 10px 28px;
+        font-size: 12.5px;
+        color: var(--muted);
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .breadcrumb a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      .breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      .breadcrumb span {
+        margin: 0 8px;
+        color: var(--faint);
+      }
+      main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      body.index main {
+        max-width: 1120px;
+      }
+      .page-header {
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--link);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .page-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--fg);
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .page-subtitle {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 60em;
+      }
+      .section {
+        margin-bottom: 44px;
+      }
+      .section-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--fg);
+        margin-bottom: 14px;
+        padding-left: 12px;
+        border-left: 4px solid var(--link);
+        line-height: 1.3;
+      }
+      body.index .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        border-left: 0;
+        padding-left: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .block {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+        box-shadow: var(--shadow);
+      }
+      .block > :last-child {
+        margin-bottom: 0;
+      }
+      h3 {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: var(--fg);
+        margin: 22px 0 8px;
+      }
+      h3:first-child {
+        margin-top: 0;
+      }
+      p {
+        font-size: 14.5px;
+        color: var(--fg-2);
+        line-height: 1.75;
+        margin-bottom: 12px;
+      }
+      p.meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      ul,
+      ol {
+        margin: 0 0 12px 22px;
+        font-size: 14.5px;
+        color: var(--fg-2);
+      }
+      li {
+        margin: 5px 0;
+        line-height: 1.7;
+      }
+      ul.task-list {
+        list-style: none;
+        margin-left: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      ul.task-list li {
+        display: block;
+        position: relative;
+        padding-left: 18px;
+        margin: 0;
+      }
+      ul.task-list li::before {
+        content: "›";
+        position: absolute;
+        left: 2px;
+        top: 0;
+        color: var(--link);
+        font-weight: 700;
+      }
+      a {
+        color: var(--link);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--fg);
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 0 0 12px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--fg);
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-bottom: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+      }
+      .table-wrap:last-child {
+        margin-bottom: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+      th {
+        background: var(--surface);
+        border-bottom: 2px solid var(--line);
+        border-right: 1px solid var(--line);
+        padding: 10px 14px;
+        text-align: left;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      td {
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line-soft);
+        padding: 10px 14px;
+        vertical-align: top;
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      th:last-child,
+      td:last-child {
+        border-right: 0;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tr:nth-child(even) td {
+        background: var(--surface);
+      }
+      tr:hover td {
+        background: #eef4fb;
+      }
+      td code,
+      th code {
+        background: var(--bg);
+      }
+      dl {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      dl > div {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      dt {
+        font-size: 14px;
+        color: var(--fg);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      dd {
+        font-size: 13.5px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      dd ol,
+      dd ul {
+        margin-top: 6px;
+        font-size: 13.5px;
+      }
+      .callout {
+        background: #ddf4ff;
+        border: 1px solid #b6e3ff;
+        border-left: 4px solid var(--blue);
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      .callout strong {
+        color: var(--blue);
+      }
+      .callout.green {
+        background: #dafbe1;
+        border-color: #aceebb;
+        border-left-color: var(--green);
+      }
+      .callout.green strong {
+        color: var(--green);
+      }
+      .callout.yellow {
+        background: #fff8c5;
+        border-color: #f3e3a0;
+        border-left-color: var(--yellow);
+      }
+      .callout.yellow strong {
+        color: var(--yellow);
+      }
+      .callout p:last-child,
+      .callout ul:last-child {
+        margin-bottom: 0;
+      }
+      .callout ul.task-list li::before {
+        color: var(--yellow);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .info-item {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+      .info-label {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+      .info-value {
+        font-size: 22px;
+        color: var(--fg);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+      }
+      .info-note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 6px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid;
+        white-space: nowrap;
+        vertical-align: middle;
+        line-height: 1.5;
+      }
+      .tag.ok {
+        background: #dafbe1;
+        color: var(--green);
+        border-color: #aceebb;
+      }
+      .tag.warn {
+        background: #fff8c5;
+        color: var(--yellow);
+        border-color: #f3e3a0;
+      }
+      .tag.ng {
+        background: #ffebe9;
+        color: var(--red);
+        border-color: #ffcecb;
+      }
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 22px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: var(--shadow);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          transform 0.15s;
+      }
+      .card:hover {
+        border-color: var(--link);
+        box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12);
+        transform: translateY(-1px);
+      }
+      .card-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--link);
+        letter-spacing: 0.06em;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        line-height: 1.35;
+      }
+      .card-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+        flex: 1;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        align-self: flex-start;
+      }
+      .badge.blue {
+        background: #ddf4ff;
+        color: var(--blue);
+      }
+      .badge.green {
+        background: #dafbe1;
+        color: var(--green);
+      }
+      .badge.orange {
+        background: #fff1e5;
+        color: var(--orange);
+      }
+      .badge.purple {
+        background: #fbefff;
+        color: var(--purple);
+      }
+      .badge.red {
+        background: #ffebe9;
+        color: var(--red);
+      }
+      .pager {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 14px;
+      }
+      .pager a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+      .pager a:hover {
+        color: var(--link);
+      }
+      footer {
+        border-top: 1px solid var(--line-soft);
+        text-align: center;
+        padding: 24px;
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+      .section {
+        --accent: #0969da;
+        --accent-soft: #ddf4ff;
+        --accent-ink: #0550ae;
+      }
+      .section.c2 {
+        --accent: #1a7f37;
+        --accent-soft: #dafbe1;
+        --accent-ink: #116329;
+      }
+      .section.c3 {
+        --accent: #bc4c00;
+        --accent-soft: #fff1e5;
+        --accent-ink: #953800;
+      }
+      .section.c4 {
+        --accent: #8250df;
+        --accent-soft: #fbefff;
+        --accent-ink: #6639ba;
+      }
+      .section.c5 {
+        --accent: #0e7c86;
+        --accent-soft: #d8f3f5;
+        --accent-ink: #0b5f67;
+      }
+      .section.c6 {
+        --accent: #bf3989;
+        --accent-soft: #ffeff7;
+        --accent-ink: #99286e;
+      }
+      .section-title {
+        border-left-color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .section .block {
+        border-top: 3px solid var(--accent);
+        border-radius: 10px;
+      }
+      .section th {
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .section strong {
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .section dt {
+        color: var(--accent-ink);
+      }
+      .section ul.task-list li::before {
+        color: var(--accent);
+      }
+      .section dl > div {
+        border-left: 3px solid var(--accent);
+      }
+      .section h3 {
+        color: var(--accent-ink);
+      }
+      body.index .section-title {
+        border-left: 0;
+      }
+      body.index .section-num {
+        display: none;
+      }
+      .page-header {
+        border-bottom: 2px solid var(--page-accent, #0969da);
+      }
+      .eyebrow {
+        color: var(--page-accent, #0969da);
+      }
+      .page-title {
+        color: #0b1220;
+      }
+      p {
+        color: var(--fg-2);
+      }
+      td {
+        color: var(--fg);
+      }
+      a {
+        color: var(--link);
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body style="--page-accent: #8250df">
+    <header>
+      <a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+      <a class="back-link" href="00_目次.html">← 目次に戻る</a>
+    </header>
+    <nav class="breadcrumb">
+      <a href="00_目次.html">Phase 1 経路比較</a><span>›</span>10_次への反映
+    </nav>
+    <main>
+      <div class="page-header">
+        <div class="eyebrow">Phase 1 経路比較 · 10</div>
+        <h1 class="page-title">次への反映</h1>
+        <p class="page-subtitle">
+          Phase 2 で自動評価する項目、正規化 (#22) の確認結果、設計判断の更新
+        </p>
+      </div>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">01</span>Phase 2 で自動評価する項目
+        </div>
+        <div class="block">
+          <p>
+            Phase 2 は LaTeX ソースから正解データを作り、30
+            本で数値評価する計画。今回の目視比較で、自動で測るべき項目と、今の
+            <code>comparison.json</code> / verify
+            では測れていない項目が分かった。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>項目</th>
+                <th>今回の観察</th>
+                <th>測り方の案</th>
+              </tr>
+              <tr>
+                <td>見出しの一致</td>
+                <td>
+                  A は番号を落とし、B は番号と題名を分離する。<code
+                    >diff.headings</code
+                  >
+                  の完全一致は 5 本とも不一致
+                </td>
+                <td>
+                  番号を除いた題名で照合し、階層 (level)
+                  は正解の章立てと突き合わせる。番号の有無・分離・段落ラベルの昇格を別々に数える
+                </td>
+              </tr>
+              <tr>
+                <td>本文の被覆と重複</td>
+                <td>
+                  A は親節に子節を含む重複 (最大 23,300 文字)、B
+                  はページ冒頭の段落や段・ページ全体の欠落 (本文量は A の
+                  53〜71%)
+                </td>
+                <td>
+                  正解の段落ごとに「どちらの経路に存在するか」を判定し、被覆率と重複率を出す。混入
+                  (キャプション、脚注、スタンプ) は正解に無い文字列の割合で測る
+                </td>
+              </tr>
+              <tr>
+                <td>表のセル値</td>
+                <td>
+                  大きな数値表で B が数値を改変、A
+                  が記号を数値に化かす。小さな表は一致
+                </td>
+                <td>
+                  正解の表とセル単位で一致率を出す
+                  (数値セルと記号セルを分ける)。表でないものの誤検出数も数える
+                </td>
+              </tr>
+              <tr>
+                <td>図とキャプション</td>
+                <td>B が原本に近く、A は分割・ロゴ・取り違えがある</td>
+                <td>正解の図の数とキャプションの一致率</td>
+              </tr>
+              <tr>
+                <td>参考文献</td>
+                <td>
+                  A は件数一致、B は引用番号の混入と結合。B
+                  は固有名詞を書き換える
+                </td>
+                <td>
+                  件数、<code>raw</code> の文字列距離、著者名・arXiv ID
+                  の一致率。Crossref は補助にとどめる
+                </td>
+              </tr>
+              <tr>
+                <td>字形</td>
+                <td>A は数学記号と矢印を落とす</td>
+                <td>正解との文字種別の一致率 (記号クラス)</td>
+              </tr>
+              <tr>
+                <td>安定性</td>
+                <td>
+                  B は同じ入力でも JSON の型が崩れることがある (1 / 60 ページ)
+                </td>
+                <td>同じ論文を複数回流し、完走率と結果の一致率を出す</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section class="section c2">
+        <div class="section-title">
+          <span class="section-num">02</span>正規化 (#22) の確認
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              番号つき見出しの level
+              を番号から決め直す処理は両経路に効いており、共通の見出しでは level
+              が一致した。ただし番号そのものは A
+              が落としているため、正規化で番号を揃えることはできていない
+              (無いものは足せない)
+            </li>
+            <li>
+              題名と著者の完全一致は 5 本で成立。要旨は A の行末ハイフン (<code
+                >accu- rately</code
+              >) と en dash の違いで 3 本が不一致。ハイフネーションの結合と
+              ダッシュの正規化を入れれば差分から消せるが、2608.20318v1 の
+              <code>SO that</code> (OCR の誤り)
+              は大文字小文字を無視する比較で既に隠れている。正規化で消してよい差
+              (表記) と残すべき差 (内容) の線引きが要る
+            </li>
+            <li>
+              結合セルの扱い (A は複製、B は空文字)
+              は正規化で揃えるべき表記差で、今は揃っていない
+            </li>
+          </ul>
+        </div>
+      </section>
+      <section class="section c3">
+        <div class="section-title">
+          <span class="section-num">03</span>設計判断の更新
+        </div>
+        <div class="block">
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>判断</th>
+                <th>今回の結論</th>
+                <th>反映先</th>
+              </tr>
+              <tr>
+                <td>Textract の FeatureTypes</td>
+                <td>
+                  <code>LAYOUT</code> は経路 A の設計上の前提 (#107)。<code
+                    >TABLES</code
+                  >
+                  は数値表の正確さに効いている一方、コストの 5〜7
+                  割を占める。要否は Phase 2 の表の評価で決める
+                </td>
+                <td>
+                  #34 を not planned で閉じた。Notion「Textract の FeatureTypes
+                  選定」は暫定採用のまま
+                </td>
+              </tr>
+              <tr>
+                <td>コストの想定</td>
+                <td>
+                  「A が安価」は成り立たない (ほぼ同額)。Textract を
+                  <code>LAYOUT</code> のみにすれば A は 1/3 以下になる
+                </td>
+                <td>
+                  docs/README.ja.md の経路比較の表 (コストの行)
+                  を実測に合わせて直す
+                </td>
+              </tr>
+              <tr>
+                <td>経路 B の応答形式</td>
+                <td>
+                  自由文の JSON は引用符で壊れる。tool use +
+                  <code>strict: true</code> で受け取る (#111 は tool use
+                  まで、#118 で strict)
+                </td>
+                <td>#118</td>
+              </tr>
+              <tr>
+                <td>欠落の扱い</td>
+                <td>
+                  経路が部分的に成功した状態を <code>COMPLETED</code> にしない
+                  (#112)。B のページ冒頭の段落欠落は verify では検出できていない
+                </td>
+                <td>Phase 2 の被覆率で測る</td>
+              </tr>
+              <tr>
+                <td>verify の照合</td>
+                <td>
+                  見出しの番号、Crossref
+                  の片向き被覆、参考文献の長さ下限、Textract 確信度の扱いを直す
+                  (<a href="08_信頼度の分布.html">08</a>)
+                </td>
+                <td>#23 の見直しとして Issue 化する</td>
+              </tr>
+              <tr>
+                <td>運用</td>
+                <td>
+                  Lambda の同時実行上限 10 のため投入は 1 本ずつ。Bedrock
+                  のクォータ (50 / 分) より先に当たる
+                </td>
+                <td>
+                  <a href="01_前提と実行手順.html">01</a>。恒久対応は Service
+                  Quotas の申請
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section class="section c4">
+        <div class="section-title">
+          <span class="section-num">04</span>Issue
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              対応済み:
+              <a href="https://github.com/tamaco489/folio/issues/111">#111</a>
+              (tool use)、<a
+                href="https://github.com/tamaco489/folio/issues/112"
+                >#112</a
+              >
+              (欠落を needsReview に)、<a
+                href="https://github.com/tamaco489/folio/issues/113"
+                >#113</a
+              >
+              (PageDecodeError の Retry)
+            </li>
+            <li>
+              未対応:
+              <a href="https://github.com/tamaco489/folio/issues/118">#118</a>
+              (strict スキーマ)
+            </li>
+            <li>
+              この報告から起こすもの: verify の照合の見直し (#23 の範囲)、経路 A
+              の見出し番号と親節の重複、経路 B
+              のページ冒頭の段落欠落と引用番号の混入、docs/README
+              の経路比較表の更新
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="pager">
+        <a href="09_想定外と原因.html">← 09_想定外と原因</a><span></span>
+      </div>
+    </main>
+    <footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+  </body>
+</html>

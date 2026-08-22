@@ -398,7 +398,7 @@ func TestHandleCallbackTreatsPartialSuccessAsSuccess(t *testing.T) {
 func TestHandleCallbackExtractFailed(t *testing.T) {
 	t.Parallel()
 
-	getErr := &awstextracttypes.InternalServerError{Message: aws.String("textract is unavailable")}
+	getErr := &awstextracttypes.InternalServerError{Message: new("textract is unavailable")}
 
 	tests := map[string]struct {
 		id          string

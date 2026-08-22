@@ -1,5 +1,6 @@
 resource "aws_iam_role" "lambda_parser" {
   name               = "${local.name_prefix}-lambda-parser-role"
+  description        = "Execution role shared by textract-parser and bedrock-parser (S3 work/, Textract, Bedrock, Step Functions task token)."
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
 
@@ -17,6 +18,20 @@ data "aws_iam_policy_document" "lambda_parser" {
     sid       = "WriteWork"
     actions   = ["s3:PutObject"]
     resources = [local.work_objects]
+  }
+
+  # bedrock-parser が無いページ画像を s3.ErrNotFound (→ InvalidInputError) として扱うために要る
+  # ListBucket が無いと S3 は存在しないキーの GetObject を 404 ではなく 403 で返し、NotFound 判定に入らない
+  statement {
+    sid       = "ListWork"
+    actions   = ["s3:ListBucket"]
+    resources = [var.documents_bucket_arn]
+
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["work/*"]
+    }
   }
 
   # Textract の API はリソース単位の制御を持たないため * にする

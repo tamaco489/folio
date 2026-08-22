@@ -1,5 +1,6 @@
 resource "aws_iam_role" "lambda_validate" {
   name               = "${local.name_prefix}-lambda-validate-role"
+  description        = "Execution role of the validator Lambda (reads uploads/, registers the job in DynamoDB)."
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
 

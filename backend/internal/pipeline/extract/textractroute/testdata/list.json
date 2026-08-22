@@ -1,0 +1,187 @@
+{
+  "paperId": "9000.00002",
+  "jobId": "list-fixture",
+  "featureTypes": [
+    "LAYOUT"
+  ],
+  "note": "手書きの合成データであり実 API のレスポンスではない。LAYOUT_LIST の子 LAYOUT_TEXT が個別の要素になり、親の連結テキストが要素にならないことを検証するために作成した",
+  "analysisPages": [
+    {
+      "jobStatus": "SUCCEEDED",
+      "modelVersion": "1.0",
+      "documentMetadata": {
+        "Pages": 1
+      },
+      "blocks": [
+        {
+          "BlockType": "PAGE",
+          "Id": "p1",
+          "Page": 1,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 1,
+              "Height": 1,
+              "Left": 0,
+              "Top": 0
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "ls",
+                "i1",
+                "i2"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_LIST",
+          "Id": "ls",
+          "Page": 1,
+          "Confidence": 90.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.2,
+              "Left": 0.1,
+              "Top": 0.2
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "i1",
+                "i2"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "i1",
+          "Page": 1,
+          "Confidence": 95.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.08,
+              "Left": 0.1,
+              "Top": 0.2
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "i1-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LAYOUT_TEXT",
+          "Id": "i2",
+          "Page": 1,
+          "Confidence": 95.0,
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.08,
+              "Left": 0.1,
+              "Top": 0.3
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "i2-l"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "i1-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "[1] first entry",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.02,
+              "Left": 0.1,
+              "Top": 0.205
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "i1-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "LINE",
+          "Id": "i2-l",
+          "Page": 1,
+          "Confidence": 98.0,
+          "Text": "[2] second entry",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.8,
+              "Height": 0.02,
+              "Left": 0.1,
+              "Top": 0.305
+            }
+          },
+          "Relationships": [
+            {
+              "Type": "CHILD",
+              "Ids": [
+                "i2-w"
+              ]
+            }
+          ]
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "i1-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "[1] first entry",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.205
+            }
+          }
+        },
+        {
+          "BlockType": "WORD",
+          "Id": "i2-w",
+          "Page": 1,
+          "Confidence": 99.0,
+          "Text": "[2] second entry",
+          "TextType": "PRINTED",
+          "Geometry": {
+            "BoundingBox": {
+              "Width": 0.05,
+              "Height": 0.01,
+              "Left": 0.1,
+              "Top": 0.305
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

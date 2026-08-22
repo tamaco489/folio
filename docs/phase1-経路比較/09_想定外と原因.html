@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>09_想定外と原因 — folio Phase 1</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #ffffff;
+        --surface: #f6f8fa;
+        --surface-2: #eef1f4;
+        --line: #d0d7de;
+        --line-soft: #e6e9ed;
+        --fg: #111827;
+        --fg-2: #1f2937;
+        --muted: #4b5563;
+        --faint: #6b7280;
+        --link: #0969da;
+        --blue: #0969da;
+        --green: #1a7f37;
+        --orange: #bc4c00;
+        --yellow: #9a6700;
+        --purple: #8250df;
+        --red: #cf222e;
+        --shadow:
+          0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06);
+      }
+      html {
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+          "Noto Sans JP", Helvetica, Arial, sans-serif;
+        line-height: 1.7;
+        min-height: 100vh;
+        font-size: 15px;
+      }
+      header {
+        border-bottom: 1px solid var(--line-soft);
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .header-logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+      }
+      .header-logo:hover {
+        color: var(--link);
+      }
+      .back-link {
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--link);
+      }
+      .breadcrumb {
+        padding: 10px 28px;
+        font-size: 12.5px;
+        color: var(--muted);
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .breadcrumb a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      .breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      .breadcrumb span {
+        margin: 0 8px;
+        color: var(--faint);
+      }
+      main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      body.index main {
+        max-width: 1120px;
+      }
+      .page-header {
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--link);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .page-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--fg);
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .page-subtitle {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 60em;
+      }
+      .section {
+        margin-bottom: 44px;
+      }
+      .section-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--fg);
+        margin-bottom: 14px;
+        padding-left: 12px;
+        border-left: 4px solid var(--link);
+        line-height: 1.3;
+      }
+      body.index .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        border-left: 0;
+        padding-left: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .block {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+        box-shadow: var(--shadow);
+      }
+      .block > :last-child {
+        margin-bottom: 0;
+      }
+      h3 {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: var(--fg);
+        margin: 22px 0 8px;
+      }
+      h3:first-child {
+        margin-top: 0;
+      }
+      p {
+        font-size: 14.5px;
+        color: var(--fg-2);
+        line-height: 1.75;
+        margin-bottom: 12px;
+      }
+      p.meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      ul,
+      ol {
+        margin: 0 0 12px 22px;
+        font-size: 14.5px;
+        color: var(--fg-2);
+      }
+      li {
+        margin: 5px 0;
+        line-height: 1.7;
+      }
+      ul.task-list {
+        list-style: none;
+        margin-left: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      ul.task-list li {
+        display: block;
+        position: relative;
+        padding-left: 18px;
+        margin: 0;
+      }
+      ul.task-list li::before {
+        content: "›";
+        position: absolute;
+        left: 2px;
+        top: 0;
+        color: var(--link);
+        font-weight: 700;
+      }
+      a {
+        color: var(--link);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--fg);
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 0 0 12px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--fg);
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-bottom: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+      }
+      .table-wrap:last-child {
+        margin-bottom: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+      th {
+        background: var(--surface);
+        border-bottom: 2px solid var(--line);
+        border-right: 1px solid var(--line);
+        padding: 10px 14px;
+        text-align: left;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      td {
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line-soft);
+        padding: 10px 14px;
+        vertical-align: top;
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      th:last-child,
+      td:last-child {
+        border-right: 0;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tr:nth-child(even) td {
+        background: var(--surface);
+      }
+      tr:hover td {
+        background: #eef4fb;
+      }
+      td code,
+      th code {
+        background: var(--bg);
+      }
+      dl {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      dl > div {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      dt {
+        font-size: 14px;
+        color: var(--fg);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      dd {
+        font-size: 13.5px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      dd ol,
+      dd ul {
+        margin-top: 6px;
+        font-size: 13.5px;
+      }
+      .callout {
+        background: #ddf4ff;
+        border: 1px solid #b6e3ff;
+        border-left: 4px solid var(--blue);
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      .callout strong {
+        color: var(--blue);
+      }
+      .callout.green {
+        background: #dafbe1;
+        border-color: #aceebb;
+        border-left-color: var(--green);
+      }
+      .callout.green strong {
+        color: var(--green);
+      }
+      .callout.yellow {
+        background: #fff8c5;
+        border-color: #f3e3a0;
+        border-left-color: var(--yellow);
+      }
+      .callout.yellow strong {
+        color: var(--yellow);
+      }
+      .callout p:last-child,
+      .callout ul:last-child {
+        margin-bottom: 0;
+      }
+      .callout ul.task-list li::before {
+        color: var(--yellow);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .info-item {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+      .info-label {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+      .info-value {
+        font-size: 22px;
+        color: var(--fg);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+      }
+      .info-note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 6px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid;
+        white-space: nowrap;
+        vertical-align: middle;
+        line-height: 1.5;
+      }
+      .tag.ok {
+        background: #dafbe1;
+        color: var(--green);
+        border-color: #aceebb;
+      }
+      .tag.warn {
+        background: #fff8c5;
+        color: var(--yellow);
+        border-color: #f3e3a0;
+      }
+      .tag.ng {
+        background: #ffebe9;
+        color: var(--red);
+        border-color: #ffcecb;
+      }
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 22px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: var(--shadow);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          transform 0.15s;
+      }
+      .card:hover {
+        border-color: var(--link);
+        box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12);
+        transform: translateY(-1px);
+      }
+      .card-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--link);
+        letter-spacing: 0.06em;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        line-height: 1.35;
+      }
+      .card-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+        flex: 1;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        align-self: flex-start;
+      }
+      .badge.blue {
+        background: #ddf4ff;
+        color: var(--blue);
+      }
+      .badge.green {
+        background: #dafbe1;
+        color: var(--green);
+      }
+      .badge.orange {
+        background: #fff1e5;
+        color: var(--orange);
+      }
+      .badge.purple {
+        background: #fbefff;
+        color: var(--purple);
+      }
+      .badge.red {
+        background: #ffebe9;
+        color: var(--red);
+      }
+      .pager {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 14px;
+      }
+      .pager a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+      .pager a:hover {
+        color: var(--link);
+      }
+      footer {
+        border-top: 1px solid var(--line-soft);
+        text-align: center;
+        padding: 24px;
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+      .section {
+        --accent: #0969da;
+        --accent-soft: #ddf4ff;
+        --accent-ink: #0550ae;
+      }
+      .section.c2 {
+        --accent: #1a7f37;
+        --accent-soft: #dafbe1;
+        --accent-ink: #116329;
+      }
+      .section.c3 {
+        --accent: #bc4c00;
+        --accent-soft: #fff1e5;
+        --accent-ink: #953800;
+      }
+      .section.c4 {
+        --accent: #8250df;
+        --accent-soft: #fbefff;
+        --accent-ink: #6639ba;
+      }
+      .section.c5 {
+        --accent: #0e7c86;
+        --accent-soft: #d8f3f5;
+        --accent-ink: #0b5f67;
+      }
+      .section.c6 {
+        --accent: #bf3989;
+        --accent-soft: #ffeff7;
+        --accent-ink: #99286e;
+      }
+      .section-title {
+        border-left-color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .section .block {
+        border-top: 3px solid var(--accent);
+        border-radius: 10px;
+      }
+      .section th {
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .section strong {
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .section dt {
+        color: var(--accent-ink);
+      }
+      .section ul.task-list li::before {
+        color: var(--accent);
+      }
+      .section dl > div {
+        border-left: 3px solid var(--accent);
+      }
+      .section h3 {
+        color: var(--accent-ink);
+      }
+      body.index .section-title {
+        border-left: 0;
+      }
+      body.index .section-num {
+        display: none;
+      }
+      .page-header {
+        border-bottom: 2px solid var(--page-accent, #0969da);
+      }
+      .eyebrow {
+        color: var(--page-accent, #0969da);
+      }
+      .page-title {
+        color: #0b1220;
+      }
+      p {
+        color: var(--fg-2);
+      }
+      td {
+        color: var(--fg);
+      }
+      a {
+        color: var(--link);
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body style="--page-accent: #cf222e">
+    <header>
+      <a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+      <a class="back-link" href="00_目次.html">← 目次に戻る</a>
+    </header>
+    <nav class="breadcrumb">
+      <a href="00_目次.html">Phase 1 経路比較</a><span>›</span>09_想定外と原因
+    </nav>
+    <main>
+      <div class="page-header">
+        <div class="eyebrow">Phase 1 経路比較 · 09</div>
+        <h1 class="page-title">想定外と原因</h1>
+        <p class="page-subtitle">
+          実行で踏んだ問題 (JSON の破損、欠落の黙殺、Lambda の上限など)
+          と原因・対応
+        </p>
+      </div>
+      <p>
+        2026-08-22
+        の実行で踏んだ問題を、発見の順に記録する。コードの不具合として Issue
+        にしたものと、環境の制約として手順に書いたものがある。
+      </p>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">01</span>1. 経路 B の JSON が引用符で壊れる
+          (4 本中 3 本)
+        </div>
+        <div class="block">
+          <p>
+            <span class="tag ng">backend の不具合</span> →
+            <a href="https://github.com/tamaco489/folio/issues/111">#111</a>
+            で対応済み
+          </p>
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>停止したページ</th>
+                <th>エラー</th>
+                <th>そのページの原本にある語句</th>
+                <th>揃ったページ</th>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>p.11</td>
+                <td>
+                  <code
+                    >invalid character &#x27;B&#x27; after object key:value
+                    pair</code
+                  >
+                </td>
+                <td><code>&quot;Beauty&quot;</code></td>
+                <td>14 / 17</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>p.3</td>
+                <td>
+                  <code
+                    >invalid character &#x27;O&#x27; after object key:value
+                    pair</code
+                  >
+                </td>
+                <td><code>“On ...</code></td>
+                <td>7 / 15</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>p.12</td>
+                <td>
+                  <code
+                    >invalid character &#x27;p&#x27; after object key:value
+                    pair</code
+                  >
+                </td>
+                <td><code>“prove...</code></td>
+                <td>11 / 12</td>
+              </tr>
+            </table>
+          </div>
+          <dl>
+            <div>
+              <dt>事象</dt>
+              <dd>
+                経路 B の <code>BedrockPage</code> が
+                <code>PageDecodeError</code> (<code
+                  >bedrock: response is not valid json: ...</code
+                >) で失敗し、Map 全体が止まって未着手のページも処理されない。1
+                本目 (2608.20338v1) と 2608.20318v1 は通った
+              </dd>
+            </div>
+            <div>
+              <dt>原因</dt>
+              <dd>
+                bedrock-parser はモデルに「JSON
+                だけを返せ」と指示して応答テキストを
+                <code>json.Unmarshal</code> していた。モデルが本文中の
+                <code>“…”</code> を <code>"</code> のままエスケープせず JSON
+                文字列に転記すると、パーサは引用句の直前で文字列を閉じ、直後の文字で落ちる。エラーに出る文字
+                (B / O / p)
+                が引用句の先頭と一致する。引用句のあるページで再現するため、再試行では直らない
+              </dd>
+            </div>
+            <div>
+              <dt>対応</dt>
+              <dd>
+                Converse の tool use (<code>toolConfig</code>
+                に出力スキーマを登録し <code>toolChoice</code> で強制)
+                で受け取り、Bedrock 側に JSON の整形を任せる (#111、PR #116)。2
+                回目の実行では同じページが <code>"</code> を含んだまま正しく
+                JSON に入った (2608.19529v1 p.11 の本文に
+                <code>Amazon Beauty³ [23]</code> が残っている)。経路 A も同じ
+                <code>DecodeJSON</code> だったので同時に切り替えた
+              </dd>
+            </div>
+            <div>
+              <dt>考慮不足</dt>
+              <dd>
+                「JSON
+                だけを返せ」という指示で整形を保証できると見ていた。記録済みレスポンスの再生テストは引用符を含まない合成データだったので、テストでは見つからなかった
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section class="section c2">
+        <div class="section-title">
+          <span class="section-num">02</span>2. ページが欠けたまま COMPLETED
+          になる
+        </div>
+        <div class="block">
+          <p>
+            <span class="tag ng">backend の設計の穴</span> →
+            <a href="https://github.com/tamaco489/folio/issues/112">#112</a>
+            で対応済み
+          </p>
+          <dl>
+            <div>
+              <dt>事象</dt>
+              <dd>
+                1. で Map が止まっても、Step Functions の実行は Catch →
+                <code>BedrockFailed</code> (Pass) を経て Finalize
+                に進み、finalizer は保存済みのページだけで結合して経路 B を
+                <code>succeeded</code> にした。2608.19526v1 は 7 / 15
+                ページ、参考文献 0 件で <code>COMPLETED</code> /
+                <code>needsReview: false</code> になった
+              </dd>
+            </div>
+            <div>
+              <dt>原因</dt>
+              <dd>
+                <code>finalize/route.go</code> の
+                <code>bedrockRoute</code> が「ページ結果が 1
+                件以上あれば成功」と判定し、Catch の
+                <code>Error</code> を見ていなかった。欠落は
+                <code>provenance.warnings</code> に残るだけだった
+              </dd>
+            </div>
+            <div>
+              <dt>対応</dt>
+              <dd>
+                欠落ページがあるか Catch の <code>Error</code> があれば
+                <code>needsReview: true</code> にし、<code
+                  >comparison.json</code
+                >
+                の <code>routes.bedrock</code> に <code>missingPages</code> と
+                <code>error</code> / <code>cause</code> を残す (#112、PR
+                #114)。2 回目の 2608.17950v1 (11 / 12) はこの判定で
+                <code>REVIEW_PENDING</code> になった
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section class="section c3">
+        <div class="section-title">
+          <span class="section-num">03</span>3. PageDecodeError を再試行しない
+        </div>
+        <div class="block">
+          <p>
+            <span class="tag warn">保険として変更</span> →
+            <a href="https://github.com/tamaco489/folio/issues/113">#113</a>
+            で対応済み
+          </p>
+          <dl>
+            <div>
+              <dt>事象</dt>
+              <dd>
+                ステートマシンの <code>BedrockPage</code> は
+                <code>PageDecodeError</code> を
+                <code>InvalidInputError</code>
+                と同じ「再試行しても直らない」扱い (<code>MaxAttempts: 0</code>)
+                にしていた
+              </dd>
+            </div>
+            <div>
+              <dt>対応</dt>
+              <dd>
+                5 秒後に 1 回だけ再試行する (PR #115、dev に apply 済み)。1
+                ページ分の課金で経路 B
+                全体を救える可能性があるため。引用符の問題 (1.)
+                は再試行では直らないので、根本対策ではない。Map の
+                <code>ToleratedFailurePercentage</code> は置かない
+                (欠落のある経路は 2.
+                で再投入が要るため、残りのページにトークンを使っても無駄になる)
+              </dd>
+            </div>
+            <div>
+              <dt>結果</dt>
+              <dd>
+                2 回目の 2608.17950v1 の p.12 で再試行が走ったが、同じエラー
+                (4.) で 2 回とも失敗した
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section class="section c4">
+        <div class="section-title">
+          <span class="section-num">04</span>4. tool use でも型が崩れる (1
+          ページ)
+        </div>
+        <div class="block">
+          <p>
+            <span class="tag ng">backend の不具合</span> →
+            <a href="https://github.com/tamaco489/folio/issues/118">#118</a>
+            (未対応)
+          </p>
+          <dl>
+            <div>
+              <dt>事象</dt>
+              <dd>
+                2 回目の 2608.17950v1 の p.12 (見出しの無い本文だけのページ)
+                で、モデルが
+                <code>sections</code> を配列ではなく文字列で返し、<code
+                  >json: cannot unmarshal string into Go struct field
+                  PageResult.sections of type []bedrockroute.PageSection</code
+                >
+                になった。再試行でも同じ
+              </dd>
+            </div>
+            <div>
+              <dt>原因</dt>
+              <dd>
+                tool use の <code>inputSchema</code> は
+                <code>strict</code>
+                を付けないと型を保証しない。公式ドキュメントは「strict
+                なしでは型の不一致や必須欠落が起こり得る」とし、<code
+                  >strict: true</code
+                >
+                (constrained decoding) を解決策として示している。Claude Sonnet
+                4.5 は Bedrock Converse で対象
+              </dd>
+            </div>
+            <div>
+              <dt>対応 (予定)</dt>
+              <dd>
+                <code>strict: true</code> を付け、スキーマの全 object に
+                <code>additionalProperties: false</code> と
+                <code>required</code> を書く。失敗時にモデルの生応答を S3 に残す
+                (今回は何が返ったかが残っておらず、エラー文から推測した)
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section class="section c5">
+        <div class="section-title">
+          <span class="section-num">05</span>5. Lambda の同時実行数の上限 (10)
+        </div>
+        <div class="block">
+          <p>
+            <span class="tag warn">環境の制約</span> →
+            <a href="01_前提と実行手順.html">01</a> の前提に記載
+          </p>
+          <dl>
+            <div>
+              <dt>事象</dt>
+              <dd>
+                2 回目の再投入で 2 本を同時に投げたところ、2608.19526v1 の
+                <code>BedrockPage</code> が 1 回
+                <code>Lambda.TooManyRequestsException</code> (Rate
+                Exceeded、429) で失敗した。<code>States.TaskFailed</code> の
+                Retry (10 秒後) で回復し、結果には影響していない
+              </dd>
+            </div>
+            <div>
+              <dt>原因</dt>
+              <dd>
+                このアカウントの Lambda 同時実行数の上限が 10
+                (<code>get-account-settings</code>)。経路 B の Map が並列 5
+                なので、2 本で 10 に preprocessor や textract-parser
+                が重なると超える。Bedrock のクォータ (50 リクエスト / 分)
+                より先に当たる
+              </dd>
+            </div>
+            <div>
+              <dt>対応</dt>
+              <dd>
+                投入は 1 本ずつにする。恒久的には Service Quotas
+                で上限の引き上げを申請する (未実施)
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section class="section c6">
+        <div class="section-title">
+          <span class="section-num">06</span>6. 手順上の無駄
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              2 回目の再投入の前 (22:36) に 2608.19529v1 が 1 本余分に走った
+              (<code>just upload</code> の直後に投入し、その後もう一度 cleanup →
+              投入したため)。成果物は 22:41
+              の実行で上書きされ、結果には影響しないが、約 $0.9
+              の課金が余計に発生した
+            </li>
+            <li>
+              経路 B の欠落ページ分のトークンは usage が残らないため、1 回目の 3
+              本のコストは実際より低く見える
+            </li>
+          </ul>
+        </div>
+      </section>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">07</span>7. fetch-corpus の引数
+          (レポートの範囲外だが同日)
+        </div>
+        <div class="block">
+          <p>
+            justfile の <code>{{ args }}</code> 埋め込みで空白を含む
+            <code>-query</code> と後続のフラグが落ち、意図と違う 5
+            本が取れた。PR #110 に同梱して修正済み。詳細は
+            <code>tmp/findings/2026-08-22-fetch-corpus-args/</code>。
+          </p>
+        </div>
+      </section>
+
+      <div class="pager">
+        <a href="08_信頼度の分布.html">← 08_信頼度の分布</a
+        ><a href="10_次への反映.html">10_次への反映 →</a>
+      </div>
+    </main>
+    <footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+  </body>
+</html>

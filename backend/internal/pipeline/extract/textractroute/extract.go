@@ -3,6 +3,7 @@ package textractroute
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	awstextracttypes "github.com/aws/aws-sdk-go-v2/service/textract/types"
 
@@ -39,7 +40,8 @@ func New(c bedrock.Converser, modelID string) *Extractor {
 
 // Extract は Textract の出力を構造化 JSON へ落とす
 //
-// 図と表は Read が復元した結果をそのまま用い、モデルには書誌情報・章立て・参考文献だけを解釈させる
+// 図と表は Read が復元した結果をそのまま用い、モデルには書誌情報・章立て・参考文献の分解だけを解釈させる
+// 節の本文と参考文献の原文はモデルが指した要素番号から Reading を引いて組み立てる
 // provenance の extractedAt と durationMs は後段 (normalize, finalizer) が埋めるためここでは触らない
 func (e *Extractor) Extract(ctx context.Context, in Input) (*domain.Document, error) {
 	if e.modelID == "" {
@@ -57,28 +59,33 @@ func (e *Extractor) Extract(ctx context.Context, in Input) (*domain.Document, er
 		Messages:    []bedrock.Message{bedrock.UserText(userPrompt(reading))},
 		MaxTokens:   new(maxTokens),
 		Temperature: new(temperature),
+		Tool:        paperTool,
 		RecordKey:   bedrock.RecordKey(in.PaperID, bedrock.RouteTextract),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("textractroute: converse: %w", err)
 	}
 
-	// パースの失敗はリトライしない
-	// awsx/bedrock のリトライはスロットリング用であり、同じ入力を投げ直しても JSON にならない見込みが高いうえ課金だけが増える
+	// 復号の失敗はリトライしない
+	// awsx/bedrock のリトライはスロットリング用であり、同じ入力を投げ直しても同じ出力になる見込みが高いうえ課金だけが増える
 	var s structured
 	if err := resp.DecodeJSON(&s); err != nil {
 		return nil, fmt.Errorf("textractroute: decode structured response: %w", err)
 	}
+
+	sections, sectionWarns := s.sections(reading)
+	references, referenceWarns := s.references(reading)
+	warnings := slices.Concat(reading.Warnings, sectionWarns, referenceWarns)
 
 	return &domain.Document{
 		JobID:         in.JobID,
 		SchemaVersion: domain.SchemaVersion,
 		Source:        in.Source,
 		Metadata:      s.metadata(),
-		Sections:      s.sections(),
+		Sections:      sections,
 		Figures:       reading.figures(),
 		Tables:        reading.tables(),
-		References:    s.references(),
+		References:    references,
 		Provenance: domain.Provenance{
 			Route:      domain.RouteTextract,
 			Confidence: reading.Confidence(),
@@ -89,7 +96,7 @@ func (e *Extractor) Extract(ctx context.Context, in Input) (*domain.Document, er
 				BedrockInputTokens:  int(resp.Usage.InputTokens),
 				BedrockOutputTokens: int(resp.Usage.OutputTokens),
 			},
-			Warnings: reading.Warnings,
+			Warnings: warnings,
 		},
 	}, nil
 }

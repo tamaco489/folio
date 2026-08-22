@@ -2,11 +2,13 @@ package bedrock
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsbedrockruntime "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	awsbedrockruntimedocument "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/document"
 	awsbedrockruntimetypes "github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 )
 
@@ -75,7 +77,7 @@ func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, erro
 	}
 
 	in := &awsbedrockruntime.ConverseInput{
-		ModelId:  aws.String(modelID),
+		ModelId:  new(modelID),
 		Messages: messages,
 	}
 	if req.System != "" {
@@ -89,7 +91,36 @@ func (c *Client) buildInput(req Request) (*awsbedrockruntime.ConverseInput, erro
 			Temperature: req.Temperature,
 		}
 	}
+	if req.Tool != nil {
+		tc, err := toToolConfig(req.Tool)
+		if err != nil {
+			return nil, err
+		}
+		in.ToolConfig = tc
+	}
 	return in, nil
+}
+
+// toToolConfig は tool を 1 つだけ登録し、toolChoice でその tool の呼び出しを強制する
+//
+// strict を常に有効にするのは、無効だとスキーマが型を保証せず配列が文字列で返ることがあったため (constrained decoding で出力をスキーマに従わせる)
+// strict はスキーマに制約 (全 object に additionalProperties: false、minimum や minLength は不可) を課すため、スキーマは呼び出し側がその範囲で書く
+func toToolConfig(t *ToolSpec) (*awsbedrockruntimetypes.ToolConfiguration, error) {
+	if t.Name == "" || t.Schema == nil {
+		return nil, ErrInvalidToolSpec
+	}
+	spec := awsbedrockruntimetypes.ToolSpecification{
+		Name:        new(t.Name),
+		InputSchema: &awsbedrockruntimetypes.ToolInputSchemaMemberJson{Value: awsbedrockruntimedocument.NewLazyDocument(t.Schema)},
+		Strict:      new(true),
+	}
+	if t.Description != "" {
+		spec.Description = new(t.Description)
+	}
+	return &awsbedrockruntimetypes.ToolConfiguration{
+		Tools:      []awsbedrockruntimetypes.Tool{&awsbedrockruntimetypes.ToolMemberToolSpec{Value: spec}},
+		ToolChoice: &awsbedrockruntimetypes.ToolChoiceMemberTool{Value: awsbedrockruntimetypes.SpecificToolChoice{Name: new(t.Name)}},
+	}, nil
 }
 
 func toContentBlocks(parts []ContentPart) ([]awsbedrockruntimetypes.ContentBlock, error) {
@@ -130,19 +161,32 @@ func newResponse(out *awsbedrockruntime.ConverseOutput) (*Response, error) {
 	}
 
 	var sb strings.Builder
+	var toolInput json.RawMessage
 	if msg, ok := out.Output.(*awsbedrockruntimetypes.ConverseOutputMemberMessage); ok {
 		for _, block := range msg.Value.Content {
-			if t, ok := block.(*awsbedrockruntimetypes.ContentBlockMemberText); ok {
-				sb.WriteString(t.Value)
+			switch b := block.(type) {
+			case *awsbedrockruntimetypes.ContentBlockMemberText:
+				sb.WriteString(b.Value)
+			case *awsbedrockruntimetypes.ContentBlockMemberToolUse:
+				// tool は 1 つしか登録しないため最初の toolUse だけを採る
+				if toolInput != nil || b.Value.Input == nil {
+					continue
+				}
+				raw, err := b.Value.Input.MarshalSmithyDocument()
+				if err != nil {
+					return nil, fmt.Errorf("bedrock: marshal tool input: %w", err)
+				}
+				toolInput = raw
 			}
 		}
 	}
-	if sb.Len() == 0 {
+	if sb.Len() == 0 && toolInput == nil {
 		return nil, ErrNoTextContent
 	}
 
 	resp := &Response{
 		Text:       sb.String(),
+		ToolInput:  toolInput,
 		StopReason: string(out.StopReason),
 	}
 	if out.Usage != nil {

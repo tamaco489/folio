@@ -1,5 +1,6 @@
 resource "aws_iam_role" "statemachine" {
   name               = "${local.name_prefix}-statemachine-role"
+  description        = "Execution role of the folio pipeline state machine (invokes the pipeline Lambdas and delivers execution logs)."
   assume_role_policy = data.aws_iam_policy_document.statemachine_assume.json
 }
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -15,8 +14,8 @@ import (
 // 500MB クラスの PDF をメモリに載せずに /tmp へ流すため、バイト列ではなく ReadCloser を返す (呼び出し側が Close する)
 func (c *Client) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	out, err := c.api.GetObject(ctx, &awss3.GetObjectInput{
-		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Bucket: new(c.bucket),
+		Key:    new(key),
 	})
 	if err != nil {
 		return nil, wrapErr("get object", key, err)

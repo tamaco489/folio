@@ -1,16 +1,17 @@
 # 配布は S3 + zip (provided.al2023 / arm64、zip の中身は bootstrap 1 ファイル)
-# source_code_hash は使わず、artifacts バケットのバージョニングと s3_object_version で差し替えを検出する
+# コードの差し替えは backend の just upload (aws lambda update-function-code) が行い、Terraform は初回作成と設定だけを担う
+# s3_object_version と source_code_hash は書かない (書くと upload のたびに apply が要る。どちらも API から読み戻されないため外部の差し替えで drift は出ない)
 # publish は false (バージョンとエイリアスを使わず、Step Functions は $LATEST を直接呼ぶ)
 resource "aws_lambda_function" "pipeline" {
   for_each = local.functions
 
   function_name = local.function_names[each.key]
+  description   = each.value.description
   role          = each.value.role_arn
 
-  package_type      = "Zip"
-  s3_bucket         = var.artifacts_bucket_name
-  s3_key            = data.aws_s3_object.function[each.key].key
-  s3_object_version = data.aws_s3_object.function[each.key].version_id
+  package_type = "Zip"
+  s3_bucket    = var.artifacts_bucket_name
+  s3_key       = data.aws_s3_object.function[each.key].key
 
   runtime       = "provided.al2023"
   architectures = ["arm64"]

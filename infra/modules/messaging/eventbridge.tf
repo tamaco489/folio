@@ -4,7 +4,8 @@
 # uploads/*/original.pdf は jobId に / が含まれないため、* が / をまたぐかによらず uploads/{jobId}/original.pdf に一致する
 # 既存キーの上書きも Object Created として届くが、そのまま起動させる (同じ内容なら jobId (SHA-256) が同じで validator の冪等性チェックが SKIPPED にする)
 resource "aws_cloudwatch_event_rule" "upload_trigger" {
-  name = "${local.name_prefix}-upload-trigger"
+  name        = "${local.name_prefix}-upload-trigger"
+  description = "Starts the folio pipeline when a PDF is created under uploads/ in the documents bucket."
 
   event_pattern = jsonencode({
     source      = ["aws.s3"]
@@ -71,6 +72,7 @@ data "aws_iam_policy_document" "upload_trigger_dlq" {
 # Step Functions はリソースポリシーを持たないため、ターゲット側に IAM ロールが要る
 resource "aws_iam_role" "eventbridge_invoke" {
   name               = "${local.name_prefix}-eventbridge-invoke-role"
+  description        = "Assumed by EventBridge to start the pipeline state machine for uploads/ object-created events."
   assume_role_policy = data.aws_iam_policy_document.eventbridge_assume.json
 }
 

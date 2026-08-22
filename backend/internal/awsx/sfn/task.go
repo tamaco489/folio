@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awssfn "github.com/aws/aws-sdk-go-v2/service/sfn"
 )
 
@@ -19,8 +18,8 @@ func (c *Client) SendTaskSuccess(ctx context.Context, taskToken string, output a
 		return fmt.Errorf("sfn: encode task output: %w", err)
 	}
 	if _, err := c.api.SendTaskSuccess(ctx, &awssfn.SendTaskSuccessInput{
-		TaskToken: aws.String(taskToken),
-		Output:    aws.String(string(b)),
+		TaskToken: new(taskToken),
+		Output:    new(string(b)),
 	}); err != nil {
 		return wrapErr("send task success", err)
 	}
@@ -38,9 +37,9 @@ func (c *Client) SendTaskFailure(ctx context.Context, taskToken, errorCode, caus
 		return fmt.Errorf("%w: error code is required", ErrInvalidInput)
 	}
 	if _, err := c.api.SendTaskFailure(ctx, &awssfn.SendTaskFailureInput{
-		TaskToken: aws.String(taskToken),
-		Error:     aws.String(errorCode),
-		Cause:     aws.String(cause),
+		TaskToken: new(taskToken),
+		Error:     new(errorCode),
+		Cause:     new(cause),
 	}); err != nil {
 		return wrapErr("send task failure", err)
 	}

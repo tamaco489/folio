@@ -110,6 +110,10 @@ func Read(res *textract.AnalysisResult) (*Reading, error) {
 		if _, ok := layoutTypes[b.BlockType]; !ok {
 			continue
 		}
+		// LAYOUT_LIST の子 (LAYOUT_TEXT) は個別の要素として並ぶため、親の連結テキストまで要素にすると同じ文が二重に入る
+		if b.BlockType == awstextracttypes.BlockTypeLayoutList && hasLayoutChild(index, b) {
+			continue
+		}
 		p := blockPage(b)
 		addPage(p)
 		hasLayout[p] = true
@@ -208,7 +212,8 @@ func (r *Reading) captionNear(i int, prefixes ...string) string {
 
 // Text は Bedrock へ渡すためのテキスト表現を組み立てる
 //
-// 要素には由来の BlockType を付け、表は Markdown で埋め込む
+// 要素には Elements の添字 (#n) と由来の BlockType を付け、表は Markdown で埋め込む
+// モデルは本文を書き写さず #n で節の範囲と参考文献の位置を指すため、番号は Elements の添字と一致していなければならない
 func (r *Reading) Text() string {
 	var sb strings.Builder
 	rendered := map[string]bool{}
@@ -224,7 +229,7 @@ func (r *Reading) Text() string {
 		}
 	}
 
-	for _, e := range r.Elements {
+	for i, e := range r.Elements {
 		if e.Page != page {
 			flush(page)
 			page = e.Page
@@ -234,7 +239,7 @@ func (r *Reading) Text() string {
 			for _, t := range r.Tables {
 				if t.Data.ID == e.TableID {
 					rendered[e.TableID] = true
-					fmt.Fprintf(&sb, "[TABLE %s]\n%s\n", e.TableID, t.markdown())
+					fmt.Fprintf(&sb, "[#%d TABLE %s]\n%s\n", i, e.TableID, t.markdown())
 				}
 			}
 			continue
@@ -242,7 +247,7 @@ func (r *Reading) Text() string {
 		if e.Text == "" {
 			continue
 		}
-		fmt.Fprintf(&sb, "[%s] %s\n\n", e.tag(), e.Text)
+		fmt.Fprintf(&sb, "[#%d %s] %s\n\n", i, e.tag(), e.Text)
 	}
 	flush(page)
 
@@ -294,6 +299,23 @@ func (r *Reading) Confidence() domain.Confidence {
 
 func (e Element) tag() string {
 	return strings.TrimPrefix(string(e.Type), "LAYOUT_")
+}
+
+// hasLayoutChild は CHILD の Relationships に LAYOUT_* の Block が含まれるかを返す
+func hasLayoutChild(index map[string]*awstextracttypes.Block, b *awstextracttypes.Block) bool {
+	for _, rel := range b.Relationships {
+		if rel.Type != awstextracttypes.RelationshipTypeChild {
+			continue
+		}
+		for _, cid := range rel.Ids {
+			if child := index[cid]; child != nil {
+				if _, ok := layoutTypes[child.BlockType]; ok {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func newElement(index map[string]*awstextracttypes.Block, b *awstextracttypes.Block) Element {

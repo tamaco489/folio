@@ -55,7 +55,7 @@ func seedUpload(fake *s3test.Fake, body []byte) (string, string) {
 // assertCompact は出力が実体を含んでいないことを確かめる
 //
 // State 間の上限は 256KB だが、PDF の実体が紛れ込めば桁違いに超えるため、より厳しい 1KB で押さえる
-func assertCompact(t *testing.T, out Output) {
+func assertCompact(t *testing.T, out *Output) {
 	t.Helper()
 
 	b, err := json.Marshal(out)
@@ -75,6 +75,9 @@ func TestHandleProceedsForNewUpload(t *testing.T) {
 	got, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: key})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
 	}
 	if got.Decision != DecisionProceed {
 		t.Errorf("decision = %q, want %q", got.Decision, DecisionProceed)
@@ -147,6 +150,9 @@ func TestHandleRejectsInvalidInput(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
+			if got == nil {
+				t.Fatal("Handle() = nil, want output")
+			}
 			assertCompact(t, got)
 
 			if tt.wantCode == "" {
@@ -189,6 +195,9 @@ func TestHandleRejectsOversizedObject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if got.Decision != DecisionRejected {
 		t.Fatalf("decision = %q, want %q", got.Decision, DecisionRejected)
 	}
@@ -211,6 +220,9 @@ func TestHandleRejectsHashMismatch(t *testing.T) {
 	got, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: key})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
 	}
 	if got.Decision != DecisionRejected {
 		t.Fatalf("decision = %q, want %q", got.Decision, DecisionRejected)
@@ -265,6 +277,9 @@ func TestHandleIdempotency(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
+			if got == nil {
+				t.Fatal("Handle() = nil, want output")
+			}
 			assertCompact(t, got)
 
 			if got.Decision != tt.wantDecision {
@@ -310,8 +325,12 @@ func TestHandleFailsOnMisroutedEvent(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			h, jobs := newHandler(fake, &fakePDF{info: pdf.Info{Pages: 1}})
 
-			if _, err := h.Handle(context.Background(), in); err == nil {
+			got, err := h.Handle(context.Background(), in)
+			if err == nil {
 				t.Fatal("Handle() error = nil, want error")
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
 			}
 			if jobs.Len() != 0 {
 				t.Errorf("job was registered for a misrouted event: %d jobs", jobs.Len())
@@ -326,9 +345,12 @@ func TestHandleFailsWhenObjectIsMissing(t *testing.T) {
 	h, jobs := newHandler(fake, &fakePDF{info: pdf.Info{Pages: 1}})
 
 	// 取得できないのは入力の不備ではなく一時障害でもありうるため、判定ではなくエラーとして Step Functions に委ねる
-	_, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: s3.OriginalPDFKey(jobID)})
+	got, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: s3.OriginalPDFKey(jobID)})
 	if !errors.Is(err, s3.ErrNotFound) {
 		t.Fatalf("Handle() error = %v, want %v", err, s3.ErrNotFound)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	if jobs.Item(jobID) == nil {
 		t.Error("job should stay registered so that the retry is gated by the same record")
@@ -448,6 +470,9 @@ func TestHandleWithPoppler(t *testing.T) {
 			got, err := h.Handle(context.Background(), Input{Bucket: testBucket, Key: key})
 			if err != nil {
 				t.Fatalf("Handle() error = %v", err)
+			}
+			if got == nil {
+				t.Fatal("Handle() = nil, want output")
 			}
 			if tt.wantCode == "" {
 				if got.Decision != DecisionProceed {

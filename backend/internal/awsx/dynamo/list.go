@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	awsdynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -17,19 +16,19 @@ func (c *Client) ListByStatus(ctx context.Context, status Status, limit int32) (
 		return nil, fmt.Errorf("dynamo: unknown status %q", status)
 	}
 	in := &awsdynamodb.QueryInput{
-		TableName:              aws.String(c.tableName),
-		IndexName:              aws.String(IndexStatusUpdatedAt),
-		KeyConditionExpression: aws.String("#status = :status"),
+		TableName:              new(c.tableName),
+		IndexName:              new(IndexStatusUpdatedAt),
+		KeyConditionExpression: new("#status = :status"),
 		ExpressionAttributeNames: map[string]string{
 			"#status": attrStatus,
 		},
 		ExpressionAttributeValues: map[string]awsdynamodbtypes.AttributeValue{
 			":status": &awsdynamodbtypes.AttributeValueMemberS{Value: string(status)},
 		},
-		ScanIndexForward: aws.Bool(false),
+		ScanIndexForward: new(false),
 	}
 	if limit > 0 {
-		in.Limit = aws.Int32(limit)
+		in.Limit = new(limit)
 	}
 	out, err := c.api.Query(ctx, in)
 	if err != nil {

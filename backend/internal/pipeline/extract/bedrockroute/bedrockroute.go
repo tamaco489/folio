@@ -56,6 +56,7 @@ func (e *Extractor) ExtractPage(ctx context.Context, in PageInput) (*PageResult,
 		Messages:    []bedrock.Message{bedrock.UserImage(bedrock.ImageFormatPNG, in.Image, pagePrompt(in.Page, in.Language))},
 		MaxTokens:   new(maxTokens),
 		Temperature: new(temperature),
+		Tool:        pageTool,
 		RecordKey:   in.RecordKey,
 	})
 	if err != nil {
@@ -64,7 +65,7 @@ func (e *Extractor) ExtractPage(ctx context.Context, in PageInput) (*PageResult,
 
 	var page PageResult
 	if err := resp.DecodeJSON(&page); err != nil {
-		return nil, fmt.Errorf("%w: page %d: %w", ErrPageDecode, in.Page, err)
+		return nil, &DecodeError{Page: in.Page, Response: resp, Err: fmt.Errorf("%w: page %d: %w", ErrPageDecode, in.Page, err)}
 	}
 
 	// モデルはページ番号を読み違えうるため、呼び出し側が指定した番号で上書きする

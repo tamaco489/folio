@@ -77,14 +77,14 @@ func New(storage *s3.Client, runner *pdf.Runner, opts ...Option) *Handler {
 // Handle は PDF をラスタライズしてテキストレイヤーを抽出し、結果の所在と判定を返す
 //
 // ページ数の上限はバリデーション State が弾いているため、ここでは再判定しない
-func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	if in.JobID == "" {
-		return Output{}, ErrEmptyJobID
+		return nil, ErrEmptyJobID
 	}
 
 	workDir, err := os.MkdirTemp(h.baseDir, workDirPattern)
 	if err != nil {
-		return Output{}, fmt.Errorf("preprocess: create work dir: %w", err)
+		return nil, fmt.Errorf("preprocess: create work dir: %w", err)
 	}
 	// 同じ実行環境が次のジョブに再利用されるため、/tmp に成果物を残さない
 	// 後片付けの失敗は処理結果を左右しないが、/tmp が埋まる予兆になるため記録だけする
@@ -96,35 +96,35 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 
 	pdfPath := filepath.Join(workDir, fileOriginalPDF)
 	if err := h.download(ctx, s3.OriginalPDFKey(in.JobID), pdfPath); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	// ページ数はチャンク分割の範囲を決めるために先に確定させる
 	info, err := h.runner.Info(ctx, pdfPath)
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	text, err := h.runner.ExtractText(ctx, pdfPath, filepath.Join(workDir, fileTextLayer))
 	if err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	// 言語判定は全文の文字種で行うため、先頭だけを見ずに読み切る (英文要旨で始まる日本語論文を取り違えないため)
 	body, err := os.ReadFile(text.Path)
 	if err != nil {
-		return Output{}, fmt.Errorf("preprocess: read extracted text: %w", err)
+		return nil, fmt.Errorf("preprocess: read extracted text: %w", err)
 	}
 	if err := h.storage.PutBytes(ctx, s3.TextLayerKey(in.JobID), body, s3.WithContentType(contentTypeText)); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	if err := h.rasterize(ctx, in.JobID, pdfPath, filepath.Join(workDir, dirPages), info.Pages); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
 	language, detected := DetectLanguage(string(body), text.HasTextLayer)
-	return Output{
+	return &Output{
 		JobID:            in.JobID,
 		PageCount:        info.Pages,
 		HasTextLayer:     text.HasTextLayer,

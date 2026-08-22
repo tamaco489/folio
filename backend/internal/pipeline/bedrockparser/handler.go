@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tamaco489/folio/backend/internal/awsx/bedrock"
 	"github.com/tamaco489/folio/backend/internal/awsx/s3"
 	"github.com/tamaco489/folio/backend/internal/domain"
 	"github.com/tamaco489/folio/backend/internal/pipeline/extract/bedrockroute"
@@ -40,6 +41,17 @@ type PageOutput struct {
 	Result      bedrockroute.PageResult `json:"result"`
 }
 
+// PageError は解釈に失敗したモデルの応答を残す封筒
+//
+// PageDecodeError は同じ応答を再現する手段が無いため、何が返ったかをここに残して原因を調べられるようにする
+type PageError struct {
+	JobID    string           `json:"jobId"`
+	Page     int              `json:"page"`
+	FailedAt time.Time        `json:"failedAt"`
+	Error    string           `json:"error"`
+	Response bedrock.Response `json:"response"` // Response は toolInput を含む生の応答
+}
+
 // Handler は 1 ページ分の抽出の依存をまとめる
 type Handler struct {
 	storage   *s3.Client
@@ -71,21 +83,21 @@ func New(storage *s3.Client, extractor *bedrockroute.Extractor, opts ...Option) 
 // Handle はページ画像 1 枚を取得して構造化し、結果の所在を返す
 //
 // スロットリングのリトライは awsx/bedrock が担うため、ここでは再送しない
-func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
+func (h *Handler) Handle(ctx context.Context, in Input) (*Output, error) {
 	if in.JobID == "" {
-		return Output{}, &InvalidInputError{Err: ErrEmptyJobID}
+		return nil, &InvalidInputError{Err: ErrEmptyJobID}
 	}
 	if in.Page < 1 {
-		return Output{}, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPage, in.Page)}
+		return nil, &InvalidInputError{Err: fmt.Errorf("%w: %d", ErrInvalidPage, in.Page)}
 	}
 
 	started := h.now()
 	image, err := h.storage.GetBytes(ctx, s3.PageImageKey(in.JobID, in.Page))
 	if err != nil {
 		if errors.Is(err, s3.ErrNotFound) {
-			return Output{}, &InvalidInputError{Err: err}
+			return nil, &InvalidInputError{Err: err}
 		}
-		return Output{}, err
+		return nil, err
 	}
 
 	// RecordKey は本番では使わないため空のまま渡す (再生テストは Converser の層でキーを補う)
@@ -95,7 +107,12 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 		Language: in.Language,
 	})
 	if err != nil {
-		return Output{}, classify(err)
+		if derr, ok := errors.AsType[*bedrockroute.DecodeError](err); ok {
+			if serr := h.saveError(ctx, in, derr); serr != nil {
+				err = fmt.Errorf("%w (error dump not saved: %w)", err, serr)
+			}
+		}
+		return nil, classify(err)
 	}
 	finished := h.now()
 
@@ -107,8 +124,19 @@ func (h *Handler) Handle(ctx context.Context, in Input) (Output, error) {
 		DurationMs:  finished.Sub(started).Milliseconds(),
 		Result:      *result,
 	}); err != nil {
-		return Output{}, err
+		return nil, err
 	}
 
-	return Output{JobID: in.JobID, Page: in.Page, ResultKey: key}, nil
+	return &Output{JobID: in.JobID, Page: in.Page, ResultKey: key}, nil
+}
+
+// saveError は解釈に失敗した応答を page-NNNN.error.json へ残す
+func (h *Handler) saveError(ctx context.Context, in Input, derr *bedrockroute.DecodeError) error {
+	return h.storage.PutJSON(ctx, s3.BedrockPageErrorKey(in.JobID, in.Page), PageError{
+		JobID:    in.JobID,
+		Page:     in.Page,
+		FailedAt: h.now().UTC(),
+		Error:    derr.Error(),
+		Response: *derr.Response,
+	})
 }

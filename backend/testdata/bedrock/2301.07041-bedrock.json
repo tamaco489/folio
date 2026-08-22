@@ -3,8 +3,34 @@
   "route": "bedrock",
   "recordedAt": "2026-08-15T00:00:00Z",
   "response": {
-    "text": "以下がページ 1 の構造化結果です。\n\n```json\n{\"page\":1,\"title\":\"Learning to Structure Scientific Documents\",\"authors\":[{\"name\":\"Jane Doe\",\"affiliation\":\"Example University\"},{\"name\":\"John Roe\",\"affiliation\":\"Example Institute\"}],\"abstract\":\"We present a pipeline that converts scientific PDFs into structured JSON by combining layout-aware OCR with a large language model.\",\"sections\":[{\"heading\":\"1 Introduction\",\"page\":1}],\"figures\":[{\"label\":\"Figure 1\",\"caption\":\"Overview of the extraction pipeline\"}]}\n```\n",
-    "stopReason": "end_turn",
+    "toolInput": {
+      "title": "Learning to Structure Scientific Documents",
+      "authors": [
+        {
+          "name": "Jane Doe",
+          "affiliation": "Example University"
+        },
+        {
+          "name": "John Roe",
+          "affiliation": "Example Institute"
+        }
+      ],
+      "abstract": "We present a pipeline that converts scientific PDFs into structured JSON by combining layout-aware OCR with a large language model.",
+      "sections": [
+        {
+          "level": 1,
+          "heading": "1 Introduction",
+          "text": "Scientific papers are published as PDF, which keeps the layout but loses the structure."
+        }
+      ],
+      "figures": [
+        {
+          "label": "Figure 1",
+          "caption": "Overview of the extraction pipeline"
+        }
+      ]
+    },
+    "stopReason": "tool_use",
     "usage": {
       "inputTokens": 2317,
       "outputTokens": 264,
@@ -12,5 +38,5 @@
     },
     "latencyMs": 5083
   },
-  "note": "synthetic placeholder fixture; replace with a real recording captured via Recorder once a billed run is approved"
+  "note": "synthetic placeholder fixture in the tool use format (toolInput); replace with a real recording captured via Recorder once a billed run is approved"
 }

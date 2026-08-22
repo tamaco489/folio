@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>08_信頼度の分布 — folio Phase 1</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #ffffff;
+        --surface: #f6f8fa;
+        --surface-2: #eef1f4;
+        --line: #d0d7de;
+        --line-soft: #e6e9ed;
+        --fg: #111827;
+        --fg-2: #1f2937;
+        --muted: #4b5563;
+        --faint: #6b7280;
+        --link: #0969da;
+        --blue: #0969da;
+        --green: #1a7f37;
+        --orange: #bc4c00;
+        --yellow: #9a6700;
+        --purple: #8250df;
+        --red: #cf222e;
+        --shadow:
+          0 1px 2px rgba(31, 35, 40, 0.04), 0 1px 6px rgba(31, 35, 40, 0.06);
+      }
+      html {
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+          "Noto Sans JP", Helvetica, Arial, sans-serif;
+        line-height: 1.7;
+        min-height: 100vh;
+        font-size: 15px;
+      }
+      header {
+        border-bottom: 1px solid var(--line-soft);
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .header-logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+      }
+      .header-logo:hover {
+        color: var(--link);
+      }
+      .back-link {
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--link);
+      }
+      .breadcrumb {
+        padding: 10px 28px;
+        font-size: 12.5px;
+        color: var(--muted);
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .breadcrumb a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      .breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      .breadcrumb span {
+        margin: 0 8px;
+        color: var(--faint);
+      }
+      main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      body.index main {
+        max-width: 1120px;
+      }
+      .page-header {
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--link);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .page-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--fg);
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .page-subtitle {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 60em;
+      }
+      .section {
+        margin-bottom: 44px;
+      }
+      .section-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--fg);
+        margin-bottom: 14px;
+        padding-left: 12px;
+        border-left: 4px solid var(--link);
+        line-height: 1.3;
+      }
+      body.index .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        border-left: 0;
+        padding-left: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .block {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+        box-shadow: var(--shadow);
+      }
+      .block > :last-child {
+        margin-bottom: 0;
+      }
+      h3 {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: var(--fg);
+        margin: 22px 0 8px;
+      }
+      h3:first-child {
+        margin-top: 0;
+      }
+      p {
+        font-size: 14.5px;
+        color: var(--fg-2);
+        line-height: 1.75;
+        margin-bottom: 12px;
+      }
+      p.meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      ul,
+      ol {
+        margin: 0 0 12px 22px;
+        font-size: 14.5px;
+        color: var(--fg-2);
+      }
+      li {
+        margin: 5px 0;
+        line-height: 1.7;
+      }
+      ul.task-list {
+        list-style: none;
+        margin-left: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      ul.task-list li {
+        display: block;
+        position: relative;
+        padding-left: 18px;
+        margin: 0;
+      }
+      ul.task-list li::before {
+        content: "›";
+        position: absolute;
+        left: 2px;
+        top: 0;
+        color: var(--link);
+        font-weight: 700;
+      }
+      a {
+        color: var(--link);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--fg);
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 0 0 12px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: var(--fg);
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-bottom: 16px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+      }
+      .table-wrap:last-child {
+        margin-bottom: 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+      th {
+        background: var(--surface);
+        border-bottom: 2px solid var(--line);
+        border-right: 1px solid var(--line);
+        padding: 10px 14px;
+        text-align: left;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      td {
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line-soft);
+        padding: 10px 14px;
+        vertical-align: top;
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      th:last-child,
+      td:last-child {
+        border-right: 0;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      tr:nth-child(even) td {
+        background: var(--surface);
+      }
+      tr:hover td {
+        background: #eef4fb;
+      }
+      td code,
+      th code {
+        background: var(--bg);
+      }
+      dl {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      dl > div {
+        background: var(--surface);
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      dt {
+        font-size: 14px;
+        color: var(--fg);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      dd {
+        font-size: 13.5px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      dd ol,
+      dd ul {
+        margin-top: 6px;
+        font-size: 13.5px;
+      }
+      .callout {
+        background: #ddf4ff;
+        border: 1px solid #b6e3ff;
+        border-left: 4px solid var(--blue);
+        border-radius: 0 8px 8px 0;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--fg-2);
+        line-height: 1.7;
+      }
+      .callout strong {
+        color: var(--blue);
+      }
+      .callout.green {
+        background: #dafbe1;
+        border-color: #aceebb;
+        border-left-color: var(--green);
+      }
+      .callout.green strong {
+        color: var(--green);
+      }
+      .callout.yellow {
+        background: #fff8c5;
+        border-color: #f3e3a0;
+        border-left-color: var(--yellow);
+      }
+      .callout.yellow strong {
+        color: var(--yellow);
+      }
+      .callout p:last-child,
+      .callout ul:last-child {
+        margin-bottom: 0;
+      }
+      .callout ul.task-list li::before {
+        color: var(--yellow);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .info-item {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+      .info-label {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+      .info-value {
+        font-size: 22px;
+        color: var(--fg);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+      }
+      .info-note {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 6px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid;
+        white-space: nowrap;
+        vertical-align: middle;
+        line-height: 1.5;
+      }
+      .tag.ok {
+        background: #dafbe1;
+        color: var(--green);
+        border-color: #aceebb;
+      }
+      .tag.warn {
+        background: #fff8c5;
+        color: var(--yellow);
+        border-color: #f3e3a0;
+      }
+      .tag.ng {
+        background: #ffebe9;
+        color: var(--red);
+        border-color: #ffcecb;
+      }
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 22px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: var(--shadow);
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s,
+          transform 0.15s;
+      }
+      .card:hover {
+        border-color: var(--link);
+        box-shadow: 0 4px 14px rgba(9, 105, 218, 0.12);
+        transform: translateY(-1px);
+      }
+      .card-num {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--link);
+        letter-spacing: 0.06em;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg);
+        line-height: 1.35;
+      }
+      .card-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+        flex: 1;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        align-self: flex-start;
+      }
+      .badge.blue {
+        background: #ddf4ff;
+        color: var(--blue);
+      }
+      .badge.green {
+        background: #dafbe1;
+        color: var(--green);
+      }
+      .badge.orange {
+        background: #fff1e5;
+        color: var(--orange);
+      }
+      .badge.purple {
+        background: #fbefff;
+        color: var(--purple);
+      }
+      .badge.red {
+        background: #ffebe9;
+        color: var(--red);
+      }
+      .pager {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 14px;
+      }
+      .pager a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+      .pager a:hover {
+        color: var(--link);
+      }
+      footer {
+        border-top: 1px solid var(--line-soft);
+        text-align: center;
+        padding: 24px;
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+      .section {
+        --accent: #0969da;
+        --accent-soft: #ddf4ff;
+        --accent-ink: #0550ae;
+      }
+      .section.c2 {
+        --accent: #1a7f37;
+        --accent-soft: #dafbe1;
+        --accent-ink: #116329;
+      }
+      .section.c3 {
+        --accent: #bc4c00;
+        --accent-soft: #fff1e5;
+        --accent-ink: #953800;
+      }
+      .section.c4 {
+        --accent: #8250df;
+        --accent-soft: #fbefff;
+        --accent-ink: #6639ba;
+      }
+      .section.c5 {
+        --accent: #0e7c86;
+        --accent-soft: #d8f3f5;
+        --accent-ink: #0b5f67;
+      }
+      .section.c6 {
+        --accent: #bf3989;
+        --accent-soft: #ffeff7;
+        --accent-ink: #99286e;
+      }
+      .section-title {
+        border-left-color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .section .block {
+        border-top: 3px solid var(--accent);
+        border-radius: 10px;
+      }
+      .section th {
+        background: var(--accent-soft);
+        color: var(--accent-ink);
+      }
+      .section strong {
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .section dt {
+        color: var(--accent-ink);
+      }
+      .section ul.task-list li::before {
+        color: var(--accent);
+      }
+      .section dl > div {
+        border-left: 3px solid var(--accent);
+      }
+      .section h3 {
+        color: var(--accent-ink);
+      }
+      body.index .section-title {
+        border-left: 0;
+      }
+      body.index .section-num {
+        display: none;
+      }
+      .page-header {
+        border-bottom: 2px solid var(--page-accent, #0969da);
+      }
+      .eyebrow {
+        color: var(--page-accent, #0969da);
+      }
+      .page-title {
+        color: #0b1220;
+      }
+      p {
+        color: var(--fg-2);
+      }
+      td {
+        color: var(--fg);
+      }
+      a {
+        color: var(--link);
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body style="--page-accent: #bc4c00">
+    <header>
+      <a class="header-logo" href="00_目次.html">folio — Phase 1 経路比較</a>
+      <a class="back-link" href="00_目次.html">← 目次に戻る</a>
+    </header>
+    <nav class="breadcrumb">
+      <a href="00_目次.html">Phase 1 経路比較</a><span>›</span>08_信頼度の分布
+    </nav>
+    <main>
+      <div class="page-header">
+        <div class="eyebrow">Phase 1 経路比較 · 08</div>
+        <h1 class="page-title">信頼度の分布</h1>
+        <p class="page-subtitle">
+          provenance.confidence の項目別の値、hallucination 判定、レビュー閾値
+          (#23) の見直し案
+        </p>
+      </div>
+      <p>
+        finalizer の verify が各経路の出力に付ける項目別の信頼度
+        (<code>provenance.confidence</code>) と、レビュー要否の判定
+        (<code>needsReview</code>)。値の意味は
+        <code>backend/internal/pipeline/verify/</code> のコードで確認した。
+      </p>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">01</span>信頼度の求め方
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              項目別の <code>confidence</code> は、存在するシグナルの平均:
+              <code>original</code> (原本のテキストレイヤーとの一致)、<code
+                >textract</code
+              >
+              (経路 A のみ。Textract のブロックの確信度)、<code>crossref</code>
+              (references のみ。Crossref で照合できた割合)
+            </li>
+            <li>
+              <code>original</code>
+              は、題名・著者・見出し・キャプション・参考文献の
+              <code>raw</code> は短い文字列の一致 (畳んだ部分文字列の一致なら
+              1、無ければ隣接トークン対の被覆率)、要旨・本文は被覆率
+            </li>
+            <li>
+              <code>crossref</code> は
+              <code>verified / (verified + mismatch)</code>。<code
+                >notFound</code
+              >
+              は分母に入らず、<code>mismatch</code> は DOI
+              つきで登録題名が違うときだけ起きる
+            </li>
+            <li>
+              hallucination は、短い値の一致スコアが 0.5 未満のもの。1
+              件でもあれば <code>needsReview: true</code>。項目別の
+              <code>confidence</code> が閾値 0.7 を下回っても
+              <code>needsReview: true</code>
+            </li>
+          </ul>
+        </div>
+      </section>
+      <section class="section c2">
+        <div class="section-title">
+          <span class="section-num">02</span>項目別の値
+        </div>
+        <div class="block">
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>経路</th>
+                <th>title</th>
+                <th>authors</th>
+                <th>abstract</th>
+                <th>sections</th>
+                <th>figures</th>
+                <th>tables</th>
+                <th>references</th>
+                <th>最低の項目</th>
+                <th>hallucination</th>
+                <th>needsReview</th>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>A</td>
+                <td>0.7467</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.909</td>
+                <td>0.8803</td>
+                <td>0.8383</td>
+                <td>0.9992</td>
+                <td>title (0.7467)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>B</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9946</td>
+                <td>1</td>
+                <td>0.9887</td>
+                <td>0.995</td>
+                <td>tables (0.9887)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>A</td>
+                <td>0.7889</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.8891</td>
+                <td>0.8622</td>
+                <td>0.8386</td>
+                <td>0.9933</td>
+                <td>title (0.7889)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>B</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9864</td>
+                <td>1</td>
+                <td>0.9397</td>
+                <td>0.9981</td>
+                <td>tables (0.9397)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>A</td>
+                <td>0.8257</td>
+                <td>1</td>
+                <td>0.95</td>
+                <td>0.9159</td>
+                <td>0.8043</td>
+                <td>0.8389</td>
+                <td>1</td>
+                <td>figures (0.8043)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>B</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9914</td>
+                <td>0.9782</td>
+                <td>1</td>
+                <td>1</td>
+                <td>figures (0.9782)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>A</td>
+                <td>0.8923</td>
+                <td>1</td>
+                <td>0.9748</td>
+                <td>0.8979</td>
+                <td>—</td>
+                <td>0.8239</td>
+                <td>1</td>
+                <td>tables (0.8239)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>B</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9939</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>sections (0.9939)</td>
+                <td>—</td>
+                <td>いいえ</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>A</td>
+                <td>0.9441</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.8472</td>
+                <td>0.9695</td>
+                <td>0.8742</td>
+                <td>0.9984</td>
+                <td>sections (0.8472)</td>
+                <td>1 Introduction、6 Discussion</td>
+                <td>はい</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>B</td>
+                <td>1</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9162</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0.9989</td>
+                <td>sections (0.9162)</td>
+                <td>6 Discussion</td>
+                <td>はい</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            経路 A は title (0.75〜0.94) か tables (0.82〜0.87) が最低、経路 B
+            は sections (0.92〜0.99) が最低で tables はほぼ 1.0。0.7
+            を下回った項目は無い。2608.19526v1 の A は図を 1
+            つも検出していないため <code>figures</code> が無い。
+          </p>
+        </div>
+      </section>
+      <section class="section c3">
+        <div class="section-title">
+          <span class="section-num">03</span>内訳 (original / textract /
+          crossref)
+        </div>
+        <div class="block">
+          <p>
+            A の値が系統的に低いのは <code>textract</code> シグナルによる。<code
+              >original</code
+            >
+            は A も 0.86〜1.0 で B と差が小さい。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>A title (original / textract)</th>
+                <th>A sections (original / textract)</th>
+                <th>A tables (original / textract)</th>
+                <th>B sections (original)</th>
+                <th>B tables (original)</th>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>1 / 0.493</td>
+                <td>0.996 / 0.822</td>
+                <td>0.969 / 0.708</td>
+                <td>0.995</td>
+                <td>0.989</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>1 / 0.578</td>
+                <td>0.986 / 0.793</td>
+                <td>0.922 / 0.755</td>
+                <td>0.986</td>
+                <td>0.940</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>1 / 0.651</td>
+                <td>0.980 / 0.852</td>
+                <td>0.922 / 0.756</td>
+                <td>0.991</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>1 / 0.785</td>
+                <td>0.990 / 0.806</td>
+                <td>0.964 / 0.684</td>
+                <td>0.994</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>1 / 0.888</td>
+                <td>0.863 / 0.832</td>
+                <td>0.885 / 0.864</td>
+                <td>0.916</td>
+                <td>1</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            値は <code>comparison.json</code> の
+            <code>routes.*.report.fields</code>。A の title は 5 本とも
+            <code>original</code> が 1.0 (原本と完全一致) なのに、Textract の
+            <code>LAYOUT_TITLE</code> の確信度 0.49〜0.89 で 0.75〜0.94
+            まで下がっている。
+          </p>
+        </div>
+      </section>
+      <section class="section c4">
+        <div class="section-title">
+          <span class="section-num">04</span>tables の信頼度は何を測っているか
+        </div>
+        <div class="block">
+          <p>
+            設計時の想定「tables の信頼度が最も低い」は、経路 A では当たり
+            (title と並んで最低)、経路 B では外れ (ほぼ 1.0)。ただし B の tables
+            の
+            <code>original</code>
+            はセルの文字列が原本のテキストレイヤーに存在するかを見るだけで、<a
+              href="05_差分の内訳.html"
+              >05</a
+            >
+            で確認した数値の改変 (<code>5.84</code> → <code>5.34</code>)
+            や列ずれは検出できない (<code>5.34</code>
+            のような短い数値は原本のどこかに存在しやすい)。B の tables 1.0
+            は「構造が正しい」ことを意味しない。
+          </p>
+        </div>
+      </section>
+      <section class="section c5">
+        <div class="section-title">
+          <span class="section-num">05</span>hallucination の判定
+        </div>
+        <div class="block">
+          <p>
+            5 本 × 2 経路で hallucination は 2608.17950v1 の 3 件だけで、3
+            件とも偽陽性だった。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>経路</th>
+                <th>path</th>
+                <th>value</th>
+                <th>score</th>
+                <th>原本</th>
+              </tr>
+              <tr>
+                <td>A</td>
+                <td><code>sections[1].heading</code></td>
+                <td><code>1 Introduction</code></td>
+                <td>0</td>
+                <td>
+                  ある (<code>pdftotext -layout</code> で
+                  <code>1 Introduction</code>)
+                </td>
+              </tr>
+              <tr>
+                <td>A</td>
+                <td><code>sections[23].heading</code></td>
+                <td><code>6 Discussion</code></td>
+                <td>0</td>
+                <td>ある</td>
+              </tr>
+              <tr>
+                <td>B</td>
+                <td><code>sections[19].heading</code></td>
+                <td><code>6 Discussion</code></td>
+                <td>0</td>
+                <td>ある</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            理由: 照合に使う <code>work/text/layer.txt</code> は
+            <code>pdftotext</code> を <code>-layout</code> 無しで作る
+            (二段組で左右の段が混ざるのを避けるため)。この出力では二段組の見出し番号が本文から切り離され、<code
+              >1</code
+            >
+            と <code>Introduction</code> が別の行に離れて並ぶ。番号 + 1
+            語の見出しは隣接トークン対が 1 つしかなく、それが原本に無いので 0
+            になる。3 語の <code>4 Experimental Setup</code> は対 2 つのうち 1
+            つが当たって 0.5 になり、閾値 0.5 未満をぎりぎりで免れている。逆に B
+            の <code>1</code> (題名が欠けた見出し)
+            は単一トークンが原本にあるので 1.0 で通る。
+          </p>
+        </div>
+      </section>
+      <section class="section c6">
+        <div class="section-title">
+          <span class="section-num">06</span>Crossref の照合
+        </div>
+        <div class="block">
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>経路</th>
+                <th>verified</th>
+                <th>notFound</th>
+                <th>mismatch</th>
+                <th>references の confidence</th>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>A</td>
+                <td>15</td>
+                <td>45</td>
+                <td>0</td>
+                <td>0.9992</td>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>B</td>
+                <td>15</td>
+                <td>44</td>
+                <td>0</td>
+                <td>0.995</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>A</td>
+                <td>9</td>
+                <td>7</td>
+                <td>0</td>
+                <td>0.9933</td>
+              </tr>
+              <tr>
+                <td><code>2608.20338v1</code></td>
+                <td>B</td>
+                <td>9</td>
+                <td>7</td>
+                <td>0</td>
+                <td>0.9981</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>A</td>
+                <td>25</td>
+                <td>15</td>
+                <td>0</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code></td>
+                <td>B</td>
+                <td>29</td>
+                <td>16</td>
+                <td>0</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>A</td>
+                <td>9</td>
+                <td>8</td>
+                <td>0</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>B</td>
+                <td>8</td>
+                <td>15</td>
+                <td>0</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>A</td>
+                <td>12</td>
+                <td>8</td>
+                <td>0</td>
+                <td>0.9984</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td>B</td>
+                <td>11</td>
+                <td>9</td>
+                <td>0</td>
+                <td>0.9989</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            <code>mismatch</code> が 10 経路すべてで 0 なので
+            <code>crossref</code> シグナルは常に 1.0
+            で、信頼度に差を生んでいない。一方で
+            <code>verified</code> には明らかに別の文献への照合が含まれる。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <tr>
+                <th>論文</th>
+                <th>抽出した題名</th>
+                <th>Crossref の登録題名</th>
+                <th>similarity</th>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td><code>Pointer sentinel mixture models</code></td>
+                <td><code>Mixture Models</code></td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.17950v1</code></td>
+                <td><code>Attention is all you need</code></td>
+                <td><code>Is Attention All You Need?</code></td>
+                <td>0.75</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>
+                  <code
+                    >Retrieval-augmented generation for knowledge-intensive NLP
+                    tasks</code
+                  >
+                </td>
+                <td><code>Retrieval‐Augmented Generation</code> (書籍の章)</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19526v1</code></td>
+                <td>
+                  <code
+                    >The Financial Narrative Summarisation Shared Task (FNS
+                    2022)</code
+                  >
+                </td>
+                <td><code>… (FNS 2023)</code></td>
+                <td>0.857</td>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>
+                  <code
+                    >Learning to learn by gradient descent by gradient
+                    descent</code
+                  >
+                </td>
+                <td><code>Gradient Descent</code></td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.20318v1</code></td>
+                <td>
+                  <code
+                    >Alpa: Automating inter- and intra-operator parallelism
+                    …</code
+                  >
+                </td>
+                <td><code>Intra-operator Parallelism</code></td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td><code>2608.19529v1</code> (B)</td>
+                <td><code>[14]</code> (引用番号の混入)</td>
+                <td><code>14</code> (書籍の章)</td>
+                <td>1</td>
+              </tr>
+            </table>
+          </div>
+          <p>
+            理由: <code>similarity</code> は「Crossref
+            の登録題名のトークン対のうち、抽出側の文字列に含まれる割合」で、向きが片側
+            (<code>reference.go</code> の
+            <code>extracted.coverage(work.Title)</code
+            >)。登録題名が短く抽出側に包含されていれば 1.0 になる。登録題名が 1
+            トークンなら語の有無だけで判定される。
+          </p>
+          <p>
+            <code>notFound</code> の大半は arXiv プレプリントや PMLR / JMLR /
+            ICLR など Crossref に DOI
+            を持たない出版形態で、コードの想定どおり。検索そのものの失敗と言えるのは各論文
+            1〜3 件。
+          </p>
+        </div>
+      </section>
+      <section class="section c1">
+        <div class="section-title">
+          <span class="section-num">07</span>レビュー閾値 (#23) の見直し案
+        </div>
+        <div class="block">
+          <ul class="task-list">
+            <li>
+              閾値 0.7 そのものは 5 本 × 2 経路で一度も発動しておらず、今回の
+              <code>REVIEW_PENDING</code> は hallucination (偽陽性) と欠落ページ
+              (#112) だけで決まった。閾値の値を動かす根拠はまだ無い
+            </li>
+            <li>
+              見出しの照合は番号を除いた語で行う
+              (または番号あり・なしの両方を試す)。今回の 3
+              件の偽陽性はこれで消える
+            </li>
+            <li>
+              A の title は <code>original</code> が 1.0 なら
+              <code>textract</code> で下げない。2608.20318v1 の 0.75
+              は原本と完全一致の題名に対する値で、0.7
+              を切れば要レビューになってしまう
+            </li>
+            <li>
+              Crossref の <code>similarity</code> は両方向の被覆
+              (または登録題名のトークン数の下限) にし、検索経由の verified を
+              <code>crossref</code>
+              シグナルに重みつきで反映する。今のままでは「verified 12 / notFound
+              8」のような内訳が信頼度に一切現れない
+            </li>
+            <li>
+              参考文献の <code>raw</code> に長さの下限 (3 語未満は数えない)
+              を置けば、B の引用番号混入 (<code>[14]</code>) と脚注 URL
+              を検出できる
+            </li>
+            <li>
+              B の tables が 1.0 でも構造は保証されない。表の品質は Phase 2
+              で正解データと突き合わせて測る
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="pager">
+        <a href="07_処理時間とコスト.html">← 07_処理時間とコスト</a
+        ><a href="09_想定外と原因.html">09_想定外と原因 →</a>
+      </div>
+    </main>
+    <footer>folio — Phase 1 経路比較 (2026-08-22, dev)</footer>
+  </body>
+</html>

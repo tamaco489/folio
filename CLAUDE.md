@@ -7,7 +7,7 @@
 - `.claude/rules/go/` — Go のコーディングとテストの規約
 - `.claude/rules/terraform/` — Terraform のコーディング規約
 - [docs/README.ja.md](docs/README.ja.md) — プロジェクトの構成・アーキテクチャ
-- [backend/README.ja.md](backend/README.ja.md) — Go のコマンド、ビルド、Layer、テストの前提
+- [backend/README.ja.md](backend/README.ja.md) — backend の構成、Lambda とツールの役割
 - [infra/README.ja.md](infra/README.ja.md) — Terraform の前提 (state バケット、`TF_VAR_account_id`) と使い方
 
 ## 制約事項
@@ -36,7 +36,7 @@
 - 絵文字の使用禁止 (明示的に求められた場合を除く)
 - **インフラ適用・AWS リソース操作の禁止** — 以下はユーザーのみが実行する。Claude が実行してはならない:
   - `terraform apply` / `terraform destroy` (`terraform fmt` / `validate` / `plan` は可)
-  - `aws lambda update-function-code`
+  - `aws lambda update-function-code` (`just upload` 経由を含む)
   - `aws s3 cp` (Lambda 成果物・Layer のアップロード)
   - AWS の読み取り (`aws sts get-caller-identity`、`describe-*` / `get-*` / `ls`) は確認目的で行ってよい
 - **課金が発生する API の実呼び出し禁止** — Textract と Bedrock はユーザーの承認を得てから実行する。検証は記録済みレスポンスの再生で行う

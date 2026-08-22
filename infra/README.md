@@ -76,7 +76,7 @@ The environment-level variables in `terraform.tfvars` are only `env`, `bedrock_m
 
 ### Placing the zips
 
-The compute module reads the Lambda zips and the Layer zip from **fixed keys** in the artifacts bucket (`{env}-folio-artifacts-{account_id}`, versioning enabled) with `data "aws_s3_object"` and passes `version_id` to `s3_object_version`.
+The compute module takes the Lambda zips and the Layer zip from **fixed keys** in the artifacts bucket (`{env}-folio-artifacts-{account_id}`, versioning enabled).
 Plan fails when a zip is missing, so upload first.
 
 | Key                              | How to build                                                                |
@@ -86,34 +86,34 @@ Plan fails when a zip is missing, so upload first.
 
 ```sh
 cd backend
-just upload          # package -> bin/pipeline-*.zip to lambda/ (scripts/upload.sh)
-just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first)
+just upload          # package -> bin/pipeline-*.zip to lambda/, then swap each function's code with update-function-code (scripts/upload.sh)
+just upload-layer    # layers/pdf-processor/pdf-processor.zip to layers/ (build it with layers/pdf-processor/build.sh first); apply with just plan -> just apply
 ```
 
-The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). Overwriting the same key creates a new `version_id`, and the next `just plan` detects the function (and Layer) update. Apply it with `just apply`; do not use `aws lambda update-function-code` (Terraform stays the single source of truth).
-
-`just upload` can also run from CI. Running `.github/workflows/cd-backend.yml` manually from Actions (`workflow_dispatch`, input `env`; only `dev` in Phase 1) checks out `main`, runs `just upload`, and re-uploads the zips under `lambda/`. Beforehand, register the value of `terraform -chdir=envs/dev output -raw github_actions_role_arn` as the GitHub secret `AWS_ROLE_ARN` (a secret, not a variable, because the ARN contains the account ID). The Layer is not part of CI (it needs a Docker build and changes only when poppler does; run `just upload-layer` locally). CI stops at S3 as well; applying is still `just plan` -> `just apply`.
-
-### OIDC role for GitHub Actions
-
-The iam module creates the OIDC provider (`token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and the role `{env}-folio-github-actions-role` that `cd-backend.yml` assumes. The trust policy is limited to `aud = sts.amazonaws.com` and `sub = repo:{github_repository}:ref:refs/heads/main`, so no other branch or repository can assume it. Its only permissions are `s3:PutObject` (plus `s3:AbortMultipartUpload` for multipart uploads) on `lambda/*` and `layers/*` in the artifacts bucket; it cannot touch Lambda or the Terraform state.
-`github_repository` lives in `terraform.tfvars`. It is the part of the token's `sub` claim after `repo:`; this repository was created after 2026-07-15 and therefore uses the immutable subject claim format (`owner@id/repo@id`), so take the value of `gh api repos/tamaco489/folio/actions/oidc/customization/sub --jq .sub_claim_prefix` without the `repo:` prefix.
-The OIDC provider ARN is derived from the URL, so an account can hold only one. When adding stg / prd to the same account, move the provider out of the iam module (Phase 1 is dev only). `thumbprint_list` is not set (GitHub's certificate is verified against AWS's library of trusted root CAs, so the value is unused).
+The bucket is `{env}-folio-artifacts-{account_id}`; the account ID comes from `TF_VAR_account_id` (or `aws sts get-caller-identity` when unset). The upload is run by the user.
+`just upload` swaps each function's code with `aws lambda update-function-code`; Terraform manages only the function configuration (role, timeout, environment variables, ...). Neither `s3_object_version` nor `source_code_hash` is set, so `just plan` shows no diff after an upload.
+Layer versions are immutable and the functions' `layers` reference must follow, so the Layer keeps `data "aws_s3_object"`'s `version_id` in `s3_object_version` and is applied with `just plan` -> `just apply` after `just upload-layer`.
 
 ### First apply
 
 The artifacts bucket is created by the storage module, so only the first run takes two steps.
 
-1. `just apply` with only `module "storage"` in `envs/dev/main.tf` (creates the artifacts bucket)
-2. Upload the zips as above
-3. `just plan` -> `just apply` with the remaining modules wired
+```sh
+aws sso login --profile <profile>
+export AWS_PROFILE=<profile>
+export TF_VAR_account_id=$(aws sts get-caller-identity --query Account --output text)
 
-From then on it is just "re-upload the zips -> `just plan` -> `just apply`".
+cd infra
+just init
+terraform -chdir=envs/dev apply -target=module.storage
 
-## CI
+cd ../backend
+just upload
+just upload-layer
 
-`.github/workflows/ci-infra.yml` runs on pull requests that touch `infra/**`, `.tool-versions`, or the workflow itself, with `permissions: contents: read` and no AWS credentials, so it also runs for pull requests from forks.
-Three jobs run in parallel: `terraform fmt -check` and `just validate`, `just lint` (tflint with the `terraform` recommended preset and the `aws` ruleset), and `trivy config` (misconfiguration checks, failing on MEDIUM or higher).
-`terraform plan` is intentionally not part of CI.
-Settings disabled on purpose are suppressed with `#trivy:ignore:<id>` placed right after the reason comment above the resource, so `just scan` and CI report zero findings.
-The check bundle is fetched at scan time; if a newly added check fails the job, either fix the configuration or add an ignore with a reason.
+cd ../infra
+just plan
+just apply
+```
+
+From then on, function code needs only `just upload`. When the Layer changes: `just upload-layer` -> `just plan` -> `just apply`.

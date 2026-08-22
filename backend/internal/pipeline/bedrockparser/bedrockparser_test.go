@@ -108,9 +108,12 @@ func TestHandleReplaysRecording(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 
 	want := Output{JobID: testJobID, Page: 1, ResultKey: "work/" + testJobID + "/bedrock/page-0001.json"}
-	if got != want {
+	if *got != want {
 		t.Errorf("Handle() = %+v, want %+v", got, want)
 	}
 
@@ -191,6 +194,9 @@ func TestHandleDerivesKeysFromPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
+	if got == nil {
+		t.Fatal("Handle() = nil, want output")
+	}
 	if want := s3.BedrockPageResultKey(testJobID, 3); got.ResultKey != want {
 		t.Errorf("ResultKey = %q, want %q", got.ResultKey, want)
 	}
@@ -235,9 +241,12 @@ func TestHandleInvalidInput(t *testing.T) {
 			}
 
 			// Lambda は最外の型名を errorType として報告するため、包まれていない最外の型で判定する
-			_, err := h.Handle(context.Background(), tt.in)
+			got, err := h.Handle(context.Background(), tt.in)
 			if _, ok := err.(*InvalidInputError); !ok {
 				t.Fatalf("err = %T (%v), want *InvalidInputError", err, err)
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
 			}
 			if !errors.Is(err, tt.want) {
 				t.Errorf("err = %v, want %v を包むこと", err, tt.want)
@@ -250,19 +259,72 @@ func TestHandleInvalidInput(t *testing.T) {
 	}
 }
 
-// 解釈できない応答は PageDecodeError で返り、由来のセンチネルも辿れることを確かめる
+// 解釈できない応答は PageDecodeError で返り、由来のセンチネルも辿れ、生応答が error.json に残ることを確かめる
 func TestHandleDecodeFailure(t *testing.T) {
-	h, fake := newTestHandler(t, &stubConverser{text: "この画像からは読み取れませんでした"})
-	fake.Seed(testBucket, s3.PageImageKey(testJobID, 1), s3test.Object{Body: samplePNG})
+	const reply = "この画像からは読み取れませんでした"
+	saveErr := errors.New("put failed")
 
-	_, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
-	if _, ok := err.(*PageDecodeError); !ok {
-		t.Fatalf("err = %T (%v), want *PageDecodeError (最外の型名が errorType になる)", err, err)
+	tests := map[string]struct {
+		putErr   error
+		wantDump bool
+	}{
+		"異常系_解釈できない応答の場合_生応答が error.json に残ること":            {wantDump: true},
+		"異常系_生応答の保存に失敗した場合_PageDecodeError のまま保存の失敗も辿れること": {putErr: saveErr},
 	}
-	if !errors.Is(err, bedrock.ErrInvalidJSON) || !errors.Is(err, bedrockroute.ErrPageDecode) {
-		t.Errorf("err = %v, want bedrock.ErrInvalidJSON と bedrockroute.ErrPageDecode を包むこと", err)
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			start := time.Date(2026, 8, 22, 23, 9, 0, 0, time.UTC)
+			step := time.Second
+			h, fake := newTestHandler(t, &stubConverser{text: reply}, WithClock(steppingClock(start, step)))
+			fake.Seed(testBucket, s3.PageImageKey(testJobID, 1), s3test.Object{Body: samplePNG})
+			fake.PutErr = tt.putErr
+
+			got, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
+			if _, ok := err.(*PageDecodeError); !ok {
+				t.Fatalf("err = %T (%v), want *PageDecodeError (最外の型名が errorType になる)", err, err)
+			}
+			if got != nil {
+				t.Errorf("Handle() = %+v, want nil", got)
+			}
+			if !errors.Is(err, bedrock.ErrInvalidJSON) || !errors.Is(err, bedrockroute.ErrPageDecode) {
+				t.Errorf("err = %v, want bedrock.ErrInvalidJSON と bedrockroute.ErrPageDecode を包むこと", err)
+			}
+			assertNoResultSaved(t, fake, 1)
+
+			key := s3.BedrockPageErrorKey(testJobID, 1)
+			obj, ok := fake.Object(testBucket, key)
+			if !tt.wantDump {
+				if ok {
+					t.Errorf("保存に失敗したのに生応答がある: %s", key)
+				}
+				if !errors.Is(err, saveErr) {
+					t.Errorf("err = %v, want 保存の失敗 %v も包むこと", err, saveErr)
+				}
+				return
+			}
+			if !ok {
+				t.Fatalf("生応答が保存されていない: %s", key)
+			}
+			var dump PageError
+			if err := json.Unmarshal(obj.Body, &dump); err != nil {
+				t.Fatalf("unmarshal error dump: %v", err)
+			}
+			if dump.JobID != testJobID || dump.Page != 1 {
+				t.Errorf("生応答の jobId/page = %q/%d, want %q/1", dump.JobID, dump.Page, testJobID)
+			}
+			if dump.Response.Text != reply || dump.Response.StopReason != "end_turn" {
+				t.Errorf("生応答の response = %+v, want モデルの応答をそのまま残すこと", dump.Response)
+			}
+			if !strings.Contains(dump.Error, "page 1") {
+				t.Errorf("生応答の error = %q, want 失敗の理由を含むこと", dump.Error)
+			}
+			// 時計は画像取得の前と保存の直前の 2 回進む
+			if wantAt := start.Add(step); !dump.FailedAt.Equal(wantAt) {
+				t.Errorf("FailedAt = %v, want %v", dump.FailedAt, wantAt)
+			}
+		})
 	}
-	assertNoResultSaved(t, fake, 1)
 }
 
 // スロットリングなど抽出側の失敗は型を付け替えずそのまま返し、Retry の対象に残ることを確かめる
@@ -271,9 +333,12 @@ func TestHandlePropagatesExtractError(t *testing.T) {
 	h, fake := newTestHandler(t, &stubConverser{err: want})
 	fake.Seed(testBucket, s3.PageImageKey(testJobID, 1), s3test.Object{Body: samplePNG})
 
-	_, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
+	got, err := h.Handle(context.Background(), Input{JobID: testJobID, Page: 1})
 	if !errors.Is(err, want) {
 		t.Fatalf("err = %v, want %v", err, want)
+	}
+	if got != nil {
+		t.Errorf("Handle() = %+v, want nil", got)
 	}
 	if _, ok := errors.AsType[*InvalidInputError](err); ok {
 		t.Errorf("err = %v, InvalidInputError であってはならない", err)
