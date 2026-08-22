@@ -13,6 +13,20 @@ data "aws_iam_policy_document" "lambda_finalize" {
     resources = [local.uploads_objects, local.work_objects]
   }
 
+  # 欠けた中間結果 (経路の失敗や skip) を s3.ErrNotFound で読み飛ばすために要る
+  # ListBucket が無いと S3 は存在しないキーの GetObject を 404 ではなく 403 で返し、NotFound 判定に入らない
+  statement {
+    sid       = "ListWork"
+    actions   = ["s3:ListBucket"]
+    resources = [var.documents_bucket_arn]
+
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["work/*"]
+    }
+  }
+
   statement {
     sid       = "WriteOutputs"
     actions   = ["s3:PutObject"]
