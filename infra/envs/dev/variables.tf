@@ -36,6 +36,14 @@ variable "bedrock_model_id" {
   type        = string
 }
 
+# GitHub Actions (cd-backend.yml) が OIDC で引き受けるロールの信頼ポリシーで、sub をこのリポジトリの main ブランチに限るために使う
+# 値は OIDC トークンの sub の repo: に続く部分で、gh api repos/{owner}/{repo}/actions/oidc/customization/sub の sub_claim_prefix と一致させる
+# 公開リポジトリの名前と ID なので tfvars に書く
+variable "github_repository" {
+  description = "GitHub repository allowed to assume the GitHub Actions role via OIDC, as it appears in the token's sub claim after repo: (owner/name or owner@id/name@id)."
+  type        = string
+}
+
 # Crossref の polite pool 用の連絡先 (finalizer の FOLIO_CROSSREF_MAILTO)
 # メールアドレスをリポジトリに置かないよう tfvars には書かず TF_VAR_crossref_mailto で渡す。空なら環境変数を設定しない
 variable "crossref_mailto" {
