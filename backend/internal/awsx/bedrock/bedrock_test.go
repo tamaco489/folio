@@ -267,6 +267,10 @@ func TestConverseToolConfig(t *testing.T) {
 	if got["type"] != "object" {
 		t.Errorf("schema = %s", raw)
 	}
+	// strict でなければスキーマは型を保証せず、配列が文字列で返りうる
+	if !aws.ToBool(spec.Value.Strict) {
+		t.Error("Strict = false, want true")
+	}
 	choice, ok := tc.ToolChoice.(*awsbedrockruntimetypes.ToolChoiceMemberTool)
 	if !ok {
 		t.Fatalf("ToolChoice = %T, want ToolChoiceMemberTool", tc.ToolChoice)
