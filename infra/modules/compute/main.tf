@@ -61,13 +61,14 @@ locals {
     }
 
     # 起動パスは StartDocumentAnalysis を呼んで即座に返るが、SNS 通知パスでは GetDocumentAnalysis のページングと Bedrock の構造化 (最大 5 回の指数バックオフ、待機は最大 20 秒) を 1 回の起動で行う
-    # 同じ関数を両パスで使うため、長い方の通知パスに合わせて 600 秒にする
+    # 同じ関数を両パスで使うため、長い方の通知パスに合わせる
+    # Bedrock の生成は実測 約 36 トークン/秒で、textractroute の出力上限 (maxTokens = 24576) まで生成すると約 680 秒かかるため 900 秒にする
     textract-parser = {
       name              = "pipeline-textract-parser"
       description       = "Route A: starts Textract, then structures its output through Bedrock on the SNS callback."
       role_arn          = var.lambda_parser_role_arn
       memory_size       = 512
-      timeout           = 600
+      timeout           = 900
       ephemeral_storage = local.default_ephemeral_storage_mb
       layers            = []
       environment = {
