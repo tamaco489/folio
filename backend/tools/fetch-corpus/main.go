@@ -35,6 +35,10 @@ func main() {
 		interval   = flag.Duration("interval", corpus.DefaultInterval, "arXiv へのリクエスト間隔")
 	)
 	flag.Parse()
+	// flag はフラグでない引数で解析を止めるため、クォート漏れの -query をそのまま既定値で走らせない
+	if flag.NArg() > 0 {
+		log.Fatalf("fetch-corpus: 余分な引数 %q (空白を含む -query は引用符で囲む)", flag.Args())
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

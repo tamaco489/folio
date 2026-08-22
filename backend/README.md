@@ -55,6 +55,7 @@ See `just --list` for the other recipes.
 ### fetch-corpus options
 
 The default is "5 papers of 8-20 pages from the latest `cs.CL` or `cs.LG` submissions".
+The reference count is estimated from `[n]`-style numbering, so author-year style papers show 0 (it does not mean the paper has no references).
 
 Choosing papers:
 
