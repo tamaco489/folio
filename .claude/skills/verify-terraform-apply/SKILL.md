@@ -220,7 +220,7 @@ aws lambda get-policy --function-name "$F"   # textract-parser 以外は Resourc
 | Layer の互換性              | `list-layer-versions` で関数が参照している `LayerVersionArn` の要素の `CompatibleRuntimes` `CompatibleArchitectures` | `aws_lambda_layer_version.pdf_processor` の `compatible_runtimes` `compatible_architectures`                                                                                                                                                                                                                                                                             |
 | リソースポリシー            | `get-policy` が textract-parser 以外では `ResourceNotFoundException` になること (textract-parser は SNS の節で見る)  | `aws_lambda_permission` は `modules/messaging/sns.tf` の textract-parser 向け 1 つだけ                                                                                                                                                                                                                                                                                   |
 
-`s3_bucket` `s3_key` `s3_object_version` は API の応答に含まれない (取り込み時に使われるだけ) ため、`state show` で読むに留める。
+`s3_bucket` `s3_key` は API の応答に含まれない (取り込み時に使われるだけ) ため、`state show` で読むに留める。関数は `s3_object_version` を持たない (コードは `just upload` が差し替える) ので、コードの新しさは `get-function-configuration` の `LastModified` が artifacts バケットの zip の `LastModified` より後であることで見る。Layer だけ `s3_object_version` を持つ。
 
 #### CloudWatch Logs ロググループ (compute, pipeline)
 
