@@ -38,7 +38,9 @@ resource "aws_cloudwatch_log_group" "pipeline" {
 #
 # Textract は Step Functions の直接統合ではなく textract-parser を lambda:invoke.waitForTaskToken で呼ぶ
 # Lambda が StartDocumentAnalysis を起動してタスクトークンを S3 に退避し、SNS 経由の完了通知を受けた同じ Lambda が SendTaskSuccess / SendTaskFailure で返す
-# 通知が届かない事故で無期限に待たないよう、この Task には TimeoutSeconds 3600 を置く (経路 B の結果だけで finalizer に進める)
+# 通知が届かない事故で無期限に待たないよう、この Task には TimeoutSeconds 1800 を置く (経路 B の結果だけで finalizer に進める)
+# 正当に待つ時間の上限は Textract のジョブ (12〜19 ページで実測 13〜78 秒) と通知後の Lambda (timeout 900) の合計であり、Lambda の timeout の 2 倍を上限にする
+# 短くしすぎると課金済みの Textract の結果が届いても Task が待っておらず捨てられるため、長い側に倒す
 #
 # 各 Task の TimeoutSeconds は Lambda 側の timeout より大きく取り、Lambda 自身のタイムアウトが Step Functions のタイムアウトより先に観測されるようにする
 #   Validate 360 (Lambda 300 想定) / Preprocess 960 と Finalize 960 (Lambda の上限 900) / BedrockPage 660 (Lambda 600 想定)

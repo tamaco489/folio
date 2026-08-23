@@ -122,7 +122,7 @@
             },
             "Textract": {
               "Type": "Task",
-              "Comment": "textract-parser starts the Textract job and returns; the SNS completion callback in the same Lambda resumes this task with SendTaskSuccess/Failure. TimeoutSeconds bounds a lost notification.",
+              "Comment": "textract-parser starts the Textract job and returns; the SNS completion callback in the same Lambda resumes this task with SendTaskSuccess/Failure. TimeoutSeconds bounds a lost notification at twice the Lambda timeout (900), leaving room for the Textract job itself.",
               "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
               "Arguments": {
                 "FunctionName": "${textract_parser_arn}",
@@ -134,7 +134,7 @@
                   "hasTextLayer": "{% $hasTextLayer %}"
                 }
               },
-              "TimeoutSeconds": 3600,
+              "TimeoutSeconds": 1800,
               "Retry": [
                 {
                   "ErrorEquals": ["RetryableError"],
