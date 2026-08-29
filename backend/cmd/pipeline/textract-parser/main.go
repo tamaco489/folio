@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
-	// FeatureTypes は #34 の検証で差し替えるため環境変数から受け取る
+	// FeatureTypes は課金と返る Block の種類を決めるため、コードを変えずに差し替えられるよう環境変数から受け取る
 	features, err := textractparser.ParseFeatureTypes(cfg.TextractFeatureTypes)
 	if err != nil {
 		log.Fatalf("parse %s: %v", config.EnvKeyTextractFeatureTypes, err)

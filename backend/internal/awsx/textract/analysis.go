@@ -11,7 +11,7 @@ import (
 
 // StartAnalysisInput は非同期解析の起動に必要な値
 //
-// FeatureTypes は #34 の検証で組み合わせを差し替えるため、必ず呼び出し側が指定する
+// FeatureTypes は課金と返る Block の種類を決めるため、ラッパ側で既定値を持たず呼び出し側に指定させる
 type StartAnalysisInput struct {
 	Document           S3Location
 	FeatureTypes       []awstextracttypes.FeatureType
