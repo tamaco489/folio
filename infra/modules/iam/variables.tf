@@ -33,6 +33,21 @@ variable "jobs_table_arn" {
   type        = string
 }
 
+variable "artifacts_bucket_arn" {
+  description = "ARN of the artifacts bucket; the GitHub Actions role may PutObject under its lambda/ and layers/ prefixes."
+  type        = string
+}
+
+variable "github_repository" {
+  description = "GitHub repository whose main branch may assume the GitHub Actions role via OIDC, written as it appears in the token's sub claim after repo: (owner/name, or owner@id/name@id for repositories that use the immutable subject claim format)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+(@[0-9]+)?/[A-Za-z0-9_.-]+(@[0-9]+)?$", var.github_repository))
+    error_message = "github_repository must be in the form owner/name or owner@id/name@id."
+  }
+}
+
 variable "textract_completion_topic_arn" {
   description = "ARN of the SNS topic that the Textract publish role is allowed to publish completion notifications to."
   type        = string

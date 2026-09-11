@@ -15,7 +15,7 @@ infra/
 │   ├── messaging/      EventBridge ルールと SNS (Textract 完了通知)
 │   ├── compute/        Lambda 関数と Layer
 │   ├── pipeline/       Step Functions ステートマシン
-│   └── iam/            Lambda・Step Functions・Textract のロールとポリシー
+│   └── iam/            Lambda・Step Functions・Textract のロールとポリシー、GitHub Actions 用の OIDC プロバイダとロール
 ├── scripts/            justfile から呼ぶシェルスクリプト (validate, lint)
 ├── .tflint.hcl         TFLint の設定 (CI と just lint で共用)
 └── justfile            レシピの宣言のみ
@@ -37,7 +37,7 @@ Phase 1 の環境は `dev` のみ。`stg` `prd` のディレクトリは作ら�
 | アカウント ID  | 環境変数 `TF_VAR_account_id` に 12 桁で設定する (documents バケット名に使う)。ファイルには書かない                                              |
 | state バケット | 環境ごとの `{env}-folio-tfstate` (`ap-northeast-1`) が存在すること (dev は `dev-folio-tfstate`)。Terraform の管理外で、ユーザーが事前に作成する |
 
-`terraform.tfvars` には `env` と `bedrock_model_id` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
+`terraform.tfvars` には `env` `bedrock_model_id` `github_repository` だけを置く。`account_id` は `TF_VAR_account_id` から、`region` は `variables.tf` の default (`us-east-1`) から入る。
 plan の段階で `TF_VAR_account_id` と認証情報のアカウントが一致することを検査する。
 
 ## state
@@ -72,7 +72,7 @@ just scan          # trivy config (MEDIUM 以上、dev の tfvars を適用)
 `envs/dev/main.tf` は 5 つのモジュールを結線し、値は outputs で受け渡す。
 モジュール同士が互いの出力を参照する箇所 (iam ↔ messaging、iam ↔ compute、messaging ↔ pipeline) があるが、リソース単位の依存は循環しないため plan は通る。`module` ブロックに `depends_on` を書かないこと。
 
-環境側の変数は `terraform.tfvars` の `env` と `bedrock_model_id` (公開してよい値) のみで、`account_id` は `TF_VAR_account_id`、Crossref の連絡先 `crossref_mailto` はメールアドレスなので必要なら `TF_VAR_crossref_mailto` で渡す (空なら Lambda に環境変数を設定しない)。
+環境側の変数は `terraform.tfvars` の `env` `bedrock_model_id` `github_repository` (公開してよい値) のみで、`account_id` は `TF_VAR_account_id`、Crossref の連絡先 `crossref_mailto` はメールアドレスなので必要なら `TF_VAR_crossref_mailto` で渡す (空なら Lambda に環境変数を設定しない)。
 
 ### zip の配置
 

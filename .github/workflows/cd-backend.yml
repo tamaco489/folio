@@ -1,0 +1,70 @@
+name: cd-backend
+
+# Lambda の zip を artifacts バケットに置くところまでを担う (backend の just upload と同じ)
+# Lambda への反映は infra の just plan / just apply (ユーザー) で行い、aws lambda update-function-code は使わない (Terraform を唯一の真実に保つ)
+# Layer は含めない (Docker + arm64 のビルドが要り、poppler の更新時だけ手元の just upload-layer で置く)
+#
+# 手動実行 (workflow_dispatch) だけにし、push トリガーは付けない (実行の操作をアップロードの承認とみなす)
+# 信頼ポリシーの sub が main ブランチに限られているため、他のブランチを選んで実行すると AssumeRoleWithWebIdentity で弾かれる
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Target environment (artifacts bucket {env}-folio-artifacts-{account_id})
+        type: choice
+        options:
+          - dev
+        default: dev
+
+# OIDC の JWT を得るために id-token: write が要る。contents: read は checkout 用
+permissions:
+  id-token: write
+  contents: read
+
+# 同じ環境への同時実行は直列にする
+# 途中で打ち切ると一部の関数だけ新しい zip になり、次の plan で関数ごとに版がずれるため cancel-in-progress は付けない
+concurrency:
+  group: cd-backend-${{ inputs.env }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  upload:
+    name: upload lambda zips
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # asdf と同じ値を使うためルートの .tool-versions から golang 行を読む
+          go-version-file: .tool-versions
+          cache-dependency-path: backend/go.sum
+
+      - name: Setup just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      - name: Configure AWS credentials
+        # OIDC でロールを引き受ける (アクセスキーは置かない)。ロールは infra の iam モジュールが作り、ARN は terraform output github_actions_role_arn
+        # ARN にアカウント ID が含まれるため variable ではなく secret に置く
+        # audience は既定の sts.amazonaws.com で、信頼ポリシーの aud 条件と一致する
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Build, package, and upload
+        # scripts/upload.sh は TF_VAR_account_id が無ければ aws sts get-caller-identity でアカウント ID を調べる (認可不要) ため CI では環境変数を渡さない
+        # 入力はシェルへ直接展開せず環境変数を経由する
+        env:
+          TARGET_ENV: ${{ inputs.env }}
+        run: just upload "$TARGET_ENV"
+
+      - name: Print next step
+        run: echo "Uploaded. Apply it with 'cd infra && just plan && just apply' (run by the user)."

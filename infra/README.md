@@ -15,7 +15,7 @@ infra/
 │   ├── messaging/      EventBridge rule and SNS topic (Textract completion)
 │   ├── compute/        Lambda functions and layer
 │   ├── pipeline/       Step Functions state machine
-│   └── iam/            Roles and policies for Lambda, Step Functions, and Textract
+│   └── iam/            Roles and policies for Lambda, Step Functions, and Textract; OIDC provider and role for GitHub Actions
 ├── scripts/            Shell scripts called by the justfile (validate, lint)
 ├── .tflint.hcl         TFLint configuration shared by CI and just lint
 └── justfile            Recipe declarations only
@@ -37,7 +37,7 @@ Phase 1 has a single environment, `dev`. No `stg` or `prd` directory is created.
 | Account ID   | Set the 12-digit ID in `TF_VAR_account_id` (used in the documents bucket name). Never written to a file                                            |
 | State bucket | `{env}-folio-tfstate` (`ap-northeast-1`) must exist per environment (`dev-folio-tfstate` for dev). It is outside Terraform and created by the user |
 
-`terraform.tfvars` holds only `env` and `bedrock_model_id`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
+`terraform.tfvars` holds only `env`, `bedrock_model_id`, and `github_repository`. `account_id` comes from `TF_VAR_account_id` and `region` from the default in `variables.tf` (`us-east-1`).
 `plan` fails early if `TF_VAR_account_id` does not match the account of the current credentials.
 
 ## State
@@ -72,7 +72,7 @@ In a checkout that has already run `just init` against the S3 backend, the `init
 `envs/dev/main.tf` wires the five modules and passes values through outputs.
 Some modules reference each other's outputs (iam <-> messaging, iam <-> compute, messaging <-> pipeline); the resource-level graph has no cycle, so plan succeeds. Do not add `depends_on` to `module` blocks.
 
-The environment-level variables in `terraform.tfvars` are only `env` and `bedrock_model_id` (both safe to publish). `account_id` comes from `TF_VAR_account_id`, and the Crossref contact `crossref_mailto` is an email address, so pass it with `TF_VAR_crossref_mailto` if needed (empty means the Lambda gets no such variable).
+The environment-level variables in `terraform.tfvars` are only `env`, `bedrock_model_id`, and `github_repository` (all safe to publish). `account_id` comes from `TF_VAR_account_id`, and the Crossref contact `crossref_mailto` is an email address, so pass it with `TF_VAR_crossref_mailto` if needed (empty means the Lambda gets no such variable).
 
 ### Placing the zips
 
